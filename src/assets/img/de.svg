@@ -1,0 +1,31 @@
+<!-- <svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-de" viewBox="0 0 640 480">
+  <path fill="#ffce00" d="M0 320h640v160H0z"/>
+  <path fill="#000" d="M0 0h640v160H0z"/>
+  <path fill="#d00" d="M0 160h640v160H0z"/>
+</svg>
+ -->
+
+ <svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300">
+  <!-- Background stripes -->
+  <defs>
+    <pattern id="stripes" width="60" height="60" patternUnits="userSpaceOnUse">
+      <rect width="60" height="60" fill="white"/>
+      <rect y="30" width="60" height="30" fill="red"/>
+    </pattern>
+  </defs>
+  <rect width="600" height="300" fill="url(#stripes)"/>
+
+  <!-- Blue canton -->
+  <rect width="200" height="140" fill="#012169"/>
+
+  <!-- Yellow crescent -->
+  <path d="M120,70 a30,30 0 1,0 0.1,0" fill="white"/>
+  <path d="M130,70 a20,20 0 1,1 0.1,0" fill="#012169"/>
+
+  <!-- 14-pointed star -->
+  <g transform="translate(160,70)">
+    <polygon points="0,-15 4.7,-4.8 14.1,-4.8 6.3,1.9 9.4,11.5 0,6  -9.4,11.5 -6.3,1.9 -14.1,-4.8 -4.7,-4.8" fill="yellow"/>
+    <circle r="15" fill="yellow" opacity="0.3"/>
+  </g>
+</svg>
+

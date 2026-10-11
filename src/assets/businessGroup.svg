@@ -1,0 +1,20 @@
+<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M28.0005 50.3726C40.4758 50.3726 50.5889 40.2594 50.5889 27.7842C50.5889 15.309 40.4758 5.1958 28.0005 5.1958C15.5253 5.1958 5.41211 15.309 5.41211 27.7842C5.41211 40.2594 15.5253 50.3726 28.0005 50.3726Z" fill="#09C4A3"/>
+<!-- Org chart: HQ + branches -->
+<path d="M28 14V20" stroke="#616E7D" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M16 26H40" stroke="#616E7D" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M16 26V29" stroke="#616E7D" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M28 26V29" stroke="#616E7D" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M40 26V29" stroke="#616E7D" stroke-width="1.8" stroke-linecap="round"/>
+<rect x="22" y="11" width="12" height="9" rx="1.2" fill="white" stroke="#616E7D" stroke-width="1.4"/>
+<path d="M25 14H31" stroke="#82BFAB" stroke-width="1.2" stroke-linecap="round"/>
+<rect x="10" y="29" width="12" height="14" rx="1.2" fill="white" stroke="#616E7D" stroke-width="1.4"/>
+<rect x="22" y="29" width="12" height="14" rx="1.2" fill="white" stroke="#616E7D" stroke-width="1.4"/>
+<rect x="34" y="29" width="12" height="14" rx="1.2" fill="white" stroke="#616E7D" stroke-width="1.4"/>
+<path d="M13 33H19" stroke="#82BFAB" stroke-width="1.2" stroke-linecap="round"/>
+<path d="M25 33H31" stroke="#82BFAB" stroke-width="1.2" stroke-linecap="round"/>
+<path d="M37 33H43" stroke="#82BFAB" stroke-width="1.2" stroke-linecap="round"/>
+<path d="M13 37H17" stroke="#AAD4C8" stroke-width="1" stroke-linecap="round"/>
+<path d="M25 37H29" stroke="#AAD4C8" stroke-width="1" stroke-linecap="round"/>
+<path d="M37 37H41" stroke="#AAD4C8" stroke-width="1" stroke-linecap="round"/>
+</svg>

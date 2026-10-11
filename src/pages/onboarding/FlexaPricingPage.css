@@ -1,0 +1,1482 @@
+/* Pricing typography & layout — serif headings/prices, sans-serif UI */
+.flexa-pricing,
+.flexa-pricing-page {
+  --pricing-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  --pricing-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --pricing-accent: #0C2E5A;
+  --pricing-accent-dark: #e07d00;
+  --pricing-dark: #1a1715;
+  --pricing-dark-muted: rgba(255, 255, 255, 0.55);
+  --pricing-dark-label: #c4a574;
+  --pricing-text: #111827;
+  --pricing-muted: #6b7280;
+  --pricing-body: #374151;
+  --pricing-border: #e5e7eb;
+  --pricing-selected-bg: #faf6f0;
+  font-family: var(--pricing-sans);
+}
+
+.flexa-pricing {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  color: var(--pricing-body);
+  border: 1px solid var(--pricing-border);
+}
+
+.flexa-pricing--loading,
+.flexa-pricing--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--pricing-muted);
+  font-size: 0.95rem;
+}
+
+.flexa-pricing__core-banner {
+  background: #fff8f0;
+  border: 1px solid #fde8d0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  color: var(--pricing-body);
+  margin-bottom: 20px;
+}
+
+.flexa-pricing__core-badge {
+  display: inline-block;
+  background: #fff;
+  border: 1px solid #fde8d0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pricing-accent, var(--p-blue, #0C2E5A));
+  margin-bottom: 10px;
+}
+
+.flexa-pricing__core-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.flexa-pricing__core-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--pricing-text);
+}
+
+.flexa-pricing__core-price {
+  font-family: var(--pricing-serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--pricing-accent, var(--p-blue, #0C2E5A));
+  white-space: nowrap;
+}
+
+.flexa-pricing__core-price span {
+  font-family: var(--pricing-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--pricing-muted);
+}
+
+.flexa-pricing__core-desc {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: var(--pricing-muted);
+  line-height: 1.5;
+}
+
+.flexa-pricing__core-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flexa-pricing__core-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--pricing-body);
+}
+
+.flexa-pricing__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--pricing-accent, var(--p-blue, #0C2E5A));
+  border: 1px solid #fde8d0;
+  font-size: 10px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.flexa-pricing__section-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--pricing-text);
+}
+
+.flexa-pricing__section-sub {
+  margin: 0 0 16px;
+  color: var(--pricing-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.flexa-pricing__grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .flexa-pricing__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .flexa-pricing__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .flexa-pricing__grid--with-core-only {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.flexa-pricing__card {
+  background: #fff;
+  border: 2px solid var(--pricing-border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  cursor: pointer;
+}
+
+.flexa-pricing__card:hover:not(.flexa-pricing__card--disabled) {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.flexa-pricing__card--selected {
+  border-color: var(--pricing-accent, var(--p-blue, #0C2E5A));
+  background: #fff8f0;
+  box-shadow: 0 4px 16px rgba(242, 144, 16, 0.12);
+}
+
+.flexa-pricing__card--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.flexa-pricing__card-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--pricing-text);
+  margin-bottom: 4px;
+}
+
+.flexa-pricing__card-range {
+  font-size: 0.8rem;
+  color: var(--pricing-muted);
+  margin-bottom: 4px;
+}
+
+.flexa-pricing__card-subrange {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-bottom: 10px;
+}
+
+.flexa-pricing__card--core-only {
+  background: linear-gradient(180deg, #fff8f0 0%, #fffdfb 100%);
+  border-color: #f5c98a;
+  border-width: 2px;
+  padding: 18px 16px;
+  box-shadow: 0 6px 20px rgba(242, 144, 16, 0.1);
+}
+
+.flexa-pricing__change-banner {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  border: 1px solid var(--pricing-border);
+}
+
+.flexa-pricing__change-banner--upgrade {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.flexa-pricing__change-banner--downgrade {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.flexa-pricing__change-banner--same {
+  background: #fff8f0;
+  color: #92400e;
+  border-color: #fde8d0;
+}
+
+.flexa-pricing__diff--up {
+  color: #16a34a;
+}
+
+.flexa-pricing__diff--down {
+  color: #b45309;
+}
+
+.flexa-pricing__card--active .flexa-pricing__select-btn {
+  background: #fff8f0;
+  border-color: #fde8d0;
+  color: var(--pricing-accent, var(--p-blue, #0C2E5A));
+  cursor: default;
+}
+
+.flexa-pricing__card-rate--flat {
+  font-size: 1.35rem;
+}
+
+.flexa-pricing__user-picker {
+  margin: 20px 0 8px;
+}
+
+.flexa-pricing__section-title--tiers {
+  margin-top: 24px;
+}
+
+.flexa-pricing__user-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.flexa-pricing__user-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--pricing-border);
+  background: #fff;
+  color: var(--pricing-text);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.flexa-pricing__user-btn:hover:not(:disabled) {
+  border-color: var(--pricing-accent, var(--p-blue, #0C2E5A));
+  color: var(--pricing-accent, var(--p-blue, #0C2E5A));
+}
+
+.flexa-pricing__user-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.flexa-pricing__user-input {
+  width: 88px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--pricing-border);
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.flexa-pricing__user-label {
+  color: var(--pricing-muted);
+  font-size: 0.95rem;
+}
+
+.flexa-pricing__calculator {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff8f0;
+  border: 1px solid #fde8d0;
+}
+
+.flexa-pricing__calculator-title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--pricing-text);
+}
+
+.flexa-pricing__calculator-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: var(--pricing-body);
+  padding: 6px 0;
+}
+
+.flexa-pricing__calculator-total {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #fde8d0;
+  font-weight: 700;
+  color: var(--pricing-accent, var(--p-blue, #0C2E5A));
+}
+
+.flexa-pricing__calculator-note {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.flexa-pricing__calculator-warning {
+  margin: 10px 0 0;
+  color: #b45309;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* ── FlexaPricingPage split layout ─────────────────────────────────────── */
+
+.flexa-pricing-page {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  overflow-x: hidden;
+}
+
+.flexa-pricing-page--split {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.flexa-pricing-page__main {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 32px 32px 0;
+  box-sizing: border-box;
+}
+
+.flexa-pricing-page__summary-panel {
+  flex: 0 0 340px;
+  width: 340px;
+  min-width: 280px;
+  max-width: 340px;
+  background: var(--pricing-dark);
+  color: #fff;
+  border-radius: 0 12px 12px 0;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 26px 24px;
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.flexa-pricing-page__header {
+  margin-bottom: 20px;
+}
+
+.flexa-pricing-page__title {
+  margin: 0 0 6px;
+  font-family: var(--pricing-serif);
+  font-size: clamp(1.5rem, 2.5vw, 1.875rem);
+  font-weight: 500;
+  color: var(--pricing-text);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.flexa-pricing-page__subtitle-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 0.875rem;
+  color: var(--pricing-muted);
+}
+
+.flexa-pricing-page__edit-modules {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--pricing-accent);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.flexa-pricing-page__edit-modules:hover {
+  color: var(--pricing-accent-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.flexa-pricing-page__core {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  border-top: 1px solid var(--pricing-border);
+  border-bottom: 1px solid var(--pricing-border);
+  margin-bottom: 18px;
+}
+
+.flexa-pricing-page__core-left {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.flexa-pricing-page__core-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.flexa-pricing-page__core-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pricing-text);
+}
+
+.flexa-pricing-page__core-badge {
+  display: inline-block;
+  background: #fef4e8;
+  color: #c06e08;
+  border: 1px solid #fde8d0;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.flexa-pricing-page__core-features-inline {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--pricing-muted);
+  line-height: 1.55;
+}
+
+.flexa-pricing-page__core-price-block {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.flexa-pricing-page__core-price-was {
+  font-family: var(--pricing-serif);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--pricing-muted, #9ca3af);
+  text-decoration: line-through;
+  text-align: right;
+  margin-bottom: 2px;
+}
+
+.flexa-pricing-page__core-price {
+  font-family: var(--pricing-serif);
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 500;
+  color: var(--pricing-text);
+  line-height: 1.1;
+}
+
+.flexa-pricing-page__core-price-unit {
+  font-family: var(--pricing-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--pricing-muted);
+}
+
+.flexa-pricing-page__users-section {
+  margin-bottom: 20px;
+}
+
+.flexa-pricing-page__label-caps {
+  display: block;
+  margin: 0 0 10px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pricing-muted);
+}
+
+.flexa-pricing-page__users-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.flexa-pricing-page__user-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flexa-pricing-page__stepper-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--pricing-border);
+  background: #fff;
+  color: var(--pricing-text);
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.flexa-pricing-page__stepper-btn:hover:not(:disabled) {
+  border-color: var(--pricing-accent);
+  color: var(--pricing-accent);
+}
+
+.flexa-pricing-page__stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.flexa-pricing-page__stepper-value {
+  min-width: 48px;
+  text-align: center;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--pricing-text);
+}
+
+.flexa-pricing-page__slider-wrap {
+  position: relative;
+  padding-top: 20px;
+}
+
+.flexa-pricing-page__slider-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  background: var(--pricing-text);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.flexa-pricing-page__slider-tooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--pricing-text);
+  border-bottom: none;
+}
+
+.flexa-pricing-page__slider {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  background: linear-gradient(
+    to right,
+    var(--pricing-accent) 0%,
+    var(--pricing-accent) var(--slider-fill, 50%),
+    #e5e7eb var(--slider-fill, 50%),
+    #e5e7eb 100%
+  );
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.flexa-pricing-page__slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--pricing-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.flexa-pricing-page__slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--pricing-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.flexa-pricing-page__slider-scale {
+  position: relative;
+  height: 16px;
+  margin-top: 8px;
+  font-size: 0.6875rem;
+  color: #9ca3af;
+}
+
+.flexa-pricing-page__tiers-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.flexa-pricing-page__tiers-header .flexa-pricing-page__label-caps {
+  margin-bottom: 0;
+}
+
+.flexa-pricing-page__tiers-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--pricing-muted);
+  text-align: right;
+}
+
+.flexa-pricing-page__tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.flexa-pricing-page__tier-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 14px 16px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+
+.flexa-pricing-page__tier-row:hover:not(.flexa-pricing-page__tier-row--disabled) {
+  border-color: #d1d5db;
+  background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.flexa-pricing-page__tier-row--selected {
+  background: #fff8f0 !important;
+  border-color: var(--pricing-accent, #0C2E5A) !important;
+  border-width: 2px !important;
+  box-shadow: 0 4px 16px rgba(249, 148, 23, 0.12) !important;
+  padding-left: 14px;
+}
+
+.flexa-pricing-page__tier-row--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.flexa-pricing-page__tier-radio {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease;
+}
+
+.flexa-pricing-page__tier-row--selected .flexa-pricing-page__tier-radio {
+  border-color: var(--pricing-accent, #0C2E5A);
+}
+
+.flexa-pricing-page__tier-radio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pricing-accent, #0C2E5A);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.flexa-pricing-page__tier-row--selected .flexa-pricing-page__tier-radio-dot {
+  opacity: 1;
+}
+
+.flexa-pricing-page__tier-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.flexa-pricing-page__tier-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.flexa-pricing-page__tier-name {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--pricing-text, #111827);
+  margin-right: 4px;
+}
+
+.flexa-pricing-page__tier-user-range {
+  margin: 2px 0 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.flexa-pricing-page__tier-features {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.flexa-pricing-page__tier-features li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 0.8125rem;
+  color: var(--pricing-accent, #0C2E5A);
+  font-weight: 500;
+}
+
+.flexa-pricing-page__tier-features li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  font-size: 0.75rem;
+}
+
+.flexa-pricing-page__tier-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.flexa-pricing-page__tier-badge--popular {
+  background: var(--pricing-accent, #0C2E5A);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+}
+
+.flexa-pricing-page__tier-badge--yours {
+  background: transparent;
+  color: var(--pricing-accent, #0C2E5A);
+  padding: 0;
+  margin-left: 2px;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.flexa-pricing-page__tier-desc {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--pricing-muted, #6b7280);
+  line-height: 1.4;
+}
+
+.flexa-pricing-page__tier-range-block {
+  text-align: right;
+  margin-right: 20px;
+  flex-shrink: 0;
+}
+
+.flexa-pricing-page__tier-range-val {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.flexa-pricing-page__tier-estimate {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.flexa-pricing-page__tier-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  flex-shrink: 0;
+  text-align: right;
+  min-width: 100px;
+}
+
+.flexa-pricing-page__tier-rate-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.flexa-pricing-page__tier-rate {
+  font-family: var(--pricing-serif);
+  font-size: 1.75rem;
+  font-weight: 500;
+  color: var(--pricing-text, #111827);
+  line-height: 1;
+}
+
+.flexa-pricing-page__tier-rate-unit {
+  font-family: var(--pricing-sans);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--pricing-muted, #6b7280);
+  line-height: 1;
+}
+
+.flexa-pricing-page__tier-badge--discount {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.flexa-pricing-page__tier-ineligible {
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.flexa-pricing-page__tier-rate-was {
+  font-family: var(--pricing-serif);
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--pricing-muted, #9ca3af);
+  text-decoration: line-through;
+  text-align: right;
+  margin-bottom: 2px;
+}
+
+.flexa-pricing-page__tier-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pricing-accent);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.flexa-pricing-page__tier-expand-btn:hover {
+  color: var(--pricing-accent-dark);
+}
+
+.flexa-pricing-page__tier-features {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.flexa-pricing-page__tier-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--pricing-body);
+  line-height: 1.4;
+}
+
+.flexa-pricing-page__tier-feature-check {
+  flex-shrink: 0;
+  color: #16a34a;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.flexa-pricing-page__summary-title {
+  margin: 0 0 16px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pricing-dark-label);
+}
+
+.flexa-pricing-page__summary-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.flexa-pricing-page__summary-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.flexa-pricing-page__summary-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
+.flexa-pricing-page__summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 0.875rem;
+  color: var(--pricing-dark-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.flexa-pricing-page__summary-row strong {
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.flexa-pricing-page__summary-was {
+  text-decoration: line-through;
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-weight: 500 !important;
+}
+
+.flexa-pricing-page__summary-row-label {
+  line-height: 1.4;
+}
+
+.flexa-pricing-page__summary-row-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
+}
+
+.flexa-pricing-page__summary-note {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--pricing-dark-muted);
+  line-height: 1.5;
+}
+
+.flexa-pricing-page__summary-total {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(196, 165, 116, 0.35);
+}
+
+.flexa-pricing-page__summary-total-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pricing-dark-label);
+}
+
+.flexa-pricing-page__summary-total-amount {
+  font-family: var(--pricing-serif);
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.05;
+}
+
+.flexa-pricing-page__summary-total-unit {
+  font-family: var(--pricing-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pricing-dark-muted);
+}
+
+.flexa-pricing-page__summary-meta {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  color: var(--pricing-dark-muted);
+}
+
+.flexa-pricing-page__summary-cta {
+  flex-shrink: 0;
+  margin-top: 16px;
+}
+
+.flexa-pricing-page__continue-btn {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 20px;
+  background: var(--pricing-accent);
+  color: #111827;
+  font-family: var(--pricing-sans);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.01em;
+}
+
+
+.flexa-pricing-page__continue-btn:hover:not(:disabled) {
+  background: var(--pricing-accent-dark);
+  box-shadow: 0 4px 14px rgba(249, 148, 23, 0.35);
+}
+
+.flexa-pricing-page__continue-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.flexa-pricing-page__summary-footer {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.35);
+  line-height: 1.45;
+}
+
+.flexa-pricing-page__module-changes,
+.flexa-pricing-page__module-changes.onboarding-adjustment-preview__modules {
+  margin-top: 16px;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.flexa-pricing-page__module-change-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.flexa-pricing-page__module-changes .onboarding-adjustment-preview__chip-label {
+  display: block;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #475569;
+  line-height: 1.2;
+}
+
+.flexa-pricing-page__module-changes .onboarding-pricing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.flexa-pricing-page__module-changes-priority {
+  margin: 0 0 18px;
+  padding: 16px 16px 14px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.flexa-pricing-page__module-changes-priority .flexa-pricing-page__module-changes {
+  margin-top: 0;
+}
+
+.flexa-pricing-page__tier-row--locked {
+  cursor: default;
+  background: #fffaf3;
+}
+
+.flexa-pricing-page__tier-row--locked:hover {
+  border-color: var(--pricing-accent, #0C2E5A);
+  box-shadow: none;
+}
+
+.flexa-pricing-page__tier-locked-note {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.flexa-pricing-page__warning {
+  margin: 0;
+  color: #b45309;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.flexa-pricing-page__summary-header--upgrade {
+  color: #86efac;
+}
+
+.flexa-pricing-page__summary-header--downgrade {
+  color: #fcd34d;
+}
+
+.flexa-pricing-page__calc-summary--refreshing {
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+.flexa-pricing-page--loading,
+.flexa-pricing-page--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  padding: 40px 20px;
+  color: var(--pricing-muted);
+}
+
+@media (max-width: 1100px) {
+  .flexa-pricing-page__summary-panel {
+    flex-basis: 300px;
+    width: 300px;
+    max-width: 300px;
+    min-width: 260px;
+    padding: 22px 20px 20px;
+  }
+
+  .flexa-pricing-page__main {
+    padding-right: 20px;
+  }
+
+  .plan-picker-modal--split {
+    --plan-picker-summary-width: 300px;
+  }
+}
+
+/* Tablet + phone: stack plan list above bill summary */
+@media (max-width: 900px) {
+  .flexa-pricing-page--split {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .flexa-pricing-page__main {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    padding: 20px 16px 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .flexa-pricing-page__header {
+    margin-bottom: 14px;
+    padding-right: 56px;
+  }
+
+  .flexa-pricing-page__title {
+    font-size: clamp(1.25rem, 5.5vw, 1.5rem);
+    line-height: 1.2;
+  }
+
+  .flexa-pricing-page__subtitle-row {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .flexa-pricing-page__users-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .flexa-pricing-page__tiers-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .flexa-pricing-page__tiers-note {
+    text-align: left;
+  }
+
+  .flexa-pricing-page__core {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .flexa-pricing-page__core-price-block {
+    text-align: left;
+    width: 100%;
+  }
+
+  .flexa-pricing-page__core-price-was {
+    text-align: left;
+  }
+
+  /* Compact tier cards — avoid horizontal squeeze on narrow screens */
+  .flexa-pricing-page__tier-row {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "radio body price"
+      ". meta meta";
+    column-gap: 10px;
+    row-gap: 8px;
+    align-items: start;
+    padding: 14px 12px;
+  }
+
+  .flexa-pricing-page__tier-radio {
+    grid-area: radio;
+    margin-top: 3px;
+  }
+
+  .flexa-pricing-page__tier-body {
+    grid-area: body;
+    min-width: 0;
+  }
+
+  .flexa-pricing-page__tier-price {
+    grid-area: price;
+    min-width: 0;
+    align-items: flex-end;
+    text-align: right;
+    padding-left: 0;
+  }
+
+  .flexa-pricing-page__tier-range-block {
+    grid-area: meta;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+  }
+
+  .flexa-pricing-page__tier-rate {
+    font-size: 1.35rem;
+  }
+
+  .flexa-pricing-page__tier-rate-unit {
+    font-size: 0.6875rem;
+  }
+
+  .flexa-pricing-page__tier-list {
+    max-height: none;
+    overflow: visible;
+    gap: 8px;
+  }
+
+  /* Pinned footer (flex), not sticky — reliable on iOS Safari */
+  .flexa-pricing-page__summary-panel {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    overflow: hidden;
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.2);
+    max-height: min(38vh, 280px);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .flexa-pricing-page__summary-title {
+    margin: 0 0 4px;
+    font-size: 0.625rem;
+  }
+
+  .flexa-pricing-page__summary-body {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 12vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .flexa-pricing-page__summary-row {
+    padding: 6px 0;
+    font-size: 0.75rem;
+    gap: 8px;
+  }
+
+  .flexa-pricing-page__summary-row strong {
+    white-space: normal;
+    text-align: right;
+  }
+
+  .flexa-pricing-page__summary-note {
+    font-size: 0.75rem;
+    margin: 4px 0 0;
+  }
+
+  .flexa-pricing-page__summary-total {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding-top: 8px;
+  }
+
+  .flexa-pricing-page__summary-total-amount {
+    font-size: 1.5rem;
+  }
+
+  .flexa-pricing-page__summary-cta {
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .flexa-pricing-page__continue-btn {
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 0.9375rem;
+  }
+
+  .flexa-pricing-page__summary-footer {
+    margin-top: 8px;
+    font-size: 0.625rem;
+  }
+
+  .flexa-pricing-page__module-changes .onboarding-pricing-chips {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .flexa-pricing-page__main {
+    padding: 16px 12px 10px;
+  }
+
+  .flexa-pricing-page__header {
+    padding-right: 48px;
+  }
+
+  .flexa-pricing-page__tier-row {
+    grid-template-columns: 20px minmax(0, 1fr);
+    grid-template-areas:
+      "radio body"
+      "price price"
+      "meta meta";
+  }
+
+  .flexa-pricing-page__tier-price {
+    align-items: flex-start;
+    text-align: left;
+    padding-left: 30px;
+  }
+
+  .flexa-pricing-page__tier-range-block {
+    padding-left: 30px;
+  }
+
+  .flexa-pricing-page__tier-rate-was {
+    text-align: left;
+  }
+
+  .flexa-pricing-page__tier-rate {
+    font-size: 1.25rem;
+  }
+
+  .flexa-pricing-page__users-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .flexa-pricing-page__summary-panel {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    max-height: min(42vh, 280px);
+  }
+
+  /* Lean footer on the smallest phones — keep short details if present */
+  .flexa-pricing-page__summary-body {
+    max-height: 9vh;
+  }
+
+  .flexa-pricing-page__summary-title {
+    margin-bottom: 0;
+  }
+
+  .flexa-pricing-page__summary-footer {
+    display: none;
+  }
+
+  .flexa-pricing-page__summary-meta {
+    font-size: 0.6875rem;
+  }
+}

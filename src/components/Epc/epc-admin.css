@@ -1,0 +1,8226 @@
+/**
+ * Admin surface — the certification modules, running on the portal's system.
+ *
+ * Everything here is scoped under `.epc-root` for the same reason the portal
+ * itself is: both applications can be mounted in one document, and neither
+ * should reach the other. Measurements are in `px`, not `rem`, because the
+ * admin sets a 14px root font size that would rescale every value.
+ *
+ * These rules add only what the admin frame does not already provide — page
+ * padding, a workflow rail, and the few form controls the portal's own Field
+ * shell has no equivalent for. Anything the portal already styles is used as
+ * it stands rather than restated here.
+ */
+
+.epc-root.epc-admin-surface {
+  background: var(--epc-page-bg);
+  min-height: 100%;
+}
+
+.epc-admin-page {
+  padding: 28px clamp(16px, 3vw, 28px) 56px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Already inside a horizontally padded frame — the Settings screens supply
+   their own side padding, but the vertical rhythm is still this page's. */
+.epc-admin-page--flush {
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 8px;
+  padding-bottom: 32px;
+  max-width: none;
+}
+
+/* The way back. An outlined chip rather than bare text: on a page of cards,
+   an unbordered link reads as body copy and gets missed. */
+.epc-root .epc-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 7px 14px 7px 8px;
+  border: 1px solid var(--epc-border);
+  border-radius: 999px;
+  background: var(--epc-surface);
+  font-size: var(--epc-text-label);
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-muted);
+  transition:
+    color var(--epc-transition-fast),
+    border-color var(--epc-transition-fast),
+    transform var(--epc-transition-fast);
+}
+
+.epc-root .epc-back__icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--epc-surface-muted);
+  transition: background var(--epc-transition-fast);
+}
+
+.epc-root .epc-back:hover {
+  color: var(--epc-text-strong);
+  border-color: var(--epc-border-strong);
+}
+
+.epc-root .epc-back:hover .epc-back__icon {
+  background: var(--epc-primary-soft);
+  color: var(--epc-primary);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .epc-root .epc-back:active {
+    transform: translateX(-1px);
+  }
+}
+
+/* Stack — the vertical rhythm between panels on a page. */
+
+.epc-root .epc-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Workflow rail — the stages of a certification, down the side of the page. */
+
+.epc-admin-workflow {
+  display: grid;
+  grid-template-columns: 268px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .epc-admin-workflow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.epc-root .epc-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.epc-root .epc-rail__item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  text-align: left;
+  transition:
+    background var(--epc-transition-fast),
+    border-color var(--epc-transition-fast);
+}
+
+.epc-root .epc-rail__item:hover:not(:disabled) {
+  background: var(--epc-surface-muted);
+}
+
+.epc-root .epc-rail__item.is-active {
+  background: var(--epc-surface);
+  border-color: var(--epc-primary);
+}
+
+.epc-root .epc-rail__item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.epc-root .epc-rail__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.epc-root .epc-rail__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--epc-text-label);
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.epc-root .epc-rail__code {
+  display: block;
+  margin: 2px 0 6px 24px;
+  font-size: 11px;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .epc-rail__pill {
+  margin-left: 24px;
+}
+
+.epc-root .epc-rail__dot {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.epc-root .epc-rail__dot--done {
+  background: var(--epc-success-soft);
+  color: var(--epc-success);
+}
+.epc-root .epc-rail__dot--busy {
+  background: var(--epc-warning-soft);
+  color: var(--epc-warning);
+}
+.epc-root .epc-rail__dot--stop {
+  background: var(--epc-danger-soft);
+  color: var(--epc-danger);
+}
+.epc-root .epc-rail__dot--idle {
+  background: var(--epc-surface-muted);
+  color: var(--epc-text-subtle);
+}
+
+/* Facts strip — the job at a glance, above a workflow. */
+
+.epc-root .epc-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px 24px;
+}
+
+.epc-root .epc-facts__label {
+  font-size: 11px;
+  font-weight: var(--epc-weight-bold);
+  letter-spacing: var(--epc-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .epc-facts__value {
+  margin-top: 3px;
+  font-size: var(--epc-text-label);
+  color: var(--epc-text-strong);
+  overflow-wrap: anywhere;
+}
+
+/* Notices — why a stage is locked, waiting, or finished. */
+
+.epc-root .epc-notice {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: var(--epc-text-label);
+  line-height: var(--epc-text-label-lh);
+}
+
+.epc-root .epc-notice--info {
+  background: var(--epc-info-soft);
+  color: var(--epc-info);
+}
+.epc-root .epc-notice--ok {
+  background: var(--epc-success-soft);
+  color: var(--epc-success);
+}
+.epc-root .epc-notice--warn {
+  background: var(--epc-warning-soft);
+  color: var(--epc-warning);
+}
+.epc-root .epc-notice--stop {
+  background: var(--epc-danger-soft);
+  color: var(--epc-danger);
+}
+
+.epc-root .epc-notice__icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.epc-root .epc-notice strong {
+  font-weight: var(--epc-weight-bold);
+}
+
+/* Action rows at the foot of a form. */
+
+.epc-root .epc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 18px;
+  margin-top: 20px;
+  border-top: 1px solid var(--epc-border);
+}
+
+/* Document preview — a generated PDF, opened in place. */
+
+.epc-root .epc-doc {
+  border: 1px solid var(--epc-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--epc-surface);
+}
+
+.epc-root .epc-doc + .epc-doc {
+  margin-top: 10px;
+}
+
+.epc-root .epc-doc__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.epc-root .epc-doc__head:disabled {
+  cursor: default;
+}
+
+.epc-root .epc-doc__grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.epc-root .epc-doc__title {
+  font-size: var(--epc-text-label);
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+}
+
+.epc-root .epc-doc__meta {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .epc-doc__body {
+  border-top: 1px solid var(--epc-border);
+  padding: 12px 14px 14px;
+}
+
+.epc-root .epc-doc__frame {
+  height: 620px;
+  border: 1px solid var(--epc-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--epc-surface-muted);
+}
+
+.epc-root .epc-doc__frame object,
+.epc-root .epc-doc__frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.epc-root .epc-doc__status {
+  display: grid;
+  place-items: center;
+  height: 200px;
+  font-size: var(--epc-text-label);
+  color: var(--epc-text-muted);
+}
+
+.epc-root .epc-doc__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Signature capture. */
+
+.epc-root .epc-sig {
+  border: 1px solid var(--epc-border);
+  border-radius: 10px;
+  background: var(--epc-surface);
+  padding: 14px;
+}
+
+.epc-root .epc-sig__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.epc-root .epc-sig__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--epc-surface-muted);
+  border-radius: 9px;
+}
+
+.epc-root .epc-sig__tab {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--epc-text-muted);
+}
+
+.epc-root .epc-sig__tab.is-active {
+  background: var(--epc-surface);
+  color: var(--epc-text-strong);
+  font-weight: var(--epc-weight-bold);
+  box-shadow: 0 1px 3px rgba(16, 16, 16, 0.12);
+}
+
+.epc-root .epc-sig__pad {
+  border: 1px dashed var(--epc-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.epc-root .epc-sig__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .epc-sig__clear {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--epc-text-muted);
+  text-decoration: underline;
+}
+
+.epc-root .epc-sig__drop {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px;
+  border: 1px dashed var(--epc-border);
+  border-radius: 8px;
+}
+
+.epc-root .epc-sig__preview {
+  max-height: 110px;
+  object-fit: contain;
+}
+
+.epc-root .epc-sig--compact {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.epc-root .epc-sig--compact .epc-sig__head {
+  margin-bottom: 6px;
+  gap: 6px;
+}
+
+.epc-root .epc-sig--compact .epc-doc__meta {
+  font-size: 10px;
+  margin: 0;
+}
+
+.epc-root .epc-sig--compact .epc-sig__pad {
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.epc-root .epc-sig--compact .epc-sig__preview {
+  max-height: 56px;
+}
+
+.epc-root .epc-sig--compact .epc-sig__foot {
+  margin-top: 4px;
+  font-size: 10px;
+}
+
+.epc-root .epc-sig--compact .epc-sig__tab {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+/* Signature roster — who has signed a document, and who is still owed. */
+
+.epc-root .epc-signers {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--epc-border);
+  border-bottom: 1px solid var(--epc-border);
+  margin: 12px 0;
+}
+
+.epc-root .epc-signers__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.epc-root .epc-signers__row + .epc-signers__row {
+  border-top: 1px solid var(--epc-border);
+}
+
+.epc-root .epc-signers__name {
+  font-size: var(--epc-text-label);
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+}
+
+.epc-root .epc-signers__meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--epc-text-subtle);
+}
+
+/* Repeatable form rows. */
+
+.epc-root .epc-repeat {
+  border: 1px solid var(--epc-border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.epc-root .epc-repeat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.epc-root .epc-repeat__label {
+  font-size: 12px;
+  font-weight: var(--epc-weight-bold);
+  letter-spacing: var(--epc-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .epc-file {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.epc-root .epc-file__picked {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.epc-root .epc-file__preview {
+  max-width: 220px;
+  max-height: 140px;
+  object-fit: contain;
+  border: 1px solid var(--epc-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.epc-root .epc-file__current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.epc-root .epc-file__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.epc-root .epc-file__hint {
+  font-size: 12px;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .epc-file__hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Checkboxes and radios, which the portal's Field shell has no control for. */
+
+.epc-root .epc-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.epc-root .epc-choice--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.epc-root .epc-choice__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border: 1px solid var(--epc-border);
+  border-radius: 8px;
+  background: var(--epc-surface);
+  font-size: var(--epc-text-label);
+  color: var(--epc-text);
+  cursor: pointer;
+  transition:
+    border-color var(--epc-transition-fast),
+    background var(--epc-transition-fast);
+}
+
+.epc-root .epc-choice__option:hover {
+  border-color: var(--epc-primary);
+}
+
+.epc-root .epc-choice__option.is-selected {
+  border-color: var(--epc-primary);
+  background: var(--epc-primary-soft);
+  color: var(--epc-text-strong);
+  font-weight: var(--epc-weight-bold);
+}
+
+.epc-root .epc-choice__option.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.epc-root .epc-choice__option input {
+  accent-color: var(--epc-primary);
+  margin: 0;
+}
+
+/* Check point: Y/N chips share the row with the optional note. */
+
+.epc-root .epc-checkpoint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.epc-root .epc-checkpoint .epc-choice {
+  flex: 0 0 auto;
+}
+
+.epc-root .epc-checkpoint__note {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.epc-root .epc-checkpoint__note .epc-input {
+  width: 100%;
+}
+
+/* A read-only value, where the portal would show an input. */
+
+.epc-root .epc-readonly {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 13px;
+  border: 1px solid var(--epc-border);
+  border-radius: 8px;
+  background: var(--epc-surface-muted);
+  font-size: var(--epc-text-label);
+  color: var(--epc-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.epc-root .epc-readonly--empty {
+  color: var(--epc-text-subtle);
+  font-style: italic;
+}
+
+/* Section blocks inside a long form. */
+
+.epc-root .epc-section + .epc-section {
+  margin-top: 26px;
+}
+
+.epc-root .epc-section__head {
+  margin-bottom: 14px;
+}
+
+.epc-root .epc-section__title {
+  font-family: var(--epc-font-display);
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+}
+
+.epc-root .epc-section__desc {
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--epc-text-muted);
+}
+
+/* Toolbar above a table: search, filters and actions on one line. */
+
+.epc-root .epc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.epc-root .epc-toolbar__grow {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.epc-root .epc-toolbar__right {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+/* A table cell that carries a name over a quieter second line. */
+
+.epc-root .epc-cell__primary {
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+}
+
+.epc-root .epc-cell__secondary {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .epc-cell__link {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-primary);
+  text-align: left;
+}
+
+.epc-root .epc-cell__link:hover {
+  text-decoration: underline;
+}
+
+/* Right-hand slide-over, for a record opened from a list. */
+
+.epc-root .epc-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.epc-root .epc-drawer__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 16, 16, 0.42);
+}
+
+.epc-root .epc-drawer__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  height: 100%;
+  background: var(--epc-page-bg);
+  box-shadow: -20px 0 60px rgba(16, 16, 16, 0.2);
+}
+
+.epc-root .epc-drawer__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--epc-border);
+  background: var(--epc-surface);
+}
+
+.epc-root .epc-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.epc-root .epc-drawer__foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--epc-border);
+  background: var(--epc-surface);
+}
+
+.epc-root .epc-drawer__close {
+  border: 0;
+  background: none;
+  padding: 6px;
+  border-radius: 8px;
+  color: var(--epc-text-subtle);
+  line-height: 0;
+}
+
+.epc-root .epc-drawer__close:hover {
+  background: var(--epc-surface-muted);
+  color: var(--epc-text-strong);
+}
+
+/* Money breakdown, as it appears on a quotation or an invoice. */
+
+.epc-root .epc-money {
+  border: 1px solid var(--epc-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.epc-root .epc-money__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: var(--epc-text-label);
+  color: var(--epc-text-muted);
+}
+
+.epc-root .epc-money__row + .epc-money__row {
+  border-top: 1px solid var(--epc-border);
+}
+
+.epc-root .epc-money__row--total {
+  border-top: 1px solid var(--epc-border);
+  background: var(--epc-surface-muted);
+  color: var(--epc-text-strong);
+  font-weight: var(--epc-weight-bold);
+}
+
+.epc-root .epc-money__value {
+  font-variant-numeric: tabular-nums;
+  color: var(--epc-text-strong);
+}
+
+/* Pagination footer under a table. */
+
+.epc-root .epc-tablefoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  margin-top: 4px;
+  border-top: 1px solid var(--epc-border);
+  font-size: 12.5px;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .epc-tablefoot__pages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
+/* The line that opens a record: its reference, its state, and what you can do
+   with it. Always the same shape, so a reference is always in the same place. */
+
+.epc-root .epc-recordhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--epc-border);
+}
+
+.epc-root .epc-recordhead__ref {
+  font-family: var(--epc-font-display);
+  font-size: 17px;
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+  letter-spacing: -0.01em;
+}
+
+.epc-root .epc-recordhead__spacer {
+  flex: 1 1 auto;
+}
+
+/* Buttons carry an icon beside their label often enough to be worth setting
+   once rather than per button. */
+
+.epc-root .epc-btn svg {
+  flex: 0 0 auto;
+}
+
+/* Rail items get a little more room between the marker and the title, and the
+   pill sits on its own line so a long stage name never crowds it. */
+
+.epc-root .epc-rail__item + .epc-rail__item {
+  margin-top: 2px;
+}
+
+/* Stat tiles stay on one row.
+
+   The portal drops to two columns below 1280px, which is the right call there
+   because it has the full window. Here the admin sidebar takes roughly 380px,
+   so the content area is under that threshold on an ordinary screen and the
+   four tiles would break into two rows that read as two groups. They shrink
+   instead, and only stack when the column is genuinely too narrow to hold
+   them. */
+
+.epc-root.epc-admin-surface .epc-statgrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.epc-root.epc-admin-surface .epc-stat {
+  min-width: 0;
+}
+
+.epc-root.epc-admin-surface .epc-stat {
+  padding: 16px 18px;
+}
+
+/* Four tiles in a narrower column means each is tighter than the portal's
+   own. The label truncates rather than wrapping to a second line, which would
+   make one tile taller than its neighbours. */
+.epc-root.epc-admin-surface .epc-stat__head {
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.epc-root.epc-admin-surface .epc-stat__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A formatted sum is the longest thing a tile ever holds, so it is allowed to
+   set its own size rather than overflow the track. */
+.epc-root.epc-admin-surface .epc-stat__value {
+  font-size: clamp(18px, 1.6vw, 26px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .epc-root.epc-admin-surface .epc-statgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .epc-root.epc-admin-surface .epc-statgrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Tables: a right-aligned action column should not stretch, and long
+   references should not force a horizontal scroll on their own. */
+
+.epc-root .epc-table td:last-child,
+.epc-root .epc-table th:last-child {
+  white-space: nowrap;
+}
+
+/* Cards holding a table read better without doubled padding under the head. */
+
+.epc-root .epc-card-panel > .epc-table-wrap:last-child {
+  margin-bottom: -4px;
+}
+
+/* Search box sitting inside a card header rather than a filter bar. */
+
+.epc-root .epc-card-head__action .epc-search {
+  margin: 0;
+}
+
+/* Workflow menu: a job's stages, opened from the row they belong to. The panel
+   is positioned against the viewport because the table it sits in scrolls. */
+
+.epc-root .epc-wfmenu {
+  display: inline-flex;
+}
+
+.epc-root .epc-wfmenu__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--epc-border, #e5e5e2);
+  border-radius: 8px;
+  background: var(--epc-surface, #fff);
+  color: var(--epc-text-muted, #6b6b66);
+  cursor: pointer;
+  transition:
+    border-color var(--epc-transition-fast, 0.15s),
+    color var(--epc-transition-fast, 0.15s);
+}
+
+.epc-root .epc-wfmenu__trigger:hover,
+.epc-root .epc-wfmenu__trigger[aria-expanded="true"] {
+  border-color: var(--epc-primary, #8c1d18);
+  color: var(--epc-primary, #8c1d18);
+}
+
+.epc-root .epc-wfmenu__panel {
+  position: fixed;
+  z-index: 9999;
+  width: 288px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--epc-surface, #fff);
+  border: 1px solid var(--epc-border, #e5e5e2);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(16, 16, 16, 0.16);
+}
+
+.epc-root .epc-wfmenu__head {
+  margin: 0;
+  padding: 6px 10px 8px;
+  font-size: 11px;
+  font-weight: var(--epc-weight-semibold, 600);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--epc-text-subtle, #8a8a84);
+}
+
+.epc-root .epc-wfmenu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.epc-root .epc-wfmenu__item:hover {
+  background: var(--epc-surface-muted, #f4f4f2);
+}
+
+.epc-root .epc-wfmenu__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.epc-root .epc-wfmenu__title {
+  font-size: var(--epc-text-label, 13px);
+  font-weight: var(--epc-weight-semibold, 600);
+  color: var(--epc-text-strong, #1a1a18);
+}
+
+.epc-root .epc-wfmenu__code {
+  font-size: 11px;
+  color: var(--epc-text-subtle, #8a8a84);
+}
+
+.epc-root .epc-wfmenu__empty {
+  margin: 0;
+  padding: 8px 10px 12px;
+  font-size: var(--epc-text-label, 13px);
+  color: var(--epc-text-muted, #6b6b66);
+}
+
+/* A fixed table of the same few questions asked of every row — the evaluation
+   plan's activities, laid out the way the printed master lays them out. */
+
+.epc-root .epc-matrix__wrap {
+  overflow-x: auto;
+  border: 1px solid var(--epc-border);
+  border-radius: 10px;
+  background: var(--epc-surface);
+}
+
+.epc-root .epc-matrix {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+}
+
+.epc-root .epc-matrix th,
+.epc-root .epc-matrix td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--epc-border);
+}
+
+.epc-root .epc-matrix thead th {
+  font-size: 11px;
+  font-weight: var(--epc-weight-bold);
+  letter-spacing: var(--epc-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--epc-text-subtle);
+  background: var(--epc-surface-muted);
+  white-space: nowrap;
+}
+
+.epc-root .epc-matrix tbody tr:last-child th,
+.epc-root .epc-matrix tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.epc-root .epc-matrix__no {
+  width: 38px;
+  text-align: center;
+  color: var(--epc-text-subtle);
+  font-size: 12px;
+}
+
+/* The activity's name carries the row, so it reads as a heading rather than
+   as another cell of data. */
+.epc-root .epc-matrix__rowlabel {
+  min-width: 190px;
+  font-size: var(--epc-text-label);
+  font-weight: var(--epc-weight-semibold);
+  color: var(--epc-text-strong);
+}
+
+/* Inputs sit flush in their cells: a 48px control per cell would make each
+   row taller than the three lines of text beside it. */
+.epc-root .epc-matrix__input {
+  height: 36px;
+  min-width: 130px;
+  padding: 0 10px;
+  font-size: var(--epc-text-label);
+}
+
+.epc-root .epc-matrix__input.is-invalid {
+  border-color: var(--epc-danger);
+}
+
+.epc-root .epc-matrix__value {
+  font-size: var(--epc-text-label);
+  color: var(--epc-text-muted);
+}
+
+/* Dynamic Forms — settings picker + field editor ----------------------- */
+
+.epc-root .df-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* Compact search — own styles so admin `label` rules cannot stretch it. */
+.epc-root .df-search {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--epc-border);
+  border-radius: 10px;
+  background: var(--epc-surface);
+  color: var(--epc-text-subtle);
+  flex: 0 0 auto;
+}
+
+.epc-root .df-search:focus-within {
+  border-color: var(--epc-primary);
+  box-shadow: var(--epc-shadow-focus);
+}
+
+.epc-root .df-search__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 13.5px;
+  color: var(--epc-text-strong);
+}
+
+.epc-root .df-search__input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.epc-root .df-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.epc-root .df-stages__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--epc-border);
+  border-radius: 999px;
+  background: var(--epc-surface);
+  font-size: 12.5px;
+  font-weight: var(--epc-weight-semibold);
+  color: var(--epc-text-muted);
+  transition:
+    border-color var(--epc-transition-fast),
+    background var(--epc-transition-fast),
+    color var(--epc-transition-fast);
+}
+
+.epc-root .df-stages__chip:hover {
+  border-color: var(--epc-border-strong);
+  color: var(--epc-text-strong);
+}
+
+.epc-root .df-stages__chip.is-active {
+  border-color: var(--epc-primary);
+  background: var(--epc-primary-soft);
+  color: var(--epc-text-strong);
+}
+
+.epc-root .df-stages__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--epc-surface-muted);
+  font-size: 11px;
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-subtle);
+  line-height: 1;
+}
+
+.epc-root .df-stages__chip.is-active .df-stages__count {
+  background: var(--epc-surface);
+  color: var(--epc-primary);
+}
+
+.epc-root .df-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.epc-root .df-group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--epc-border);
+}
+
+.epc-root .df-group__title {
+  margin: 0;
+  font-family: var(--epc-font-display);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+}
+
+.epc-root .df-group__count {
+  font-size: 12px;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .df-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.epc-root .df-list__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--epc-border);
+  border-radius: 12px;
+  background: var(--epc-surface);
+  text-align: left;
+  transition:
+    border-color var(--epc-transition-fast),
+    background var(--epc-transition-fast),
+    box-shadow var(--epc-transition-fast);
+}
+
+.epc-root .df-list__item:hover {
+  border-color: var(--epc-primary);
+  background: var(--epc-primary-soft);
+  box-shadow: 0 1px 2px rgba(16, 16, 16, 0.04);
+}
+
+.epc-root .df-list__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--epc-surface-muted);
+  color: var(--epc-text-muted);
+}
+
+.epc-root .df-list__item:hover .df-list__icon {
+  background: var(--epc-surface);
+  color: var(--epc-primary);
+}
+
+.epc-root .df-list__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.epc-root .df-list__title {
+  font-size: var(--epc-text-label);
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+}
+
+.epc-root .df-list__meta {
+  font-size: 12px;
+  color: var(--epc-text-subtle);
+}
+
+.epc-root .df-list__side {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  justify-content: flex-end;
+  max-width: 46%;
+}
+
+.epc-root .df-list__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-primary);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .epc-root .df-list__item {
+    flex-wrap: wrap;
+  }
+
+  .epc-root .df-list__side {
+    width: 100%;
+    max-width: 100%;
+    justify-content: space-between;
+    padding-left: 54px;
+  }
+}
+
+.epc-root .df-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.epc-root .df-sections-intro {
+  margin: 4px 0 0;
+}
+
+.epc-root .df-sections-intro__title {
+  margin: 0;
+  font-family: var(--epc-font-display);
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+}
+
+.epc-root .df-sections-intro__desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--epc-text-muted);
+}
+
+.epc-root .df-section-toggle {
+  padding: 16px 20px;
+}
+
+.epc-root .df-section-body {
+  padding: 16px 20px 20px;
+}
+
+/* Field cards — clear numbered blocks so 1 / 2 / 3 are obvious. */
+
+.epc-root .df-fields {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.epc-root .df-field {
+  border: 1px solid var(--epc-border);
+  border-radius: 12px;
+  background: var(--epc-surface);
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(16, 16, 16, 0.03);
+}
+
+.epc-root .df-field__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--epc-surface-muted);
+  border-bottom: 1px solid var(--epc-border);
+}
+
+.epc-root .df-field__num {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--epc-surface);
+  border: 1px solid var(--epc-border);
+  font-size: 12.5px;
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+  line-height: 1;
+}
+
+.epc-root .df-field__intro {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.epc-root .df-field__title {
+  font-size: 13.5px;
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+  line-height: 1.35;
+}
+
+.epc-root .df-field__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.epc-root .df-field__type,
+.epc-root .df-field__flag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: var(--epc-weight-semibold);
+  line-height: 1.4;
+}
+
+.epc-root .df-field__type {
+  background: var(--epc-surface);
+  border: 1px solid var(--epc-border);
+  color: var(--epc-text-muted);
+}
+
+.epc-root .df-field__flag {
+  background: var(--epc-info-soft);
+  color: var(--epc-info);
+}
+
+.epc-root .df-field__body {
+  padding: 16px;
+}
+
+.epc-root .df-field__bound {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+}
+
+.epc-root .df-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: var(--epc-weight-semibold);
+  color: var(--epc-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.epc-root .df-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--epc-primary);
+}
+
+.epc-root .df-check.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.epc-root .df-save-bar {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  align-items: center;
+}
+
+.epc-root .df-save-hint {
+  margin-top: 0;
+  align-self: center;
+  max-width: 360px;
+}
+
+
+/* —— Inspection costing sheet — mirrors templates/inspectionCostingSheet.html —— */
+
+.epc-root .ics-page {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 9mm 11mm 8mm;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9.5pt;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.epc-root .ics-header {
+  position: relative;
+  min-height: 28mm;
+  display: grid;
+  grid-template-columns: 30mm 1fr;
+  align-items: center;
+  column-gap: 4mm;
+  margin-bottom: 2mm;
+}
+
+.epc-root .ics-logo-wrap {
+  width: 25mm;
+  height: 25mm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.epc-root .ics-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.epc-root .ics-logo-mark {
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid #333;
+  display: grid;
+  place-items: center;
+  font-size: 11pt;
+  font-weight: 700;
+  color: #0c2e5a;
+}
+
+.epc-root .ics-company-heading {
+  text-align: center;
+  line-height: 1.18;
+  padding-top: 1mm;
+}
+
+.epc-root .ics-company-name {
+  font-size: 18pt;
+  font-weight: 400;
+  margin-bottom: 1.5mm;
+}
+
+.epc-root .ics-title {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.epc-root .ics-subtitle {
+  font-size: 9.5pt;
+  font-weight: 700;
+  margin-top: 0.5mm;
+  white-space: nowrap;
+}
+
+.epc-root .ics-info-table,
+.epc-root .ics-cost-table,
+.epc-root .ics-signatures {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.epc-root .ics-info-table {
+  margin-top: 0.5mm;
+  border: 0.55mm solid #333;
+}
+
+.epc-root .ics-info-table td {
+  border: 0.35mm solid #333;
+  padding: 0.8mm 1.4mm;
+  vertical-align: top;
+}
+
+.epc-root .ics-section-no {
+  width: 10mm;
+  text-align: center;
+  vertical-align: top;
+}
+
+.epc-root .ics-labels {
+  width: 34mm;
+  line-height: 1.2;
+}
+
+.epc-root .ics-labels div {
+  min-height: 4.4mm;
+}
+
+.epc-root .ics-services-label,
+.epc-root .ics-job-label {
+  width: 34mm;
+  font-weight: 400;
+}
+
+.epc-root .ics-cost-table {
+  margin-top: 4.2mm;
+  border: 0.55mm solid #333;
+  table-layout: fixed;
+}
+
+.epc-root .ics-cost-table th,
+.epc-root .ics-cost-table td {
+  border: 0.35mm solid #333;
+  padding: 0.65mm 1.4mm;
+  line-height: 1.08;
+  vertical-align: middle;
+}
+
+.epc-root .ics-cost-table thead th {
+  text-align: center;
+  font-weight: 700;
+  height: 5.2mm;
+  font-size: 10pt;
+}
+
+.epc-root .ics-code {
+  width: 10mm;
+  text-align: center;
+}
+
+.epc-root .ics-category {
+  width: 47mm;
+}
+
+.epc-root .ics-manhour-cost {
+  width: 40mm;
+  text-align: center;
+}
+
+.epc-root .ics-manhour {
+  width: 19mm;
+  text-align: center;
+}
+
+.epc-root .ics-amount {
+  text-align: right;
+  padding-right: 4mm;
+  font-variant-numeric: tabular-nums;
+}
+
+.epc-root .ics-act {
+  width: 28px;
+  text-align: center;
+  padding: 2px !important;
+}
+
+.epc-root .ics-staff-code,
+.epc-root .ics-summary-code {
+  width: 10mm;
+  font-weight: 700;
+  text-align: center;
+}
+
+.epc-root .ics-staff-row td {
+  height: 6mm;
+}
+
+.epc-root .ics-summary-row td {
+  height: 5.5mm;
+}
+
+.epc-root .ics-bold {
+  font-weight: 700;
+}
+
+.epc-root .ics-equipment-row td {
+  height: auto;
+  min-height: 13mm;
+  vertical-align: middle;
+}
+
+.epc-root .ics-equipment-formula {
+  text-align: center;
+  line-height: 1.35;
+}
+
+.epc-root .ics-underline {
+  text-decoration: underline;
+}
+
+.epc-root .ics-a4-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 10px;
+  margin-top: 4px;
+  text-align: left;
+}
+
+.epc-root .ics-a4-inputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 8pt;
+  color: #333;
+  min-width: 110px;
+}
+
+.epc-root .ics-a4-readonly {
+  margin-top: 3px;
+  font-size: 8pt;
+  color: #444;
+}
+
+.epc-root .ics-yellow {
+  background: #fff200;
+}
+
+.epc-root .ics-profit-row td,
+.epc-root .ics-price-row td {
+  height: auto;
+  min-height: 6mm;
+}
+
+.epc-root .ics-profit-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 4px;
+  font-weight: 400;
+  font-size: 8.5pt;
+}
+
+.epc-root .ics-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.epc-root .ics-radio input {
+  margin: 0;
+  accent-color: #0c2e5a;
+}
+
+.epc-root .ics-profit-val {
+  width: 90px;
+}
+
+.epc-root .ics-round-hint {
+  font-weight: 400;
+  font-size: 8pt;
+  color: #555;
+}
+
+.epc-root .ics-signatures {
+  margin-top: 4.5mm;
+  border: 0.55mm solid #333;
+  table-layout: fixed;
+}
+
+.epc-root .ics-signatures td {
+  border: 0.35mm solid #333;
+  vertical-align: top;
+  height: 30mm;
+  padding: 1.3mm 1.4mm;
+}
+
+.epc-root .ics-signatures td.ics-sig-head {
+  height: auto;
+  padding-top: 1mm;
+  padding-bottom: 1mm;
+  font-size: 9pt;
+  vertical-align: middle;
+}
+
+.epc-root .ics-sig-details {
+  margin-top: 12mm;
+  line-height: 1.45;
+}
+
+.epc-root .ics-approved {
+  position: relative;
+}
+
+.epc-root .ics-final-price {
+  margin-top: 2mm;
+  border-top: 0.35mm solid #333;
+  padding-top: 1.2mm;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.epc-root .ics-approved .ics-sig-details {
+  margin-top: 12mm;
+}
+
+.epc-root .ics-final-in {
+  width: 110px;
+  display: inline-block;
+}
+
+.epc-root .ics-justification {
+  margin-top: 4.3mm;
+  font-size: 9.5pt;
+}
+
+.epc-root .ics-notes {
+  margin-top: 8mm;
+  font-size: 9pt;
+}
+
+.epc-root .ics-notes-title {
+  margin-bottom: 2mm;
+}
+
+.epc-root .ics-note-line {
+  display: grid;
+  grid-template-columns: 43mm 1fr;
+  margin-bottom: 1.2mm;
+}
+
+.epc-root .ics-note-symbol {
+  text-align: center;
+}
+
+.epc-root .ics-footer {
+  margin-top: 10mm;
+  padding-top: 1.5mm;
+  border-top: 0.35mm solid #333;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-size: 9pt;
+}
+
+.epc-root .ics-center {
+  text-align: center;
+}
+
+.epc-root .ics-right {
+  text-align: right;
+}
+
+.epc-root .ics-dv {
+  white-space: pre-wrap;
+  display: block;
+  min-height: 1.1em;
+}
+
+.epc-root .ics-dv--right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.epc-root .ics-in {
+  width: 100%;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-size: 9.5pt;
+  font-family: inherit;
+  background: #fff;
+  color: #111;
+}
+
+.epc-root .ics-in:focus {
+  outline: 1px solid #0c2e5a;
+  border-color: #0c2e5a;
+}
+
+.epc-root .ics-in--right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.epc-root .ics-textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  padding: 4px 6px;
+  font-size: 9.5pt;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 48px;
+}
+
+.epc-root .ics-textarea:focus {
+  outline: 1px solid #0c2e5a;
+  border-color: #0c2e5a;
+}
+
+.epc-root .ics-trash {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #fff;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+}
+
+.epc-root .ics-trash:hover {
+  color: #b91c1c;
+  border-color: #f1a0a0;
+  background: #fef2f2;
+}
+
+.epc-root .ics-add-row td {
+  background: #fafafa;
+  padding: 4px 6px !important;
+}
+
+.epc-root .ics-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #333;
+  background: #fff;
+  color: #111;
+  font-size: 9pt;
+  font-family: inherit;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.epc-root .ics-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.epc-root .ics-add-btn:not(:disabled):hover {
+  background: #f3f4f6;
+}
+
+.epc-root .ics-hint {
+  margin-left: 8px;
+  font-size: 8pt;
+  color: #666;
+}
+
+.epc-root .ics-empty-hint {
+  color: #666;
+  font-size: 9pt;
+  text-align: left !important;
+}
+
+.epc-root .ics-bad {
+  outline: 1px solid #ef4444;
+}
+
+.epc-root .ics-cost-table .epc-field {
+  margin: 0;
+}
+
+.epc-root .ics-cost-table .epc-field__label {
+  display: none;
+}
+
+.epc-root .ics-info-table .epc-field {
+  margin: 0;
+}
+
+.epc-root .ics-info-table .epc-field__label {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .epc-root .ics-page {
+    padding: 12px;
+    max-width: none;
+  }
+
+  .epc-root .ics-subtitle {
+    white-space: normal;
+  }
+}
+
+.epc-root .ics-prepared-cell {
+  vertical-align: top !important;
+}
+
+.epc-root .ics-sig-image {
+  display: block;
+  max-width: 100%;
+  max-height: 56px;
+  object-fit: contain;
+  margin: 4px 0;
+}
+
+.epc-root .ics-sig-placeholder {
+  min-height: 40px;
+  color: #999;
+  font-size: 9pt;
+  padding: 6px 0;
+}
+
+.epc-root .ics-signatures .ics-sig-details {
+  margin-top: 8px;
+}
+
+.epc-root .ics-signatures .ics-approved .ics-sig-details {
+  margin-top: 12mm;
+}
+
+/* —— Evaluation Plan (FOR-01-25) — PDF-shaped sheet —— */
+.epc-root .evp-page {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 8px 4px 24px;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+
+.epc-root .evp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.epc-root .evp-logo {
+  width: 96px;
+  height: auto;
+  object-fit: contain;
+}
+
+.epc-root .evp-doc-code {
+  text-align: right;
+  font-weight: 700;
+  font-size: 12px;
+  padding-top: 4px;
+}
+
+.epc-root .evp-title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  line-height: 1.25;
+}
+
+.epc-root .evp-info-table,
+.epc-root .evp-act-table,
+.epc-root .evp-sign-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #333;
+  margin-bottom: 12px;
+}
+
+.epc-root .evp-info-table td,
+.epc-root .evp-act-table th,
+.epc-root .evp-act-table td,
+.epc-root .evp-sign-table td {
+  border: 1px solid #333;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+.epc-root .evp-label {
+  width: 140px;
+  font-weight: 700;
+  background: #fafafa;
+}
+
+.epc-root .evp-act-table thead th {
+  background: #f3f3f3;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.epc-root .evp-col-no {
+  width: 36px;
+  text-align: center;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.epc-root .evp-col-act {
+  width: 22%;
+  min-width: 140px;
+}
+
+.epc-root .evp-col-date {
+  width: 14%;
+}
+
+.epc-root .evp-col-res,
+.epc-root .evp-col-std {
+  width: 16%;
+}
+
+.epc-root .evp-col-actn {
+  width: 36px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.epc-root .evp-in {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  padding: 2px 0;
+  color: inherit;
+}
+
+.epc-root .evp-in:focus {
+  background: #fffef5;
+}
+
+.epc-root .evp-dv {
+  display: block;
+  min-height: 1.2em;
+  white-space: pre-wrap;
+}
+
+.epc-root .evp-textarea {
+  width: 100%;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  font: inherit;
+  background: transparent;
+  min-height: 72px;
+}
+
+.epc-root .evp-textarea:focus {
+  background: #fffef5;
+}
+
+.epc-root .evp-bad {
+  outline: 1.5px solid #c0392b;
+  outline-offset: -1px;
+}
+
+.epc-root .evp-empty-hint {
+  text-align: center;
+  color: #6b7280;
+  font-size: 12px;
+  padding: 14px 8px !important;
+}
+
+.epc-root .evp-add-row td {
+  border-top: 1px dashed #999;
+  padding: 8px;
+}
+
+.epc-root .evp-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #333;
+  background: #fff;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.epc-root .evp-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.epc-root .evp-add-btn:not(:disabled):hover {
+  background: #f5f5f5;
+}
+
+.epc-root .evp-hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.epc-root .evp-trash {
+  border: 0;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+}
+
+.epc-root .evp-trash:hover {
+  color: #c0392b;
+}
+
+.epc-root .evp-sign-table td {
+  width: 33.33%;
+  height: 120px;
+}
+
+.epc-root .evp-sig-head {
+  font-weight: 700;
+  margin-bottom: 28px;
+}
+
+.epc-root .evp-sig-details {
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+.epc-root .evp-act-table .epc-field {
+  margin: 0;
+}
+
+.epc-root .evp-act-table .epc-field__label {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .epc-root .evp-page {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .epc-root .evp-act-table {
+    min-width: 720px;
+  }
+}
+
+/* —— Certification Costing Sheet (FOR-01-06) —— */
+.epc-root .ccs-page {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 8px 4px 24px;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+
+.epc-root .ccs-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.epc-root .ccs-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.epc-root .ccs-doc-code {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.epc-root .ccs-app-type {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.epc-root .ccs-file-no {
+  margin-left: auto;
+  font-size: 13px;
+}
+
+.epc-root .ccs-radio,
+.epc-root .ccs-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.epc-root .ccs-info-table,
+.epc-root .ccs-fee-table,
+.epc-root .ccs-sign-table,
+.epc-root .ccs-instr-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #333;
+  margin-bottom: 10px;
+}
+
+.epc-root .ccs-info-table td,
+.epc-root .ccs-fee-table th,
+.epc-root .ccs-fee-table td,
+.epc-root .ccs-sign-table td,
+.epc-root .ccs-instr-table td {
+  border: 1px solid #333;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+.epc-root .ccs-label {
+  width: 130px;
+  font-weight: 700;
+  background: #fafafa;
+}
+
+.epc-root .ccs-fee-table thead th {
+  background: #f3f3f3;
+  font-weight: 700;
+  text-align: center;
+  font-size: 12px;
+}
+
+.epc-root .ccs-col-act {
+  width: 70%;
+}
+
+.epc-root .ccs-col-amt {
+  width: 22%;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.epc-root .ccs-col-amt .ccs-in,
+.epc-root .ccs-col-amt .ccs-dv {
+  display: block;
+  width: 100%;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.epc-root .ccs-col-actn {
+  width: 36px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.epc-root .ccs-no {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.epc-root .ccs-grand td {
+  font-weight: 700;
+  background: #fafafa;
+}
+
+.epc-root .ccs-grand-amt {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding-right: 4px;
+}
+
+.epc-root .ccs-in {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  padding: 2px 0;
+}
+
+.epc-root .ccs-in:focus {
+  background: #fffef5;
+}
+
+.epc-root .ccs-in--right {
+  text-align: right;
+}
+
+.epc-root .ccs-dv {
+  display: block;
+  min-height: 1.2em;
+  white-space: pre-wrap;
+}
+
+.epc-root .ccs-dv--right {
+  text-align: right;
+}
+
+.epc-root .ccs-textarea {
+  width: 100%;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  font: inherit;
+  background: transparent;
+  min-height: 56px;
+  margin-top: 4px;
+}
+
+.epc-root .ccs-textarea:focus {
+  background: #fffef5;
+}
+
+.epc-root .ccs-bad {
+  outline: 1.5px solid #c0392b;
+  outline-offset: -1px;
+}
+
+.epc-root .ccs-empty-hint {
+  text-align: center;
+  color: #6b7280;
+  font-size: 12px;
+  padding: 14px 8px !important;
+}
+
+.epc-root .ccs-add-row td {
+  border-top: 1px dashed #999;
+}
+
+.epc-root .ccs-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #333;
+  background: #fff;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.epc-root .ccs-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.epc-root .ccs-add-btn:not(:disabled):hover {
+  background: #f5f5f5;
+}
+
+.epc-root .ccs-trash {
+  border: 0;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+}
+
+.epc-root .ccs-trash:hover {
+  color: #c0392b;
+}
+
+.epc-root .ccs-travel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.epc-root .ccs-discount {
+  border: 1px solid #333;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.epc-root .ccs-discount__label {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.epc-root .ccs-discount__radios {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.epc-root .ccs-discount__fields {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.epc-root .ccs-hint {
+  color: #6b7280;
+  font-size: 12px;
+  grid-column: 1 / -1;
+}
+
+.epc-root .ccs-notes {
+  font-size: 11px;
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+
+.epc-root .ccs-remarks-block {
+  margin-bottom: 10px;
+}
+
+.epc-root .ccs-sign-table td {
+  width: 50%;
+  height: 100px;
+}
+
+.epc-root .ccs-sig-head {
+  font-weight: 700;
+  margin-bottom: 28px;
+}
+
+.epc-root .ccs-sig-details {
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+.epc-root .ccs-instr-title {
+  font-weight: 700;
+  font-size: 12px;
+  margin: 8px 0 6px;
+}
+
+.epc-root .ccs-instr-table td {
+  width: 50%;
+  height: 90px;
+  font-size: 12px;
+}
+
+.epc-root .ccs-fee-table .epc-field {
+  margin: 0;
+}
+
+.epc-root .ccs-fee-table .epc-field__label {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .epc-root .ccs-page {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .epc-root .ccs-fee-table {
+    min-width: 560px;
+  }
+}
+
+/* —— Inspector Appointment Letter (FOR-06-06) — mirrors HTML template —— */
+.epc-root .ial-page {
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 15mm 18mm 28mm;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.epc-root .ial-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.epc-root .ial-company-box {
+  width: 115mm;
+  max-width: 70%;
+  height: 20mm;
+  border: 1px solid #555;
+  display: flex;
+  align-items: center;
+}
+
+.epc-root .ial-logo {
+  width: 18mm;
+  height: 18mm;
+  object-fit: contain;
+  margin: 0 3mm 0 1.5mm;
+}
+
+.epc-root .ial-company-info {
+  border-left: 1px solid #777;
+  height: 16mm;
+  padding: 0 0 0 3mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.25;
+  font-size: 11pt;
+}
+
+.epc-root .ial-master-area {
+  width: 48mm;
+  text-align: right;
+}
+
+.epc-root .ial-form-no {
+  font-size: 11pt;
+  text-align: right;
+}
+
+.epc-root .ial-header-rule {
+  border: 0;
+  border-top: 1px solid #222;
+  margin: 5mm 0 10mm;
+}
+
+.epc-root .ial-assignment-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-bottom: 9mm;
+}
+
+.epc-root .ial-assignment-table td {
+  border: 1px solid #444;
+  vertical-align: top;
+  min-height: 36mm;
+  height: 36mm;
+  padding: 5mm 2mm;
+  font-size: 10.5pt;
+  width: 50%;
+}
+
+.epc-root .ial-field-row {
+  margin-bottom: 7mm;
+}
+
+.epc-root .ial-field-row:last-child {
+  margin-bottom: 0;
+}
+
+.epc-root .ial-field-label {
+  display: inline;
+}
+
+.epc-root .ial-field-value {
+  font-weight: normal;
+}
+
+.epc-root .ial-field-control {
+  display: block;
+  margin-top: 4px;
+  max-width: 100%;
+}
+
+.epc-root .ial-field-control .epc-field,
+.epc-root .ial-field-control .epc-combobox {
+  margin: 0;
+}
+
+.epc-root .ial-in {
+  display: inline-block;
+  max-width: 100%;
+  margin-left: 4px;
+  border: 0;
+  border-bottom: 1px solid #888;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 1px 2px;
+}
+
+.epc-root .ial-in:focus {
+  outline: none;
+  border-bottom-color: #222;
+}
+
+.epc-root .ial-invalid,
+.epc-root .ial-in.ial-invalid {
+  border-bottom-color: #c0392b;
+}
+
+.epc-root .ial-title {
+  font-size: 12pt;
+  font-weight: bold;
+  margin: 0 0 5mm;
+}
+
+.epc-root .ial-intro {
+  font-size: 10.5pt;
+  margin: 0 0 5mm;
+}
+
+.epc-root .ial-detail-line {
+  font-size: 10.5pt;
+  margin: 0 0 4mm;
+}
+
+.epc-root .ial-detail-label {
+  display: inline-block;
+  min-width: 42mm;
+}
+
+.epc-root .ial-detail-value {
+  font-weight: normal;
+}
+
+.epc-root .ial-notice {
+  font-size: 10.5pt;
+  line-height: 1.2;
+  margin-top: 9mm;
+  text-align: left;
+}
+
+.epc-root .ial-notice + .ial-notice {
+  margin-top: 7mm;
+}
+
+.epc-root .ial-signature {
+  margin-top: 35mm;
+  width: 62mm;
+  max-width: 100%;
+  font-size: 10pt;
+}
+
+.epc-root .ial-signature:has(.epc-sig) {
+  width: min(100%, 320px);
+}
+
+.epc-root .ial-signature-mark {
+  width: 60mm;
+  max-width: 100%;
+  height: 14mm;
+  margin-bottom: 2mm;
+  object-fit: contain;
+  object-position: left bottom;
+}
+
+.epc-root .ial-signature .epc-sig {
+  margin-bottom: 4px;
+  width: 100%;
+}
+
+.epc-root .ial-signature-line {
+  width: 60mm;
+  max-width: 100%;
+  border-top: 1px solid #222;
+  margin-bottom: 4mm;
+}
+
+.epc-root .ial-signature-name {
+  margin-bottom: 1mm;
+  letter-spacing: 0.3px;
+}
+
+.epc-root .ial-footer {
+  position: absolute;
+  left: 18mm;
+  right: 18mm;
+  bottom: 12mm;
+  border-top: 1px solid #222;
+  padding-top: 1mm;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-size: 8.5pt;
+  line-height: 1.15;
+}
+
+.epc-root .ial-footer-center {
+  text-align: center;
+}
+
+.epc-root .ial-footer-right {
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .epc-root .ial-page {
+    max-width: 100%;
+    min-height: 0;
+    padding: 16px 12px 72px;
+  }
+
+  .epc-root .ial-company-box {
+    width: auto;
+    max-width: 72%;
+    height: auto;
+    min-height: 20mm;
+  }
+
+  .epc-root .ial-assignment-table td {
+    height: auto;
+  }
+
+  .epc-root .ial-footer {
+    left: 12px;
+    right: 12px;
+  }
+}
+
+/* —— Engineering Inspection Review Checklist (FOR-06-05) —— */
+.epc-root .eirc-page {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 8px 10mm 24px;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
+}
+
+.epc-root .eirc-header {
+  min-height: 25mm;
+  border: 1px solid #333;
+  display: grid;
+  grid-template-columns: 22mm 1fr 48mm;
+  align-items: center;
+}
+
+.epc-root .eirc-logo-box {
+  height: 22mm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.epc-root .eirc-logo {
+  width: 19mm;
+  height: 21mm;
+  object-fit: contain;
+}
+
+.epc-root .eirc-header-title {
+  text-align: center;
+  padding: 4px 6px;
+}
+
+.epc-root .eirc-header-title h1 {
+  font-size: 11.5pt;
+  margin: 0 0 4mm;
+  font-weight: 700;
+}
+
+.epc-root .eirc-file-line {
+  font-size: 10pt;
+  font-weight: 700;
+}
+
+.epc-root .eirc-file-value {
+  display: inline-block;
+  min-width: 48mm;
+  border-bottom: 1px solid #333;
+  min-height: 5mm;
+  vertical-align: bottom;
+  font-weight: normal;
+  padding: 0 1mm;
+}
+
+.epc-root .eirc-form-number {
+  text-align: center;
+  font-size: 10pt;
+  padding: 3mm;
+}
+
+.epc-root .eirc-instructions {
+  border: 1px solid #333;
+  border-top: 0;
+  min-height: 9mm;
+  padding: 2mm 3mm;
+  font-size: 10pt;
+  font-weight: 700;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+}
+
+.epc-root .eirc-checklist {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.epc-root .eirc-checklist th,
+.epc-root .eirc-checklist td {
+  border: 1px solid #555;
+}
+
+.epc-root .eirc-checklist thead th {
+  height: 13mm;
+  font-size: 9.5pt;
+  text-align: left;
+  vertical-align: middle;
+  padding: 2mm 3mm;
+  background: #fafafa;
+}
+
+.epc-root .eirc-num {
+  width: 11mm;
+  text-align: center;
+}
+
+.epc-root .eirc-item {
+  width: 38%;
+}
+
+.epc-root .eirc-finding {
+  width: auto;
+}
+
+.epc-root .eirc-checklist tbody td {
+  font-size: 9pt;
+  vertical-align: top;
+}
+
+.epc-root .eirc-num-cell {
+  text-align: center;
+  padding-top: 2mm;
+  font-size: 9pt;
+}
+
+.epc-root .eirc-item-cell {
+  padding: 2.2mm 3mm;
+  line-height: 1.15;
+}
+
+.epc-root .eirc-finding-cell {
+  padding: 1.8mm 2.5mm;
+  line-height: 1.15;
+}
+
+.epc-root .eirc-r1 { min-height: 18mm; }
+.epc-root .eirc-r2 { min-height: 25mm; }
+.epc-root .eirc-r3 { min-height: 24mm; }
+.epc-root .eirc-r4 { min-height: 23mm; }
+.epc-root .eirc-r5,
+.epc-root .eirc-r6,
+.epc-root .eirc-r7,
+.epc-root .eirc-r8,
+.epc-root .eirc-r10 { min-height: 21mm; }
+.epc-root .eirc-r9 { min-height: 28mm; }
+.epc-root .eirc-r11 { min-height: 24mm; }
+.epc-root .eirc-r12 { min-height: 20mm; }
+
+.epc-root .eirc-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4mm;
+  margin-bottom: 1.8mm;
+  flex-wrap: wrap;
+}
+
+.epc-root .eirc-option-group {
+  display: flex;
+  align-items: center;
+  gap: 1.5mm;
+  white-space: nowrap;
+}
+
+.epc-root .eirc-checkbox {
+  width: 10mm;
+  height: 5.5mm;
+  min-width: 10mm;
+  border: 1px solid #777;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  font-size: 9pt;
+  font-weight: 700;
+  line-height: 1;
+  background: #fff;
+  color: #111;
+  padding: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.epc-root .eirc-checkbox:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.epc-root .eirc-checkbox.is-invalid {
+  border-color: #c0392b;
+}
+
+.epc-root .eirc-label {
+  white-space: nowrap;
+}
+
+.epc-root .eirc-inline-field,
+.epc-root .eirc-long-field,
+.epc-root .eirc-short-field {
+  display: inline-block;
+  border: 0;
+  border-bottom: 1px dotted #555;
+  min-height: 4mm;
+  vertical-align: bottom;
+  padding: 0 1mm;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.epc-root .eirc-inline-field {
+  min-width: 48mm;
+  max-width: 100%;
+}
+
+.epc-root .eirc-long-field {
+  min-width: 75mm;
+  max-width: 100%;
+}
+
+.epc-root .eirc-short-field {
+  min-width: 27mm;
+  max-width: 40%;
+}
+
+.epc-root .eirc-inline-field:focus,
+.epc-root .eirc-long-field:focus,
+.epc-root .eirc-short-field:focus {
+  outline: none;
+  border-bottom-color: #222;
+}
+
+.epc-root .eirc-inline-field.is-invalid,
+.epc-root .eirc-long-field.is-invalid,
+.epc-root .eirc-short-field.is-invalid {
+  border-bottom-color: #c0392b;
+}
+
+.epc-root .eirc-field-ro {
+  min-height: 4mm;
+}
+
+.epc-root .eirc-remark {
+  margin-top: 2mm;
+}
+
+.epc-root .eirc-extra-line {
+  margin-top: 2mm;
+}
+
+.epc-root .eirc-hint {
+  font-size: 8.5pt;
+  color: #444;
+}
+
+.epc-root .eirc-ppe-block {
+  margin-top: 1mm;
+}
+
+.epc-root .eirc-sub-list {
+  margin: 1mm 0 0 9mm;
+  line-height: 1.45;
+}
+
+.epc-root .eirc-comments {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-bottom: 1px dotted #555;
+  resize: vertical;
+  font: inherit;
+  background: transparent;
+  padding: 2px 0;
+  box-sizing: border-box;
+}
+
+.epc-root .eirc-comments:focus {
+  outline: none;
+  border-bottom-color: #222;
+}
+
+.epc-root .eirc-comments.is-invalid {
+  border-bottom-color: #c0392b;
+}
+
+.epc-root .eirc-comments-ro {
+  white-space: pre-wrap;
+  min-height: 4mm;
+}
+
+.epc-root .eirc-bottom-review {
+  width: 82%;
+  margin: 8mm auto 4mm;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.epc-root .eirc-bottom-review td {
+  border: 1px solid #555;
+  min-height: 26mm;
+  height: 26mm;
+  padding: 2mm 3mm;
+  font-size: 9.5pt;
+  vertical-align: top;
+  width: 50%;
+}
+
+.epc-root .eirc-review-title {
+  margin-bottom: 2mm;
+  font-weight: 700;
+}
+
+.epc-root .eirc-sign-name {
+  min-height: 5mm;
+  font-size: 9pt;
+  margin-top: 4mm;
+}
+
+.epc-root .eirc-date {
+  margin-top: 5mm;
+}
+
+@media (max-width: 900px) {
+  .epc-root .eirc-page {
+    max-width: 100%;
+    padding: 12px 8px 24px;
+    overflow-x: auto;
+  }
+
+  .epc-root .eirc-header {
+    grid-template-columns: 18mm 1fr 36mm;
+  }
+
+  .epc-root .eirc-checklist {
+    min-width: 640px;
+  }
+
+  .epc-root .eirc-bottom-review {
+    width: 100%;
+  }
+
+  .epc-root .eirc-long-field {
+    min-width: 40mm;
+  }
+}
+
+/* —— Inspection Preparation Checklist (FOR-06-07-03) —— */
+.epc-root .iprep-page {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 8px 25mm 24px;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10.5pt;
+  box-sizing: border-box;
+}
+
+.epc-root .iprep-header {
+  min-height: 31mm;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.epc-root .iprep-logo {
+  position: absolute;
+  left: 0;
+  top: -2mm;
+  width: 24mm;
+  height: 24mm;
+  object-fit: contain;
+}
+
+.epc-root .iprep-form-code {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 10pt;
+}
+
+.epc-root .iprep-title {
+  margin-top: 5mm;
+  text-align: center;
+  font-size: 14pt;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.epc-root .iprep-project-table,
+.epc-root .iprep-checklist {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.epc-root .iprep-project-table td,
+.epc-root .iprep-checklist th,
+.epc-root .iprep-checklist td {
+  border: 0.35mm solid #333;
+  padding: 1.2mm 2mm;
+  vertical-align: middle;
+}
+
+.epc-root .iprep-project-table {
+  margin-bottom: 6.5mm;
+}
+
+.epc-root .iprep-project-table td {
+  height: 8.5mm;
+  font-size: 11pt;
+}
+
+.epc-root .iprep-project-table td:first-child {
+  width: 30%;
+}
+
+.epc-root .iprep-date-in {
+  border: 0;
+  border-bottom: 1px solid #888;
+  background: transparent;
+  font: inherit;
+  padding: 1px 2px;
+  max-width: 100%;
+}
+
+.epc-root .iprep-date-in:focus {
+  outline: none;
+  border-bottom-color: #222;
+}
+
+.epc-root .iprep-date-in.is-invalid {
+  border-bottom-color: #c0392b;
+}
+
+.epc-root .iprep-section {
+  margin-top: 5.5mm;
+}
+
+.epc-root .iprep-section-heading {
+  margin-bottom: 3.5mm;
+}
+
+.epc-root .iprep-section-name {
+  font-size: 11pt;
+  text-decoration: underline;
+}
+
+.epc-root .iprep-section-note {
+  font-size: 9pt;
+  margin-top: 0.5mm;
+}
+
+.epc-root .iprep-checklist th {
+  font-weight: 400;
+  text-align: left;
+  height: 7mm;
+  background: #fafafa;
+}
+
+.epc-root .iprep-checklist td {
+  height: 6.3mm;
+  font-size: 10.5pt;
+}
+
+.epc-root .iprep-num {
+  width: 6%;
+  text-align: center;
+}
+
+.epc-root .iprep-item-name {
+  width: 51%;
+}
+
+.epc-root .iprep-required {
+  width: 14%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.epc-root .iprep-availability {
+  width: 29%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.epc-root .iprep-tools .iprep-item-name {
+  width: 51.5%;
+}
+
+.epc-root .iprep-others-row td {
+  height: 10.5mm;
+}
+
+.epc-root .iprep-additional {
+  width: 88%;
+}
+
+.epc-root .iprep-additional .iprep-num {
+  width: 7%;
+}
+
+.epc-root .iprep-additional .iprep-item-name {
+  width: 72%;
+}
+
+.epc-root .iprep-additional .iprep-required {
+  width: 21%;
+}
+
+.epc-root .iprep-opt {
+  display: inline-block;
+  padding: 0.4mm 1.6mm;
+  line-height: 1.2;
+  border: 0.35mm solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.epc-root .iprep-opt:disabled {
+  cursor: default;
+}
+
+.epc-root .iprep-opt.is-selected {
+  border-color: #111;
+}
+
+.epc-root .iprep-choice.is-invalid .iprep-opt {
+  color: #c0392b;
+}
+
+.epc-root .iprep-sep {
+  color: #333;
+}
+
+.epc-root .iprep-specify {
+  display: inline-block;
+  border: 0;
+  border-bottom: 0.3mm solid #333;
+  min-width: 42mm;
+  max-width: 90%;
+  margin-left: 1mm;
+  padding: 0 1mm;
+  vertical-align: bottom;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+
+.epc-root .iprep-specify:focus {
+  outline: none;
+  border-bottom-color: #111;
+}
+
+.epc-root .iprep-specify.is-invalid {
+  border-bottom-color: #c0392b;
+}
+
+.epc-root .iprep-field-ro {
+  min-height: 5mm;
+}
+
+.epc-root .iprep-inspector-block {
+  margin-top: 7mm;
+}
+
+.epc-root .iprep-inspector {
+  font-size: 11pt;
+}
+
+.epc-root .iprep-signature {
+  margin-top: 5mm;
+  margin-left: 2mm;
+  width: 55%;
+  font-size: 10.5pt;
+}
+
+.epc-root .iprep-signature-row {
+  display: flex;
+  align-items: baseline;
+  margin: 3mm 0;
+}
+
+.epc-root .iprep-signature-label {
+  width: 20mm;
+}
+
+.epc-root .iprep-colon {
+  width: 7mm;
+  text-align: center;
+}
+
+.epc-root .iprep-line {
+  flex: 1;
+  border-bottom: 0.3mm solid #333;
+  min-height: 5mm;
+  padding: 0 1mm;
+}
+
+@media (max-width: 900px) {
+  .epc-root .iprep-page {
+    max-width: 100%;
+    padding: 12px 10px 24px;
+    overflow-x: auto;
+  }
+
+  .epc-root .iprep-header {
+    min-height: 0;
+    padding-top: 28mm;
+  }
+
+  .epc-root .iprep-logo {
+    top: 0;
+  }
+
+  .epc-root .iprep-checklist {
+    min-width: 640px;
+  }
+
+  .epc-root .iprep-additional {
+    width: 100%;
+  }
+
+  .epc-root .iprep-signature {
+    width: 100%;
+  }
+}
+
+/* —— Inspection Plan Notice (FOR-06-07-02) —— */
+.epc-root .ipn-page {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 8px 9mm 24px;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9.25pt;
+  line-height: 1.15;
+  box-sizing: border-box;
+}
+
+.epc-root .ipn-top {
+  position: relative;
+  min-height: 18mm;
+}
+
+.epc-root .ipn-logo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24mm;
+  height: auto;
+  object-fit: contain;
+}
+
+.epc-root .ipn-form-code {
+  position: absolute;
+  right: 0;
+  top: 2mm;
+  font-size: 9pt;
+}
+
+.epc-root .ipn-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 30mm;
+  margin-top: 4mm;
+}
+
+.epc-root .ipn-meta-line {
+  margin: 0 0 1.6mm;
+}
+
+.epc-root .ipn-italic {
+  font-style: italic;
+}
+
+.epc-root .ipn-recipient {
+  margin-top: 1mm;
+  margin-bottom: 2mm;
+}
+
+.epc-root .ipn-title {
+  font-weight: 700;
+  font-size: 11pt;
+  margin: 0 0 2mm;
+}
+
+.epc-root .ipn-field-line {
+  margin-bottom: 1.8mm;
+}
+
+.epc-root .ipn-standard-line {
+  border-bottom: 1px solid #111;
+  padding-bottom: 1mm;
+  margin-bottom: 2mm;
+}
+
+.epc-root .ipn-type-control {
+  display: inline-block;
+  min-width: 180px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.epc-root .ipn-type-control .epc-field {
+  margin: 0;
+}
+
+.epc-root .ipn-type-control.is-invalid {
+  outline: 1px solid #c0392b;
+}
+
+.epc-root .ipn-in {
+  border: 0;
+  border-bottom: 1px solid #888;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 1px 2px;
+  max-width: 100%;
+}
+
+.epc-root .ipn-in--compact {
+  min-width: 90px;
+}
+
+.epc-root .ipn-in--date {
+  min-width: 132px;
+}
+
+.epc-root .ipn-in--time {
+  min-width: 110px;
+}
+
+.epc-root .ipn-in--email,
+.epc-root .ipn-in--tel {
+  min-width: 140px;
+}
+
+.epc-root .ipn-in:focus {
+  outline: none;
+  border-bottom-color: #222;
+}
+
+.epc-root .ipn-in.is-invalid {
+  border-bottom-color: #c0392b;
+}
+
+.epc-root .ipn-intro {
+  margin-bottom: 0.5mm;
+}
+
+.epc-root .ipn-instruction {
+  font-style: italic;
+  margin-bottom: 2mm;
+  font-size: 9pt;
+}
+
+.epc-root .ipn-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 7mm;
+  align-items: start;
+}
+
+.epc-root .ipn-col-heading {
+  display: flex;
+  gap: 2mm;
+  align-items: baseline;
+  margin-bottom: 0.8mm;
+  flex-wrap: wrap;
+}
+
+.epc-root .ipn-value {
+  font-weight: 700;
+}
+
+.epc-root .ipn-activity {
+  display: grid;
+  grid-template-columns: 5.5mm 1fr;
+  align-items: start;
+  margin-bottom: 1mm;
+  gap: 1mm;
+}
+
+.epc-root .ipn-activity.is-clickable {
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.epc-root .ipn-activity.is-clickable:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.epc-root .ipn-activity.is-clickable:focus-visible {
+  outline: 1px solid #555;
+  outline-offset: 1px;
+}
+
+.epc-root .ipn-box,
+.epc-root .ipn-mini-box {
+  border: 1px solid #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  line-height: 1;
+  background: #fff;
+  color: #111;
+  padding: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.epc-root .ipn-box {
+  width: 3.8mm;
+  height: 3.8mm;
+  min-width: 14px;
+  min-height: 14px;
+  font-size: 7.5pt;
+  margin-top: 0.3mm;
+}
+
+.epc-root .ipn-mini-box {
+  width: 3.2mm;
+  height: 3.2mm;
+  min-width: 12px;
+  min-height: 12px;
+  font-size: 6.5pt;
+  vertical-align: -0.5mm;
+  margin: 0 0.8mm 0 1.2mm;
+}
+
+.epc-root .ipn-box:disabled,
+.epc-root .ipn-mini-box:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.epc-root .ipn-box.is-invalid,
+.epc-root .ipn-mini-box.is-invalid {
+  border-color: #c0392b;
+}
+
+.epc-root .ipn-activity-text {
+  padding-top: 0;
+}
+
+.epc-root .ipn-sub-options {
+  white-space: nowrap;
+}
+
+.epc-root .ipn-sub-option {
+  display: inline-flex;
+  align-items: center;
+}
+
+.epc-root .ipn-sub-option.is-clickable {
+  cursor: pointer;
+}
+
+.epc-root .ipn-notice {
+  margin-top: 2mm;
+  text-align: justify;
+}
+
+.epc-root .ipn-thanks {
+  margin-top: 1.8mm;
+}
+
+.epc-root .ipn-signature-block {
+  margin-top: 2mm;
+  position: relative;
+  min-height: 14mm;
+}
+
+.epc-root .ipn-signature-details {
+  line-height: 1.35;
+}
+
+.epc-root .ipn-tel {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+
+.epc-root .ipn-note {
+  font-style: italic;
+  margin-top: 1.8mm;
+  font-size: 8.75pt;
+}
+
+.epc-root .ipn-ack {
+  border-top: 1px solid #111;
+  margin-top: 2mm;
+  padding-top: 0.8mm;
+}
+
+.epc-root .ipn-ack-title {
+  text-align: center;
+  font-weight: 700;
+  text-decoration: underline;
+  font-size: 10.5pt;
+  margin-bottom: 1mm;
+}
+
+.epc-root .ipn-ack-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 30mm;
+  min-height: 12mm;
+}
+
+.epc-root .ipn-ack-line {
+  margin-bottom: 1mm;
+}
+
+.epc-root .ipn-long-line {
+  width: 45mm;
+  border-bottom: 1px solid #111;
+  margin-top: 4mm;
+}
+
+.epc-root .ipn-footnote {
+  margin-top: 0.8mm;
+  font-size: 8pt;
+}
+
+@media (max-width: 900px) {
+  .epc-root .ipn-page {
+    max-width: 100%;
+    padding: 12px 10px 24px;
+  }
+
+  .epc-root .ipn-top {
+    min-height: 52mm;
+  }
+
+  .epc-root .ipn-columns,
+  .epc-root .ipn-meta,
+  .epc-root .ipn-ack-grid {
+    grid-template-columns: 1fr;
+    row-gap: 8px;
+  }
+
+  .epc-root .ipn-tel {
+    position: static;
+    margin-top: 8px;
+  }
+}
+
+/* —— Inspection Guideline (FOR-06-11) —— */
+.epc-root .ig-page {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 8px 20px 24px;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
+}
+
+.epc-root .ig-top {
+  min-height: 34mm;
+  position: relative;
+  margin-bottom: 2mm;
+}
+
+.epc-root .ig-logo {
+  position: absolute;
+  left: 0;
+  top: 2mm;
+  width: 29mm;
+  height: 29mm;
+  object-fit: contain;
+}
+
+.epc-root .ig-form-code {
+  position: absolute;
+  right: 0;
+  top: 24mm;
+  font-size: 10px;
+}
+
+.epc-root .ig-title {
+  margin: 0;
+  position: absolute;
+  left: 40mm;
+  right: 40mm;
+  top: 22mm;
+  font-size: 16px;
+  letter-spacing: 0.2px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.epc-root .ig-main-table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  font-size: 11px;
+}
+
+.epc-root .ig-main-table td {
+  border: 1px solid #222;
+  vertical-align: top;
+}
+
+.epc-root .ig-num {
+  width: 12mm;
+  text-align: center;
+  padding-top: 2mm;
+}
+
+.epc-root .ig-label {
+  width: 43mm;
+  padding: 1.5mm 2mm;
+  line-height: 1.15;
+}
+
+.epc-root .ig-value {
+  width: auto;
+  padding: 1.5mm 2mm;
+  min-height: 8mm;
+}
+
+.epc-root .ig-r1 .ig-value { min-height: 10mm; }
+.epc-root .ig-r2 .ig-value,
+.epc-root .ig-r3 .ig-value,
+.epc-root .ig-r4 .ig-value,
+.epc-root .ig-r9 .ig-value { min-height: 14mm; }
+.epc-root .ig-r5 .ig-value,
+.epc-root .ig-r7 .ig-value { min-height: 18mm; }
+.epc-root .ig-r6 .ig-value,
+.epc-root .ig-r8 .ig-value { min-height: 10mm; }
+
+.epc-root .ig-in,
+.epc-root .ig-area {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.epc-root .ig-in:focus,
+.epc-root .ig-area:focus {
+  outline: none;
+}
+
+.epc-root .ig-in.is-invalid,
+.epc-root .ig-area.is-invalid {
+  box-shadow: inset 0 -1px 0 #c0392b;
+}
+
+.epc-root .ig-ro {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: block;
+  min-height: 1em;
+}
+
+.epc-root .ig-comment {
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 5mm;
+}
+
+.epc-root .ig-comment-body,
+.epc-root .ig-area--comment {
+  font-weight: 400;
+  white-space: pre-wrap;
+}
+
+.epc-root .ig-area--comment {
+  display: block;
+  margin-top: 4px;
+  min-height: 40px;
+  border-bottom: 1px dotted #888;
+}
+
+.epc-root .ig-signatures {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8mm;
+  font-size: 11px;
+  gap: 12px;
+}
+
+.epc-root .ig-signature {
+  width: 48%;
+}
+
+.epc-root .ig-role {
+  margin-bottom: 2mm;
+  font-weight: 700;
+}
+
+.epc-root .ig-name {
+  min-height: 5mm;
+  margin-bottom: 6mm;
+}
+
+.epc-root .ig-line {
+  border-bottom: 1px solid #222;
+  width: 44mm;
+  height: 1px;
+  margin-bottom: 2mm;
+}
+
+.epc-root .ig-caption {
+  margin-left: 2mm;
+}
+
+@media (max-width: 900px) {
+  .epc-root .ig-page {
+    max-width: 100%;
+    padding: 12px 10px 24px;
+    overflow-x: auto;
+  }
+
+  .epc-root .ig-top {
+    min-height: 48mm;
+  }
+
+  .epc-root .ig-title {
+    left: 0;
+    right: 0;
+    top: 36mm;
+    text-align: center;
+  }
+
+  .epc-root .ig-form-code {
+    top: 32mm;
+  }
+
+  .epc-root .ig-main-table {
+    min-width: 520px;
+  }
+
+  .epc-root .ig-signatures {
+    flex-direction: column;
+  }
+
+  .epc-root .ig-signature {
+    width: 100%;
+  }
+}
+
+/* —— Inspection Notes (FOR-06-07) —— */
+.epc-root .inotes-root {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.epc-root .inotes-page {
+  width: 100%;
+  max-width: 240mm;
+  margin: 0 auto;
+  padding: 10px 12mm 18px;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11.5px;
+  line-height: 1.35;
+  box-sizing: border-box;
+  border: 1px solid #e5e5e5;
+  position: relative;
+}
+
+.epc-root .inotes-doc-stamp {
+  position: absolute;
+  top: 2px;
+  right: 12mm;
+  color: #1a4f9c;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  pointer-events: none;
+}
+
+.epc-root .inotes-header {
+  margin-top: 4mm;
+  border: 1px solid #333;
+  height: 24mm;
+  display: grid;
+  grid-template-columns: 25mm 1fr 48mm;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.epc-root .inotes-logo-cell {
+  border-right: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.epc-root .inotes-logo {
+  width: 19mm;
+  height: auto;
+  max-height: 20mm;
+  object-fit: contain;
+  display: block;
+}
+
+.epc-root .inotes-header-main {
+  display: grid;
+  grid-template-rows: 8mm 1fr;
+  text-align: center;
+  font-weight: bold;
+  border-right: 1px solid #333;
+  min-width: 0;
+}
+
+.epc-root .inotes-group {
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+}
+
+.epc-root .inotes-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  letter-spacing: 0.4px;
+}
+
+.epc-root .inotes-header-meta {
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  min-width: 0;
+  text-align: left;
+}
+
+.epc-root .inotes-header-meta > div {
+  border-bottom: 1px solid #333;
+  padding: 0 2mm;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 9.5px;
+}
+
+.epc-root .inotes-header-meta > div:last-child {
+  border-bottom: 0;
+}
+
+.epc-root .inotes-section-title {
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: bold;
+  margin: 3mm 0 1.5mm;
+}
+
+.epc-root .inotes-box {
+  border: 1px solid #333;
+}
+
+.epc-root .inotes-line {
+  min-height: 7mm;
+  border-bottom: 1px solid #333;
+  padding: 1.4mm 2mm;
+}
+
+.epc-root .inotes-line:last-child {
+  border-bottom: 0;
+}
+
+.epc-root .inotes-line--wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.epc-root .inotes-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.epc-root .inotes-two-col > div:first-child {
+  border-right: 1px solid #333;
+}
+
+.epc-root .inotes-large-box {
+  min-height: 18mm;
+  padding: 2mm;
+}
+
+.epc-root .inotes-summary-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-bottom: 1px solid #333;
+}
+
+.epc-root .inotes-summary-row:last-child {
+  border-bottom: 0;
+}
+
+.epc-root .inotes-summary-row--split {
+  grid-template-columns: 1fr 1fr;
+}
+
+.epc-root .inotes-summary-row--split > .inotes-summary-cell:first-child {
+  border-right: 1px solid #333;
+}
+
+.epc-root .inotes-summary-cell {
+  min-height: 7mm;
+  padding: 1.4mm 2mm;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.epc-root .inotes-summary-cell--wrap {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.epc-root .inotes-summary-row--action .inotes-summary-cell {
+  min-height: 18mm;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.epc-root .inotes-signature {
+  margin-top: 4mm;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #333;
+  min-height: 14mm;
+}
+
+.epc-root .inotes-signature > div {
+  padding: 7mm 2mm 2mm;
+}
+
+.epc-root .inotes-signature > div:first-child {
+  border-right: 1px solid #333;
+}
+
+.epc-root .inotes-page2-head,
+.epc-root .inotes-continued-head {
+  margin-top: 2mm;
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.epc-root .inotes-activity-intro {
+  border: 1px solid #333;
+  border-bottom: 0;
+  padding: 1.5mm 2mm;
+  margin-top: 3mm;
+  font-size: 8.5px;
+}
+
+.epc-root .inotes-activity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #333;
+}
+
+.epc-root .inotes-activity-col {
+  padding: 1.5mm 2mm;
+}
+
+.epc-root .inotes-activity-col:first-child {
+  border-right: 1px solid #333;
+}
+
+.epc-root .inotes-check-item {
+  display: flex;
+  gap: 2mm;
+  margin: 0.8mm 0;
+  line-height: 1.2;
+  align-items: flex-start;
+}
+
+.epc-root .inotes-check-item.is-clickable {
+  cursor: pointer;
+}
+
+.epc-root .inotes-check,
+.epc-root .inotes-smallcheck {
+  border: 1px solid #333;
+  background: #fff;
+  color: #111;
+  padding: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.epc-root .inotes-check {
+  width: 15px;
+  height: 15px;
+  font-size: 11px;
+  margin-top: 1px;
+}
+
+.epc-root .inotes-smallcheck {
+  width: 13px;
+  height: 13px;
+  font-size: 10px;
+}
+
+.epc-root .inotes-check:disabled,
+.epc-root .inotes-smallcheck:disabled {
+  cursor: default;
+}
+
+.epc-root .inotes-check.is-invalid,
+.epc-root .inotes-smallcheck.is-invalid {
+  border-color: #c0392b;
+}
+
+.epc-root .inotes-subcheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 1mm;
+  margin-left: 1mm;
+  white-space: nowrap;
+}
+
+.epc-root .inotes-subcheck.is-clickable {
+  cursor: pointer;
+}
+
+.epc-root .inotes-yesno {
+  display: inline-flex;
+  gap: 6px;
+  margin: 0 4px;
+}
+
+.epc-root .inotes-section-block {
+  border: 1px solid #333;
+  margin-top: 2.5mm;
+}
+
+.epc-root .inotes-section-heading {
+  padding: 1.5mm 2mm;
+  border-bottom: 1px solid #333;
+  font-size: 9.5px;
+}
+
+.epc-root .inotes-blank-area {
+  min-height: 14mm;
+  padding: 2mm;
+}
+
+.epc-root .inotes-equipment {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.epc-root .inotes-equipment th,
+.epc-root .inotes-equipment td {
+  border: 1px solid #333;
+  padding: 1.5mm;
+  height: 6mm;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 9px;
+}
+
+.epc-root .inotes-equipment th {
+  text-align: center;
+  font-weight: normal;
+  background: #fafafa;
+}
+
+.epc-root .inotes-equip-col-no {
+  width: 8%;
+}
+
+.epc-root .inotes-equip-col-name {
+  width: 28%;
+}
+
+.epc-root .inotes-equip-col-model {
+  width: 16%;
+}
+
+.epc-root .inotes-equip-col-serial {
+  width: 16%;
+}
+
+.epc-root .inotes-equip-col-cal {
+  width: 16%;
+}
+
+.epc-root .inotes-equip-col-own {
+  width: 16%;
+}
+
+.epc-root .inotes-equipment td:first-child {
+  text-align: center;
+}
+
+.epc-root .inotes-equip-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.epc-root .inotes-equip-cell .inotes-in {
+  flex: 1;
+  min-width: 0;
+}
+
+.epc-root .inotes-in,
+.epc-root .inotes-area {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.epc-root .inotes-in--inline {
+  width: auto;
+  min-width: 28px;
+  flex: 1;
+  max-width: 100%;
+}
+
+.epc-root .inotes-in--date {
+  min-width: 132px;
+  max-width: 160px;
+  flex: 0 1 auto;
+}
+
+.epc-root .inotes-in--time {
+  min-width: 110px;
+  max-width: 140px;
+  flex: 0 1 auto;
+}
+
+.epc-root .inotes-select {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.epc-root .inotes-select:focus {
+  outline: none;
+}
+
+.epc-root .inotes-select.is-invalid {
+  box-shadow: inset 0 -1px 0 #c0392b;
+}
+
+.epc-root .inotes-equip-cell .inotes-select,
+.epc-root .inotes-equip-cell .inotes-in--date {
+  flex: 1;
+  min-width: 0;
+}
+
+.epc-root .inotes-ownership-dd {
+  flex: 1;
+  min-width: 0;
+}
+
+.epc-root .inotes-ownership-dd [class*="-control"] {
+  min-height: 26px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.epc-root .inotes-ownership-dd [class*="-ValueContainer"] {
+  padding: 0 2px !important;
+}
+
+.epc-root .inotes-ownership-dd [class*="-IndicatorsContainer"] {
+  height: 24px;
+}
+
+.epc-root .inotes-ownership-dd [class*="-indicatorContainer"] {
+  padding: 2px !important;
+}
+
+.epc-root .inotes-ownership-dd [class*="-singleValue"],
+.epc-root .inotes-ownership-dd [class*="-placeholder"],
+.epc-root .inotes-ownership-dd [class*="-Input"] {
+  font-size: 11px !important;
+  margin: 0 !important;
+}
+
+.epc-root .inotes-in--grow {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 1px dotted #888;
+}
+
+.epc-root .inotes-in:focus,
+.epc-root .inotes-area:focus {
+  outline: none;
+}
+
+.epc-root .inotes-in.is-invalid,
+.epc-root .inotes-area.is-invalid {
+  box-shadow: inset 0 -1px 0 #c0392b;
+}
+
+.epc-root .inotes-ro {
+  white-space: pre-wrap;
+}
+
+.epc-root .inotes-attach {
+  margin-top: 3mm;
+}
+
+.epc-root .inotes-attach-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid #333;
+  margin-top: 2mm;
+}
+
+.epc-root .inotes-attach-cell {
+  min-height: 7mm;
+  padding: 1.5mm 2mm;
+  border-right: 1px solid #333;
+  border-bottom: 1px solid #333;
+}
+
+.epc-root .inotes-attach-cell:nth-child(3n) {
+  border-right: 0;
+}
+
+.epc-root .inotes-attach-num {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.epc-root .inotes-attach-file {
+  margin-top: 4px;
+}
+
+.epc-root .inotes-attach-preview {
+  max-width: 100%;
+  max-height: 48px;
+  display: block;
+  object-fit: contain;
+}
+
+.epc-root .inotes-attach-name {
+  font-size: 8px;
+  margin-top: 2px;
+}
+
+.epc-root .inotes-attach-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.epc-root .inotes-file-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.epc-root .inotes-error {
+  color: #c0392b;
+  font-size: 8px;
+}
+
+.epc-root .inotes-row-actions {
+  margin-top: 6px;
+  padding: 0 2mm 2mm;
+}
+
+.epc-root .inotes-icon-btn {
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  cursor: pointer;
+  color: #555;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.epc-root .inotes-continued-box {
+  border: 1px solid #333;
+  min-height: 140mm;
+  margin: 4mm 0 0;
+  padding: 3mm;
+}
+
+@media (max-width: 900px) {
+  .epc-root .inotes-page {
+    max-width: 100%;
+    padding: 12px 8px;
+    overflow-x: auto;
+  }
+
+  .epc-root .inotes-doc-stamp {
+    right: 8px;
+  }
+
+  .epc-root .inotes-header {
+    grid-template-columns: 20mm 1fr 44mm;
+    min-width: 560px;
+    height: 26mm;
+  }
+
+  .epc-root .inotes-activity-grid,
+  .epc-root .inotes-two-col,
+  .epc-root .inotes-summary-row--split,
+  .epc-root .inotes-attach-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .epc-root .inotes-activity-col:first-child,
+  .epc-root .inotes-two-col > div:first-child,
+  .epc-root .inotes-summary-row--split > .inotes-summary-cell:first-child {
+    border-right: 0;
+    border-bottom: 1px solid #333;
+  }
+
+  .epc-root .inotes-equipment {
+    min-width: 640px;
+  }
+}
+
+/* —— Certification Assignment Letter (FOR-01-10) —— */
+.epc-root .cal-page {
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 14mm 16mm 28mm;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.epc-root .cal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.epc-root .cal-company-box {
+  width: 115mm;
+  max-width: 70%;
+  height: 20mm;
+  border: 1px solid #555;
+  display: flex;
+  align-items: center;
+}
+
+.epc-root .cal-logo {
+  width: 18mm;
+  height: 18mm;
+  object-fit: contain;
+  margin: 0 3mm 0 1.5mm;
+}
+
+.epc-root .cal-company-info {
+  border-left: 1px solid #777;
+  height: 16mm;
+  padding-left: 3mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.25;
+  font-size: 11pt;
+}
+
+.epc-root .cal-form-no {
+  font-size: 11pt;
+  text-align: right;
+}
+
+.epc-root .cal-header-rule {
+  border: 0;
+  border-top: 1px solid #222;
+  margin: 4mm 0 7mm;
+}
+
+.epc-root .cal-people-table,
+.epc-root .cal-company-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-bottom: 5mm;
+}
+
+.epc-root .cal-people-table td,
+.epc-root .cal-company-table td {
+  border: 1px solid #444;
+  vertical-align: top;
+  padding: 3mm 2.5mm;
+  font-size: 10pt;
+}
+
+.epc-root .cal-people-table td {
+  width: 50%;
+}
+
+.epc-root .cal-field-row {
+  margin-bottom: 3.5mm;
+}
+
+.epc-root .cal-field-row:last-child {
+  margin-bottom: 0;
+}
+
+.epc-root .cal-title {
+  font-size: 12pt;
+  font-weight: bold;
+  margin: 0 0 4mm;
+  text-align: center;
+}
+
+.epc-root .cal-type-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3mm 6mm;
+  margin-bottom: 4mm;
+  font-size: 10pt;
+}
+
+.epc-root .cal-type-row.is-invalid {
+  outline: 1px solid #c0392b;
+  outline-offset: 2px;
+}
+
+.epc-root .cal-type-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5mm;
+}
+
+.epc-root .cal-box {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #222;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: #fff;
+  color: #111;
+  padding: 0;
+  cursor: pointer;
+}
+
+.epc-root .cal-box:disabled {
+  cursor: default;
+}
+
+.epc-root .cal-box.is-invalid {
+  border-color: #c0392b;
+}
+
+.epc-root .cal-appoint-line,
+.epc-root .cal-returns,
+.epc-root .cal-notice {
+  font-size: 10.5pt;
+  margin: 0 0 3.5mm;
+  line-height: 1.4;
+}
+
+.epc-root .cal-notice {
+  text-align: justify;
+  font-size: 10pt;
+}
+
+.epc-root .cal-underline {
+  display: inline-block;
+  border-bottom: 1px solid #333;
+  min-width: 40mm;
+  padding: 0 1mm;
+  vertical-align: bottom;
+}
+
+.epc-root .cal-in,
+.epc-root .cal-underline-in {
+  border: 0;
+  border-bottom: 1px solid #888;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 1px 2px;
+  max-width: 100%;
+}
+
+.epc-root .cal-underline-in--wide {
+  min-width: 120px;
+  width: min(100%, 280px);
+}
+
+.epc-root .cal-in:focus,
+.epc-root .cal-underline-in:focus {
+  outline: none;
+  border-bottom-color: #222;
+}
+
+.epc-root .cal-in.is-invalid,
+.epc-root .cal-underline-in.is-invalid {
+  border-bottom-color: #c0392b;
+}
+
+.epc-root .cal-lbl {
+  width: 22%;
+  font-weight: 700;
+  background: #fafafa;
+}
+
+.epc-root .cal-company-table td {
+  font-size: 9.5pt;
+  padding: 2mm 2.5mm;
+}
+
+.epc-root .cal-pre {
+  white-space: pre-wrap;
+}
+
+.epc-root .cal-sigs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8mm;
+  margin-top: 10mm;
+  font-size: 9.5pt;
+}
+
+.epc-root .cal-sig-block {
+  min-height: 42mm;
+}
+
+.epc-root .cal-sig-role {
+  font-weight: 700;
+  margin-bottom: 2mm;
+}
+
+.epc-root .cal-sig-mark {
+  width: 50mm;
+  max-width: 100%;
+  height: 14mm;
+  object-fit: contain;
+  object-position: left bottom;
+  display: block;
+  margin-bottom: 1mm;
+}
+
+.epc-root .cal-sig-line {
+  width: 50mm;
+  max-width: 100%;
+  border-top: 1px solid #222;
+  margin: 2mm 0;
+}
+
+.epc-root .cal-sig-hint {
+  margin-top: 4px;
+  font-size: 8pt;
+  color: #555;
+  font-style: italic;
+}
+
+.epc-root .cal-sig-block .epc-sig {
+  margin-bottom: 4px;
+  width: 100%;
+}
+
+.epc-root .cal-footer {
+  position: absolute;
+  left: 16mm;
+  right: 16mm;
+  bottom: 10mm;
+  border-top: 1px solid #222;
+  padding-top: 1mm;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-size: 8.5pt;
+  line-height: 1.15;
+}
+
+.epc-root .cal-footer-center {
+  text-align: center;
+}
+
+.epc-root .cal-footer-right {
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .epc-root .cal-page {
+    max-width: 100%;
+    min-height: 0;
+    padding: 16px 12px 72px;
+  }
+
+  .epc-root .cal-company-box {
+    width: auto;
+    max-width: 72%;
+    height: auto;
+    min-height: 20mm;
+  }
+
+  .epc-root .cal-sigs {
+    grid-template-columns: 1fr;
+  }
+
+  .epc-root .cal-footer {
+    left: 12px;
+    right: 12px;
+  }
+
+  .epc-root .cal-company-table {
+    min-width: 560px;
+  }
+
+  .epc-root .cal-page {
+    overflow-x: auto;
+  }
+}
+
+/* —— Documentation Audit Checklist (FOR-01-08) —— */
+.epc-root .dac-page {
+  width: 100%;
+  max-width: 250mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 8mm 12mm 28mm;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10.5pt;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.epc-root .dac-header {
+  border: 1px solid #333;
+  display: grid;
+  grid-template-columns: 24mm 1fr 44mm;
+  align-items: stretch;
+  margin-bottom: 3mm;
+}
+
+.epc-root .dac-logo-box {
+  border-right: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1mm;
+}
+
+.epc-root .dac-logo {
+  width: 18mm;
+  height: 18mm;
+  object-fit: contain;
+}
+
+.epc-root .dac-header-title {
+  text-align: center;
+  padding: 2mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.epc-root .dac-header-title h1 {
+  margin: 0;
+  font-size: 14pt;
+  font-weight: 700;
+}
+
+.epc-root .dac-form-code {
+  border-left: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5pt;
+  font-weight: 700;
+  text-align: center;
+  padding: 1mm;
+}
+
+.epc-root .dac-meta {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 3mm;
+  font-size: 10pt;
+}
+
+.epc-root .dac-meta td {
+  border: 1px solid #555;
+  padding: 1.4mm 2mm;
+  vertical-align: top;
+}
+
+.epc-root .dac-lbl {
+  width: 18%;
+  font-weight: 700;
+  background: #f7f7f7;
+}
+
+.epc-root .dac-legend {
+  font-size: 9.5pt;
+  font-style: italic;
+  margin-bottom: 2mm;
+}
+
+.epc-root .dac-group-title {
+  font-weight: 700;
+  font-size: 11pt;
+  margin: 3mm 0 1mm;
+}
+
+.epc-root .dac-checklist {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 10pt;
+  margin-bottom: 1mm;
+}
+
+.epc-root .dac-checklist th,
+.epc-root .dac-checklist td {
+  border: 1px solid #555;
+  padding: 1.5mm 2mm;
+  vertical-align: top;
+}
+
+.epc-root .dac-checklist th {
+  background: #f3f3f3;
+  font-weight: 700;
+  text-align: center;
+}
+
+.epc-root .dac-col-item {
+  width: auto;
+  text-align: left;
+}
+
+.epc-root .dac-col-mark {
+  width: 40mm;
+  text-align: center;
+  font-weight: 700;
+}
+
+.epc-root .dac-col-remark {
+  width: 40mm;
+}
+
+.epc-root .dac-marks {
+  display: inline-flex;
+  gap: 1.2mm;
+  justify-content: center;
+  flex-wrap: nowrap;
+  padding: 1mm;
+  border-radius: 2px;
+}
+
+.epc-root .dac-marks.is-invalid {
+  outline: 2px solid #c0392b;
+  outline-offset: 1px;
+  background: rgba(192, 57, 43, 0.1);
+}
+
+.epc-root .dac-marks.is-invalid .dac-mark-btn {
+  border-color: #c0392b;
+}
+
+.epc-root .dac-checklist tr.dac-row-invalid > td {
+  background: rgba(192, 57, 43, 0.08);
+}
+
+.epc-root .dac-checklist tr.dac-row-invalid > td.dac-col-item {
+  color: #922b21;
+  font-weight: 600;
+}
+
+.epc-root .dac-mark-btn {
+  width: 8mm;
+  height: 8mm;
+  padding: 0;
+  border: 1px solid #555;
+  background: #fff;
+  font-size: 9pt;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  color: #111;
+}
+
+.epc-root .dac-mark-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.epc-root .dac-mark-btn.is-checked {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.epc-root .dac-mark-ro {
+  display: inline-block;
+  min-width: 5mm;
+  font-weight: 700;
+}
+
+.epc-root .dac-in {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #888;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 0 1mm;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.epc-root .dac-in:focus {
+  border-bottom-color: #111;
+}
+
+.epc-root .dac-in.is-invalid {
+  border-bottom-color: #c0392b;
+}
+
+.epc-root .dac-in--date {
+  width: auto;
+  min-width: 28mm;
+}
+
+.epc-root .dac-period-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 2mm;
+  flex-wrap: wrap;
+}
+
+.epc-root .dac-outcome {
+  border: 1px solid #333;
+  margin-top: 4mm;
+  padding: 2.5mm;
+  font-size: 10.5pt;
+}
+
+.epc-root .dac-outcome-title {
+  font-weight: 700;
+  margin-bottom: 2mm;
+}
+
+.epc-root .dac-outcome-row {
+  margin-bottom: 2mm;
+}
+
+.epc-root .dac-notes {
+  display: block;
+  width: 100%;
+  margin-top: 1mm;
+  border: 1px solid #888;
+  font: inherit;
+  padding: 1.5mm;
+  resize: vertical;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.epc-root .dac-notes:focus {
+  outline: none;
+  border-color: #111;
+}
+
+.epc-root .dac-notes.is-invalid {
+  border-color: #c0392b;
+}
+
+.epc-root .dac-notes-ro {
+  margin-top: 1mm;
+  white-space: pre-wrap;
+  min-height: 8mm;
+}
+
+.epc-root .dac-sig {
+  margin-top: 6mm;
+  width: 70mm;
+  font-size: 10pt;
+}
+
+.epc-root .dac-sig-role {
+  font-weight: 700;
+}
+
+.epc-root .dac-sig-mark {
+  width: 50mm;
+  height: 14mm;
+  object-fit: contain;
+  object-position: left bottom;
+  display: block;
+}
+
+.epc-root .dac-sig-line {
+  width: 50mm;
+  border-top: 1px solid #222;
+  margin: 2mm 0;
+}
+
+.epc-root .dac-footer {
+  position: absolute;
+  left: 12mm;
+  right: 12mm;
+  bottom: 8mm;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 9.5pt;
+  border-top: 1px solid #222;
+  padding-top: 1.5mm;
+  line-height: 1.3;
+}
+
+.epc-root .dac-footer-center,
+.epc-root .dac-footer-right {
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .epc-root .dac-page {
+    padding: 12px 12px 64px;
+    overflow-x: auto;
+  }
+
+  .epc-root .dac-header {
+    grid-template-columns: 56px 1fr 88px;
+    min-width: 640px;
+  }
+
+  .epc-root .dac-meta,
+  .epc-root .dac-checklist {
+    min-width: 640px;
+  }
+
+  .epc-root .dac-footer {
+    left: 12px;
+    right: 12px;
+  }
+}
+
+/* —— Acceptance Letter (FOR-01-09) —— */
+.epc-root .acc-page {
+  width: 100%;
+  max-width: 235mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 12mm 16mm 16mm;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.epc-root .acc-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9pt;
+  margin-bottom: 3mm;
+}
+
+.epc-root .acc-letterhead {
+  border: 1px solid #333;
+  text-align: center;
+  padding: 2.5mm 4mm;
+  margin: 0 auto 8mm;
+  max-width: 145mm;
+  line-height: 1.35;
+}
+
+.epc-root .acc-co {
+  font-weight: 700;
+  font-size: 11pt;
+}
+
+.epc-root .acc-addr,
+.epc-root .acc-contact {
+  font-size: 8.5pt;
+}
+
+.epc-root .acc-ref {
+  margin-bottom: 4mm;
+  line-height: 1.55;
+}
+
+.epc-root .acc-ref-line {
+  margin-bottom: 1mm;
+}
+
+.epc-root .acc-ref-label {
+  display: inline-block;
+  min-width: 18mm;
+}
+
+.epc-root .acc-addr-block {
+  margin: 2mm 0;
+  min-height: 14mm;
+  line-height: 1.35;
+}
+
+.epc-root .acc-co-name {
+  font-weight: 700;
+}
+
+.epc-root .acc-pre {
+  white-space: pre-wrap;
+}
+
+.epc-root .acc-att-row {
+  display: flex;
+  gap: 8mm;
+  margin-bottom: 3mm;
+  flex-wrap: wrap;
+}
+
+.epc-root .acc-salutation {
+  margin: 0 0 3mm;
+}
+
+.epc-root .acc-subject {
+  font-weight: 700;
+  text-transform: uppercase;
+  margin: 0 0 4mm;
+  font-size: 10.5pt;
+}
+
+.epc-root .acc-product {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 4mm;
+  font-size: 10pt;
+}
+
+.epc-root .acc-product td {
+  padding: 1.2mm 0;
+  vertical-align: top;
+}
+
+.epc-root .acc-lbl {
+  width: 42mm;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.epc-root .acc-colon {
+  width: 4mm;
+  vertical-align: middle;
+}
+
+.epc-root .acc-val {
+  border-bottom: 1px solid #333;
+  min-height: 7mm;
+  vertical-align: middle;
+  line-height: 1.35;
+  padding: 1.5mm 0 1mm;
+}
+
+.epc-root .acc-val.is-editing {
+  border-bottom: 0;
+  padding: 0.5mm 0;
+}
+
+.epc-root .acc-in,
+.epc-root .acc-select {
+  display: block;
+  width: 100%;
+  min-height: 7mm;
+  height: 7mm;
+  border: 0;
+  border-bottom: 1px solid #333;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  font-size: inherit;
+  line-height: 1.35;
+  color: inherit;
+  padding: 1mm 1.5mm 1.5mm;
+  margin: 0;
+  outline: none;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.epc-root .acc-in:focus,
+.epc-root .acc-select:focus {
+  border-bottom-color: #111;
+}
+
+.epc-root .acc-in.is-invalid,
+.epc-root .acc-select.is-invalid,
+.epc-root .acc-dd.is-invalid [class*="-control"] {
+  border-bottom-color: #c0392b !important;
+}
+
+.epc-root .acc-dd {
+  width: 100%;
+  min-width: 0;
+}
+
+.epc-root .acc-dd [class*="-control"] {
+  min-height: 7mm !important;
+  border: 0 !important;
+  border-bottom: 1px solid #333 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.epc-root .acc-dd [class*="-control"]:hover,
+.epc-root .acc-dd [class*="-control"][class*="-focused"] {
+  border-bottom-color: #111 !important;
+  box-shadow: none !important;
+}
+
+.epc-root .acc-dd [class*="-ValueContainer"] {
+  padding: 1mm 1.5mm !important;
+}
+
+.epc-root .acc-dd [class*="-IndicatorsContainer"] {
+  height: 7mm;
+}
+
+.epc-root .acc-dd [class*="-indicatorContainer"] {
+  padding: 2px 4px !important;
+}
+
+.epc-root .acc-dd [class*="-singleValue"],
+.epc-root .acc-dd [class*="-placeholder"],
+.epc-root .acc-dd [class*="-Input"] {
+  margin: 0 !important;
+  font-size: 10pt !important;
+}
+
+.epc-root .acc-body p {
+  margin: 0 0 3mm;
+  text-align: justify;
+  line-height: 1.45;
+}
+
+.epc-root .acc-body ol {
+  margin: 0 0 3mm;
+  padding-left: 6mm;
+}
+
+.epc-root .acc-body li {
+  margin-bottom: 2mm;
+  text-align: justify;
+  line-height: 1.4;
+}
+
+.epc-root .acc-dates {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.epc-root .acc-closing {
+  margin-top: 0;
+}
+
+.epc-root .acc-thanks {
+  margin-bottom: 4mm;
+}
+
+.epc-root .acc-sig {
+  margin-top: 8mm;
+  width: 75mm;
+}
+
+.epc-root .acc-sig-mark {
+  width: 50mm;
+  height: 14mm;
+  object-fit: contain;
+  object-position: left bottom;
+  display: block;
+}
+
+.epc-root .acc-sig-line {
+  width: 50mm;
+  border-top: 1px solid #222;
+  margin: 2mm 0 1mm;
+}
+
+.epc-root .acc-sig-role {
+  font-weight: 700;
+}
+
+.epc-root .acc-sig-dept {
+  font-size: 9.5pt;
+}
+
+.epc-root .acc-end-matter {
+  margin-top: 5mm;
+}
+
+.epc-root .acc-note {
+  margin-top: 10mm;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 9.5pt;
+}
+
+@media print {
+  .epc-root .acc-page {
+    max-width: none;
+    min-height: auto;
+    padding: 0;
+  }
+
+  .epc-root .acc-letterhead,
+  .epc-root .acc-ref,
+  .epc-root .acc-product,
+  .epc-root .acc-end-matter {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .epc-root .acc-body p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .epc-root .acc-body li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+@media (max-width: 720px) {
+  .epc-root .acc-page {
+    padding: 12px;
+    overflow-x: auto;
+  }
+
+  .epc-root .acc-letterhead {
+    max-width: none;
+  }
+
+  .epc-root .acc-product {
+    min-width: 520px;
+  }
+}
+
+/* —— Factory Audit Notice (FOR-01-11) —— */
+.epc-root .an-page {
+  width: 100%;
+  max-width: 8.5in;
+  min-height: 11in;
+  margin: 0 auto;
+  padding: 0.45in 0.55in 0.4in;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9.5pt;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.epc-root .an-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8mm;
+  margin-bottom: 2mm;
+}
+
+.epc-root .an-logo {
+  width: 42mm;
+  height: auto;
+  object-fit: contain;
+}
+
+.epc-root .an-contact {
+  text-align: right;
+  font-size: 7.5pt;
+  line-height: 1.35;
+  max-width: 78mm;
+}
+
+.epc-root .an-form-meta {
+  font-size: 9pt;
+  margin-bottom: 3mm;
+}
+
+.epc-root .an-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 12mm;
+  margin-bottom: 2mm;
+}
+
+.epc-root .an-meta-right {
+  text-align: right;
+}
+
+.epc-root .an-meta-line {
+  margin-bottom: 1.2mm;
+}
+
+.epc-root .an-recipient {
+  margin: 1.5mm 0 2mm;
+  line-height: 1.35;
+  min-height: 12mm;
+}
+
+.epc-root .an-co {
+  font-weight: 700;
+}
+
+.epc-root .an-pre {
+  white-space: pre-wrap;
+}
+
+.epc-root .an-att-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  margin-bottom: 2.5mm;
+  flex-wrap: wrap;
+}
+
+.epc-root .an-salutation {
+  margin: 0 0 2mm;
+}
+
+.epc-root .an-title {
+  font-weight: 700;
+  font-size: 11pt;
+  text-transform: uppercase;
+  margin: 0 0 2.5mm;
+}
+
+.epc-root .an-field-line {
+  margin-bottom: 1.5mm;
+}
+
+.epc-root .an-standard-line {
+  border-bottom: 1px solid #222;
+  padding-bottom: 1.5mm;
+  margin-bottom: 2.5mm;
+}
+
+.epc-root .an-intro {
+  margin: 0 0 1.5mm;
+  text-align: justify;
+  line-height: 1.35;
+}
+
+.epc-root .an-instruction {
+  font-style: italic;
+  margin: 0 0 2mm;
+  font-size: 9pt;
+  line-height: 1.3;
+}
+
+.epc-root .an-schedule {
+  display: flex;
+  gap: 18mm;
+  margin-bottom: 2mm;
+  font-weight: 700;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.epc-root .an-val {
+  text-decoration: underline;
+}
+
+.epc-root .an-scope-list {
+  margin: 0 0 2mm;
+}
+
+.epc-root .an-scope-item {
+  display: grid;
+  grid-template-columns: 5mm 1fr;
+  column-gap: 2mm;
+  align-items: start;
+  margin-bottom: 1.1mm;
+}
+
+.epc-root .an-scope-item.is-clickable {
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.epc-root .an-scope-item.is-clickable:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.epc-root .an-scope-item.is-clickable:focus-visible {
+  outline: 1px solid #555;
+  outline-offset: 1px;
+}
+
+.epc-root .an-box {
+  width: 3.8mm;
+  height: 3.8mm;
+  padding: 0;
+  border: 1px solid #222;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8pt;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 0.4mm;
+  cursor: pointer;
+  color: #111;
+}
+
+.epc-root .an-box:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.epc-root .an-box.is-checked {
+  background: #111;
+  color: #fff;
+}
+
+.epc-root .an-box.is-invalid {
+  border-color: #c0392b;
+}
+
+.epc-root .an-scope-text {
+  line-height: 1.25;
+}
+
+.epc-root .an-in,
+.epc-root .an-select {
+  border: 0;
+  border-bottom: 1px solid #888;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  outline: none;
+  padding: 0 1mm;
+  box-sizing: border-box;
+}
+
+.epc-root .an-field-line--audit-type {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  flex-wrap: wrap;
+}
+
+.epc-root .an-dd {
+  display: inline-block;
+  min-width: 55mm;
+  max-width: 90mm;
+  vertical-align: middle;
+}
+
+.epc-root .an-dd [class*="-control"] {
+  min-height: 7mm !important;
+  border: 0 !important;
+  border-bottom: 1px solid #888 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font: inherit !important;
+}
+
+.epc-root .an-dd [class*="-control"]:hover,
+.epc-root .an-dd [class*="-control"][class*="-focused"] {
+  border-bottom-color: #111 !important;
+  box-shadow: none !important;
+}
+
+.epc-root .an-dd [class*="-ValueContainer"] {
+  padding: 0 1mm !important;
+}
+
+.epc-root .an-dd [class*="-IndicatorsContainer"] {
+  height: 7mm;
+}
+
+.epc-root .an-dd [class*="-indicatorContainer"] {
+  padding: 2px 4px !important;
+}
+
+.epc-root .an-dd [class*="-singleValue"],
+.epc-root .an-dd [class*="-placeholder"],
+.epc-root .an-dd [class*="-Input"] {
+  font-size: 9.5pt !important;
+  color: #111 !important;
+}
+
+.epc-root .an-dd.is-invalid [class*="-control"] {
+  border-bottom-color: #c0392b !important;
+}
+
+.epc-root .an-schedule-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 2mm;
+}
+
+.epc-root .an-time {
+  display: inline-block;
+  min-width: 32mm;
+  max-width: 42mm;
+  font-weight: 400;
+}
+
+.epc-root .an-time .custom-datepicker-wrapper,
+.epc-root .an-time .react-datepicker-wrapper {
+  width: 100% !important;
+}
+
+.epc-root .an-time .custom-datepicker,
+.epc-root .an-time input {
+  min-height: 7mm !important;
+  border: 0 !important;
+  border-bottom: 1px solid #888 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font: inherit !important;
+  font-weight: 700 !important;
+  padding: 0 1mm !important;
+}
+
+.epc-root .an-time.is-invalid .custom-datepicker,
+.epc-root .an-time.is-invalid input {
+  border-bottom-color: #c0392b !important;
+}
+
+.epc-root .an-in--date,
+.epc-root .an-in--time {
+  min-width: 28mm;
+  font-weight: 700;
+}
+
+.epc-root .an-in--inline {
+  min-width: 28mm;
+  max-width: 55mm;
+}
+
+.epc-root .an-select {
+  min-width: 55mm;
+}
+
+.epc-root .an-in.is-invalid,
+.epc-root .an-select.is-invalid {
+  border-bottom-color: #c0392b;
+}
+
+.epc-root .an-inline-ro {
+  display: inline-block;
+  border-bottom: 1px solid #333;
+  min-width: 28mm;
+  padding: 0 1mm;
+}
+
+.epc-root .an-yesno {
+  display: inline-flex;
+  gap: 1.5mm;
+}
+
+.epc-root .an-chip {
+  border: 1px solid #555;
+  background: #fff;
+  font: inherit;
+  font-size: 8pt;
+  padding: 0 2mm;
+  cursor: pointer;
+}
+
+.epc-root .an-chip.is-checked {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.epc-root .an-chip.is-invalid {
+  border-color: #c0392b;
+}
+
+.epc-root .an-closing {
+  margin-top: 2.5mm;
+}
+
+.epc-root .an-notice {
+  margin-bottom: 2mm;
+  text-align: justify;
+  line-height: 1.35;
+}
+
+.epc-root .an-thanks {
+  margin-bottom: 1.5mm;
+}
+
+.epc-root .an-sig {
+  margin-top: 4mm;
+  width: 70mm;
+}
+
+.epc-root .an-sig-mark {
+  width: 45mm;
+  height: 12mm;
+  object-fit: contain;
+  object-position: left bottom;
+  display: block;
+}
+
+.epc-root .an-sig-line {
+  width: 45mm;
+  border-top: 1px solid #222;
+  margin: 1.5mm 0;
+}
+
+.epc-root .an-sig-row {
+  margin-bottom: 0.8mm;
+}
+
+.epc-root .an-ack {
+  margin-top: 5mm;
+  border-top: 1px solid #222;
+  padding-top: 2.5mm;
+}
+
+.epc-root .an-ack-title {
+  text-align: center;
+  font-weight: 700;
+  text-decoration: underline;
+  font-size: 10.5pt;
+  margin-bottom: 1.5mm;
+}
+
+.epc-root .an-ack-confirm {
+  margin-bottom: 2mm;
+}
+
+.epc-root .an-ack-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 14mm;
+  row-gap: 2mm;
+}
+
+.epc-root .an-ack-sig-mark {
+  width: 40mm;
+  height: 11mm;
+  object-fit: contain;
+  object-position: left bottom;
+  display: block;
+  margin-top: 1mm;
+}
+
+.epc-root .an-ack-hint {
+  margin: 1mm 0 0;
+  font-size: 8pt;
+  font-style: italic;
+  color: #555;
+}
+
+.epc-root .an-footnote {
+  margin-top: 2mm;
+  font-size: 7.5pt;
+}
+
+@media (max-width: 720px) {
+  .epc-root .an-page {
+    padding: 12px;
+    overflow-x: auto;
+  }
+
+  .epc-root .an-header {
+    min-width: 560px;
+  }
+
+  .epc-root .an-ack-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* —— Audit Checklist and Attendance List (FOR-01-12) —— */
+.epc-root .aca-page {
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 10mm 12mm 28mm;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9.5pt;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.epc-root .aca-header {
+  border: 1px solid #333;
+  display: grid;
+  grid-template-columns: 24mm 1fr 44mm;
+  align-items: stretch;
+  margin-bottom: 4mm;
+}
+
+.epc-root .aca-logo-box {
+  border-right: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1mm;
+}
+
+.epc-root .aca-logo {
+  width: 18mm;
+  height: 18mm;
+  object-fit: contain;
+}
+
+.epc-root .aca-header-title {
+  text-align: center;
+  padding: 2mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.epc-root .aca-header-title h1 {
+  margin: 0;
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.epc-root .aca-form-code {
+  border-left: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10pt;
+  font-weight: 700;
+  text-align: center;
+  padding: 1mm;
+}
+
+.epc-root .aca-date-row {
+  margin: 2mm 0 4mm 4mm;
+  font-size: 10pt;
+}
+
+.epc-root .aca-underline {
+  display: inline-block;
+  min-width: 45mm;
+  border-bottom: 1px solid #111;
+  padding: 0 2mm 0.5mm;
+}
+
+.epc-root .aca-section-title,
+.epc-root .aca-audit-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 11pt;
+  margin: 0 0 3mm;
+}
+
+.epc-root .aca-audit-subtitle {
+  text-align: center;
+  font-size: 10pt;
+  margin: 0 0 3mm;
+}
+
+.epc-root .aca-attendance {
+  width: 85%;
+  margin: 0 auto;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.epc-root .aca-attendance th,
+.epc-root .aca-attendance td {
+  border: 1px solid #333;
+  padding: 1.5mm 2mm;
+  vertical-align: middle;
+}
+
+.epc-root .aca-attendance th {
+  text-align: center;
+  font-size: 10pt;
+  background: #f7f7f7;
+}
+
+.epc-root .aca-attendance th:first-child {
+  width: 50%;
+}
+
+.epc-root .aca-time-hint {
+  display: block;
+  text-align: left;
+  margin-top: 1mm;
+  font-size: 8.5pt;
+  font-weight: 700;
+}
+
+.epc-root .aca-time-picker {
+  min-width: 0;
+  width: 100%;
+}
+
+.epc-root .aca-time-picker.is-invalid .react-datepicker-wrapper,
+.epc-root .aca-time-picker.is-invalid input {
+  border-color: #b91c1c !important;
+}
+
+.epc-root .aca-attendance .aca-time-picker .react-datepicker-wrapper,
+.epc-root .aca-attendance .aca-time-picker input {
+  width: 100%;
+  font-size: 9pt;
+}
+
+.epc-root .aca-col-actions {
+  width: 18mm;
+  border: none !important;
+  background: transparent !important;
+  text-align: center;
+}
+
+.epc-root .aca-empty {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.epc-root .aca-in {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #999;
+  background: transparent;
+  font: inherit;
+  padding: 1mm 1.5mm;
+  box-sizing: border-box;
+}
+
+.epc-root .aca-in:focus {
+  outline: none;
+  border-bottom-color: #111;
+}
+
+.epc-root .aca-in.is-invalid {
+  border-bottom-color: #c0392b;
+  background: #fdf2f0;
+}
+
+.epc-root .aca-in--date {
+  width: auto;
+  min-width: 36mm;
+}
+
+.epc-root .aca-add,
+.epc-root .aca-remove {
+  margin: 2mm auto 0;
+  display: block;
+  border: 1px solid #555;
+  background: #f7f7f7;
+  font: inherit;
+  font-size: 9pt;
+  padding: 1mm 3mm;
+  cursor: pointer;
+}
+
+.epc-root .aca-attendance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 2mm auto 0;
+  width: 85%;
+}
+
+.epc-root .aca-attendance-actions .aca-add,
+.epc-root .aca-attendance-actions .aca-mark-mine {
+  margin: 0;
+}
+
+.epc-root .aca-mark-mine {
+  display: inline-block;
+  border: 1px solid #8a1f11;
+  background: #8a1f11;
+  color: #fff;
+  font: inherit;
+  font-size: 9pt;
+  font-weight: 700;
+  padding: 1.5mm 4mm;
+  cursor: pointer;
+}
+
+.epc-root .aca-mark-hint {
+  flex-basis: 100%;
+  margin: 1mm 0 0;
+  text-align: center;
+  font-size: 8.5pt;
+  color: #8a1f11;
+}
+
+.epc-root .aca-attendee-row.is-current td {
+  background: #fff8f7;
+}
+
+.epc-root .aca-attendee-row.is-saved td {
+  background: #fafafa;
+}
+
+.epc-root .aca-attendee-badge-row {
+  margin-bottom: 1mm;
+}
+
+.epc-root .aca-badge {
+  display: inline-block;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  padding: 0.5mm 1.5mm;
+  border-radius: 3px;
+}
+
+.epc-root .aca-badge--current {
+  background: #8a1f11;
+  color: #fff;
+}
+
+.epc-root .aca-badge--saved {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.epc-root .aca-remove {
+  margin: 0;
+  display: inline-block;
+  border: none;
+  background: transparent;
+  color: #8a1f11;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.epc-root .aca-divider {
+  border-top: 1px solid #333;
+  margin: 4mm 0 3mm;
+}
+
+.epc-root .aca-meta {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2mm;
+  font-size: 9.5pt;
+}
+
+.epc-root .aca-meta td {
+  padding: 1mm 1.5mm;
+  vertical-align: bottom;
+}
+
+.epc-root .aca-meta-lbl {
+  width: 38mm;
+  white-space: nowrap;
+}
+
+.epc-root .aca-meta-colon {
+  width: 4mm;
+}
+
+.epc-root .aca-meta-file {
+  width: 22mm;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.epc-root .aca-checklist {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 9pt;
+  margin-bottom: 3mm;
+}
+
+.epc-root .aca-checklist th,
+.epc-root .aca-checklist td {
+  border: 1px solid #333;
+  vertical-align: top;
+  padding: 1.5mm 2mm;
+}
+
+.epc-root .aca-checklist th {
+  background: #f3f3f3;
+  text-align: center;
+  font-weight: 700;
+}
+
+.epc-root .aca-col-item {
+  width: 50%;
+}
+
+.epc-root .aca-col-ref {
+  width: 28%;
+}
+
+.epc-root .aca-col-coverage {
+  width: 22%;
+}
+
+.epc-root .aca-item-title {
+  font-weight: 700;
+  margin-bottom: 1mm;
+}
+
+.epc-root .aca-bullet {
+  margin-left: 3mm;
+  line-height: 1.3;
+}
+
+.epc-root .aca-ref-cell {
+  line-height: 1.3;
+}
+
+.epc-root .aca-coverage-cell {
+  padding: 0 !important;
+  vertical-align: top;
+}
+
+.epc-root .aca-coverage-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 1px solid #777;
+}
+
+.epc-root .aca-coverage-row:last-of-type {
+  border-bottom: none;
+}
+
+.epc-root .aca-coverage-in {
+  display: block;
+  flex: 1;
+  width: 100%;
+  border: none !important;
+  border-radius: 0;
+  padding: 1.5mm 1.5mm;
+  min-height: 7mm;
+}
+
+.epc-root .aca-coverage-remove {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #9b1b1b;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.epc-root .aca-add-note {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border: none;
+  background: #f8eded;
+  color: #9b1b1b;
+  font-size: 8pt;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  padding: 2px 4px;
+}
+
+.epc-root .aca-add-note:hover {
+  text-decoration: underline;
+}
+
+.epc-root .aca-coverage-line {
+  min-height: 7mm;
+  border-bottom: 1px solid #777;
+  padding: 1mm 1.5mm;
+  font-size: 8.5pt;
+  flex: 1;
+}
+
+.epc-root .aca-coverage-line:last-child {
+  border-bottom: none;
+}
+
+.epc-root .aca-attachments {
+  margin-top: 2mm;
+  font-size: 9.5pt;
+  line-height: 1.45;
+}
+
+.epc-root .aca-attachments-title {
+  margin-bottom: 1.5mm;
+  font-weight: 700;
+}
+
+.epc-root .aca-attachment {
+  display: grid;
+  grid-template-columns: 9mm 1fr;
+  align-items: center;
+  gap: 1mm;
+  margin-bottom: 1mm;
+}
+
+.epc-root .aca-attachment.is-clickable {
+  cursor: pointer;
+}
+
+.epc-root .aca-box {
+  width: 7mm;
+  height: 7mm;
+  border: 1px solid #333;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10pt;
+  font-weight: 700;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.epc-root .aca-box:disabled {
+  cursor: default;
+}
+
+.epc-root .aca-box.is-checked {
+  background: #111;
+  color: #fff;
+}
+
+.epc-root .aca-box.is-invalid {
+  outline: 2px solid #c0392b;
+}
+
+.epc-root .aca-sig {
+  margin-top: 6mm;
+  max-width: 70mm;
+}
+
+.epc-root .aca-sig-role {
+  font-weight: 700;
+  margin-bottom: 1mm;
+}
+
+.epc-root .aca-sig-mark {
+  max-height: 18mm;
+  max-width: 55mm;
+  object-fit: contain;
+  display: block;
+}
+
+.epc-root .aca-sig-line {
+  border-bottom: 1px solid #333;
+  margin: 2mm 0 1mm;
+  width: 55mm;
+}
+
+.epc-root .aca-footer {
+  position: absolute;
+  left: 12mm;
+  right: 12mm;
+  bottom: 8mm;
+  border-top: 1px solid #333;
+  padding-top: 1.5mm;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-size: 8.5pt;
+  line-height: 1.25;
+}
+
+.epc-root .aca-footer-center {
+  text-align: center;
+}
+
+.epc-root .aca-footer-right {
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .epc-root .aca-page {
+    padding: 12px;
+    overflow-x: auto;
+  }
+
+  .epc-root .aca-header,
+  .epc-root .aca-attendance,
+  .epc-root .aca-checklist {
+    min-width: 560px;
+  }
+}
+
+/* —— Audit Notes (FOR-01-13) —— */
+.epc-root .an-page {
+  position: relative;
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 16mm 18mm 28mm;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.epc-root .an-header {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 18mm;
+  margin-bottom: 4mm;
+}
+
+.epc-root .an-title {
+  margin: 0 0 2mm;
+  font-size: 15pt;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-align: center;
+}
+
+.epc-root .an-form-number {
+  position: absolute;
+  right: 0;
+  bottom: 2mm;
+  font-size: 9pt;
+}
+
+.epc-root .an-info,
+.epc-root .an-notes {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-bottom: 0;
+}
+
+.epc-root .an-info td {
+  border: 1px solid #333;
+  height: 9mm;
+  padding: 2mm 3mm;
+  font-size: 9.5pt;
+  vertical-align: middle;
+}
+
+.epc-root .an-info-left,
+.epc-root .an-info-right {
+  width: 50%;
+}
+
+.epc-root .an-label {
+  font-weight: 400;
+}
+
+.epc-root .an-field {
+  display: inline-block;
+  min-width: 40mm;
+  border-bottom: 1px dotted #777;
+  min-height: 4mm;
+  vertical-align: bottom;
+}
+
+.epc-root .an-notes th,
+.epc-root .an-notes td {
+  border: 1px solid #333;
+  padding: 2mm;
+  font-size: 9pt;
+  vertical-align: top;
+}
+
+.epc-root .an-notes th {
+  text-align: center;
+  font-weight: 400;
+  background: #f7f7f7;
+}
+
+.epc-root .an-col-item {
+  width: 17%;
+}
+
+.epc-root .an-col-obs {
+  width: 50%;
+}
+
+.epc-root .an-col-ref {
+  width: 25%;
+}
+
+.epc-root .an-col-actions {
+  width: 8%;
+  text-align: center;
+}
+
+.epc-root .an-in {
+  width: 100%;
+  border: 1px solid transparent;
+  background: #fffef8;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 9pt;
+  color: #111;
+}
+
+.epc-root .an-in:focus {
+  outline: none;
+  border-color: #c45c4a;
+  background: #fff;
+}
+
+.epc-root .an-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.epc-root .an-in--date {
+  max-width: 160px;
+}
+
+.epc-root .an-in--area {
+  resize: vertical;
+  min-height: 52px;
+  line-height: 1.35;
+}
+
+.epc-root .an-pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.epc-root .an-add,
+.epc-root .an-remove {
+  margin-top: 8px;
+  border: 1px solid #c45c4a;
+  background: #fff;
+  color: #c45c4a;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.epc-root .an-remove {
+  margin-top: 0;
+  border-color: #9ca3af;
+  color: #6b7280;
+}
+
+.epc-root .an-sign {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed #d1d5db;
+}
+
+.epc-root .an-sign-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.epc-root .an-sign-img {
+  max-height: 64px;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+.epc-root .an-footer {
+  margin-top: 18px;
+  border-top: 1px solid #333;
+  padding-top: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-size: 8pt;
+  line-height: 1.2;
+}
+
+.epc-root .an-footer-center {
+  text-align: center;
+}
+
+.epc-root .an-footer-right {
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .epc-root .an-page {
+    padding: 12px;
+    overflow-x: auto;
+  }
+
+  .epc-root .an-info,
+  .epc-root .an-notes {
+    min-width: 560px;
+  }
+}
+
+/* —— Selected Samples (FOR-01-15, landscape sheet) —— */
+.epc-root .ss-page {
+  position: relative;
+  width: 100%;
+  max-width: 297mm;
+  margin: 0 auto;
+  padding: 12mm 10mm 20mm;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10px;
+}
+
+.epc-root .ss-form-code {
+  position: absolute;
+  top: 8mm;
+  right: 10mm;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.epc-root .ss-title {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  margin: 2mm 0 8mm;
+  text-transform: uppercase;
+}
+
+.epc-root .ss-table-wrap {
+  overflow-x: auto;
+}
+
+.epc-root .ss-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 720px;
+}
+
+.epc-root .ss-table th,
+.epc-root .ss-table td {
+  border: 1px solid #222;
+  padding: 4px;
+  vertical-align: middle;
+}
+
+.epc-root .ss-table thead th {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: #f7f7f7;
+  line-height: 1.25;
+}
+
+.epc-root .ss-table tbody td {
+  font-size: 10px;
+  text-align: center;
+}
+
+.epc-root .ss-col-sample { width: 10%; }
+.epc-root .ss-col-lab { width: 16%; }
+.epc-root .ss-col-qty { width: 7%; }
+.epc-root .ss-col-product { width: 21%; }
+.epc-root .ss-col-selected { width: 18%; }
+.epc-root .ss-col-prod { width: 20%; }
+.epc-root .ss-col-actn {
+  width: 8%;
+  text-align: center;
+}
+
+.epc-root .ss-sample-name {
+  font-weight: 400;
+}
+
+.epc-root .ss-add,
+.epc-root .ss-remove {
+  margin-top: 10px;
+  border: 1px solid #c45c4a;
+  background: #fff;
+  color: #c45c4a;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.epc-root .ss-remove {
+  margin-top: 0;
+  border-color: #9ca3af;
+  color: #6b7280;
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.epc-root .ss-in {
+  width: 100%;
+  border: 1px solid transparent;
+  background: #fffef8;
+  padding: 3px 4px;
+  font: inherit;
+  font-size: 10px;
+  color: #111;
+  text-align: center;
+}
+
+.epc-root .ss-in:focus {
+  outline: none;
+  border-color: #c45c4a;
+  background: #fff;
+}
+
+.epc-root .ss-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.epc-root .ss-in--area {
+  resize: vertical;
+  min-height: 36px;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.epc-root .ss-pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.epc-root .ss-sign {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed #d1d5db;
+}
+
+.epc-root .ss-sign-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.epc-root .ss-sign-img {
+  max-height: 64px;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+.epc-root .ss-footer {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: end;
+  font-size: 8px;
+}
+
+.epc-root .ss-footer-left {
+  text-align: left;
+  line-height: 1.35;
+}
+
+.epc-root .ss-footer-center {
+  text-align: center;
+}
+
+.epc-root .ss-footer-right {
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .epc-root .ss-page {
+    padding: 12px;
+  }
+}
+
+/* —— Audit Report (FOR-01-16) —— */
+.epc-root .ar-page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 20px 22px 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.epc-root .ar-header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.epc-root .ar-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.epc-root .ar-form-code {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 11px;
+  text-align: right;
+  line-height: 1.3;
+}
+
+.epc-root .ar-section {
+  margin-bottom: 18px;
+}
+
+.epc-root .ar-section h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.epc-root .ar-section h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.epc-root .ar-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.epc-root .ar-grid--2 {
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.epc-root .ar-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.epc-root .ar-field {
+  min-width: 0;
+}
+
+.epc-root .ar-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 3px;
+}
+
+.epc-root .ar-value {
+  font-size: 13px;
+  min-height: 28px;
+  padding: 4px 0;
+  border-bottom: 1px dotted #9ca3af;
+}
+
+.epc-root .ar-in {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fffef8;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.epc-root .ar-in:focus {
+  outline: none;
+  border-color: #c45c4a;
+  background: #fff;
+}
+
+.epc-root .ar-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.epc-root .ar-in--area {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.epc-root .ar-in--date {
+  max-width: 180px;
+}
+
+.epc-root .ar-add {
+  margin: 4px 0 12px;
+  border: 1px solid #c45c4a;
+  background: #fff;
+  color: #c45c4a;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.epc-root .ar-sign {
+  margin-top: 10px;
+}
+
+.epc-root .ar-sign-img {
+  max-height: 64px;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+.epc-root .ar-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .epc-root .ar-grid,
+  .epc-root .ar-grid--2,
+  .epc-root .ar-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* —— Non-Conformance Report (FOR-01-14) —— */
+.epc-root .ncr-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 22px 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.epc-root .ncr-header {
+  position: relative;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.epc-root .ncr-conf {
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.epc-root .ncr-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.epc-root .ncr-form-code {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 11px;
+}
+
+.epc-root .ncr-section {
+  margin-bottom: 18px;
+}
+
+.epc-root .ncr-section h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.epc-root .ncr-section h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.epc-root .ncr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.epc-root .ncr-grid--2 {
+  margin-top: 12px;
+  gap: 20px;
+}
+
+.epc-root .ncr-field {
+  min-width: 0;
+}
+
+.epc-root .ncr-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 3px;
+}
+
+.epc-root .ncr-value {
+  font-size: 13px;
+  min-height: 28px;
+  padding: 4px 0;
+  border-bottom: 1px dotted #9ca3af;
+}
+
+.epc-root .ncr-in {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fffef8;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.epc-root .ncr-in:focus {
+  outline: none;
+  border-color: #c45c4a;
+  background: #fff;
+}
+
+.epc-root .ncr-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.epc-root .ncr-in--area {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.epc-root .ncr-in--date {
+  max-width: 180px;
+}
+
+.epc-root .ncr-sign {
+  margin-top: 10px;
+}
+
+.epc-root .ncr-sign-img {
+  max-height: 64px;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+.epc-root .ncr-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .epc-root .ncr-grid,
+  .epc-root .ncr-grid--2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* —— Requisition for Product Testing (FOR-01-17) —— */
+.epc-root .pt-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 22px 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.epc-root .pt-header {
+  position: relative;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.epc-root .pt-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.epc-root .pt-form-code {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 11px;
+}
+
+.epc-root .pt-section {
+  margin-bottom: 18px;
+}
+
+.epc-root .pt-section h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.epc-root .pt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.epc-root .pt-grid--2 {
+  gap: 20px;
+}
+
+.epc-root .pt-field {
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.epc-root .pt-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 3px;
+}
+
+.epc-root .pt-value {
+  font-size: 13px;
+  min-height: 28px;
+  padding: 4px 0;
+  border-bottom: 1px dotted #9ca3af;
+}
+
+.epc-root .pt-in {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fffef8;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.epc-root .pt-in:focus {
+  outline: none;
+  border-color: #c45c4a;
+  background: #fff;
+}
+
+.epc-root .pt-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.epc-root .pt-in--area {
+  resize: vertical;
+  min-height: 56px;
+}
+
+.epc-root .pt-in--date {
+  max-width: 180px;
+}
+
+.epc-root .pt-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0 0 10px;
+}
+
+.epc-root .pt-table-wrap {
+  overflow-x: auto;
+}
+
+.epc-root .pt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.epc-root .pt-table th,
+.epc-root .pt-table td {
+  border: 1px solid #d1d5db;
+  padding: 6px;
+  vertical-align: top;
+}
+
+.epc-root .pt-table th {
+  background: #f9fafb;
+  font-weight: 600;
+  text-align: left;
+}
+
+.epc-root .pt-idx {
+  width: 28px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.epc-root .pt-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.epc-root .pt-row-btn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.epc-root .pt-row-btn:hover {
+  border-color: #c45c4a;
+  color: #c45c4a;
+}
+
+.epc-root .pt-row-btn--muted {
+  color: #6b7280;
+}
+
+.epc-root .pt-cell {
+  min-height: 28px;
+  white-space: pre-wrap;
+}
+
+.epc-root .pt-sign {
+  margin-top: 10px;
+}
+
+.epc-root .pt-sign-img {
+  max-height: 64px;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+@media (max-width: 720px) {
+  .epc-root .pt-grid,
+  .epc-root .pt-grid--2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* —— Acceptance by Testing Laboratory (FOR-01-18) —— */
+.epc-root .la-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 20px 22px 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.epc-root .la-header {
+  position: relative;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.epc-root .la-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  border: 1px solid #222;
+  display: inline-block;
+  padding: 8px 14px;
+}
+
+.epc-root .la-form-code {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 11px;
+}
+
+.epc-root .la-section {
+  margin-bottom: 20px;
+}
+
+.epc-root .la-section h2 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.epc-root .la-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.epc-root .la-check input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.epc-root .la-box {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #222;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.epc-root .la-box.is-on {
+  background: #f9fafb;
+}
+
+.epc-root .la-check.is-invalid .la-box,
+.epc-root .la-check.is-invalid input {
+  outline: 2px solid #dc2626;
+}
+
+.epc-root .la-check-text {
+  flex: 1;
+}
+
+.epc-root .la-inline {
+  display: inline-block;
+  min-width: 120px;
+  margin: 0 4px;
+  border: none;
+  border-bottom: 1px solid #222;
+  background: #fffef8;
+  font: inherit;
+  padding: 2px 4px;
+}
+
+.epc-root .la-inline--wide {
+  min-width: 160px;
+}
+
+.epc-root .la-inline.is-invalid {
+  background: #fef2f2;
+  border-bottom-color: #dc2626;
+}
+
+.epc-root .la-inline-ro {
+  display: inline-block;
+  min-width: 80px;
+  border-bottom: 1px solid #9ca3af;
+  padding: 0 4px;
+}
+
+.epc-root .la-field {
+  margin-bottom: 12px;
+}
+
+.epc-root .la-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 3px;
+}
+
+.epc-root .la-value {
+  font-size: 13px;
+  min-height: 28px;
+  padding: 4px 0;
+  border-bottom: 1px dotted #9ca3af;
+}
+
+.epc-root .la-value--pre {
+  white-space: pre-wrap;
+}
+
+.epc-root .la-in {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fffef8;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.epc-root .la-in:focus {
+  outline: none;
+  border-color: #c45c4a;
+  background: #fff;
+}
+
+.epc-root .la-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.epc-root .la-in--area {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.epc-root .la-sign {
+  margin-top: 12px;
+}
+
+.epc-root .la-sign-img {
+  max-height: 64px;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+/* —— Certification Report (FOR-01-19) —— */
+.epc-root .cr-page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 20px 22px 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.epc-root .cr-header {
+  position: relative;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.epc-root .cr-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.epc-root .cr-form-code {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 11px;
+}
+
+.epc-root .cr-notice {
+  border: 1px solid #222;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 18px;
+}
+
+.epc-root .cr-section {
+  margin-bottom: 22px;
+}
+
+.epc-root .cr-section h2 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+  text-decoration: underline;
+}
+
+.epc-root .cr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.epc-root .cr-grid--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.epc-root .cr-field {
+  margin-bottom: 10px;
+}
+
+.epc-root .cr-label {
+  font-size: 12px;
+  color: #4b5563;
+  margin-bottom: 4px;
+}
+
+.epc-root .cr-value {
+  font-size: 13px;
+  min-height: 34px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
+.epc-root .cr-value--pre {
+  white-space: pre-wrap;
+  min-height: 60px;
+}
+
+.epc-root .cr-in {
+  width: 100%;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.epc-root .cr-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.epc-root .cr-in--area {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.epc-root .cr-in--date {
+  max-width: 200px;
+}
+
+.epc-root .cr-signoff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.epc-root .cr-sign-col {
+  border: 1px solid #d1d5db;
+  padding: 12px;
+  border-radius: 4px;
+  min-height: 90px;
+}
+
+.epc-root .cr-sign-role {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.epc-root .cr-sign-name {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.epc-root .cr-sign-date {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+@media (max-width: 720px) {
+  .epc-root .cr-grid,
+  .epc-root .cr-grid--4,
+  .epc-root .cr-signoff {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* —— Certification Report Changes (FOR-01-19.1) —— */
+.epc-root .crc-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px 16px 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #222;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.epc-root .crc-header {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.epc-root .crc-form-code {
+  text-align: right;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.epc-root .crc-title {
+  margin: 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.epc-root .crc-file {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.epc-root .crc-table-wrap {
+  overflow-x: auto;
+}
+
+.epc-root .crc-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+}
+
+.epc-root .crc-table th,
+.epc-root .crc-table td {
+  border: 1px solid #333;
+  padding: 6px;
+  vertical-align: top;
+}
+
+.epc-root .crc-table th {
+  text-align: center;
+  font-weight: 400;
+  background: #f9fafb;
+}
+
+.epc-root .crc-details {
+  text-align: left;
+}
+
+.epc-root .crc-col-edition { width: 7%; }
+.epc-root .crc-col-page { width: 10%; }
+.epc-root .crc-col-details { width: 22%; }
+.epc-root .crc-col-annex { width: 10%; }
+.epc-root .crc-col-license { width: 12%; }
+.epc-root .crc-col-approved { width: 10%; }
+.epc-root .crc-col-auditor { width: 10%; }
+.epc-root .crc-col-verification { width: 11%; }
+.epc-root .crc-col-actions { width: 8%; }
+
+.epc-root .crc-in {
+  width: 100%;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  background: #fff;
+}
+
+.epc-root .crc-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.epc-root .crc-in--area {
+  resize: vertical;
+  min-height: 44px;
+  font-family: inherit;
+}
+
+.epc-root .crc-actions {
+  text-align: center;
+}
+
+.epc-root .crc-remove {
+  border: none;
+  background: transparent;
+  color: #b91c1c;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.epc-root .crc-add {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.epc-root .crc-signoff {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+/* —— Certification Recommendation (FOR-01-19.2) —— */
+.epc-root .crec-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 18px 16px 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.epc-root .crec-header { margin-bottom: 14px; }
+.epc-root .crec-code { text-align: right; font-size: 11px; }
+.epc-root .crec-confidential {
+  text-align: center; font-size: 11px; font-weight: 700;
+  border: 1px solid #333; padding: 4px; margin: 8px 0;
+}
+.epc-root .crec-title {
+  margin: 10px 0 0; text-align: center; font-size: 16px; font-weight: 700;
+}
+.epc-root .crec-section { margin-bottom: 20px; }
+.epc-root .crec-section h2 {
+  margin: 0 0 10px; font-size: 14px; font-weight: 700; text-decoration: underline;
+}
+.epc-root .crec-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-bottom: 10px;
+}
+.epc-root .crec-field { margin-bottom: 10px; }
+.epc-root .crec-label { font-size: 12px; color: #4b5563; margin-bottom: 4px; }
+.epc-root .crec-value {
+  font-size: 13px; min-height: 34px; padding: 8px 10px;
+  background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;
+}
+.epc-root .crec-value--pre { white-space: pre-wrap; min-height: 60px; }
+.epc-root .crec-in {
+  width: 100%; font-size: 13px; padding: 8px 10px;
+  border: 1px solid #d1d5db; border-radius: 4px; background: #fff;
+}
+.epc-root .crec-in.is-invalid { border-color: #dc2626; background: #fef2f2; }
+.epc-root .crec-in--area { resize: vertical; min-height: 72px; font-family: inherit; }
+.epc-root .crec-audit-row {
+  border: 1px solid #e5e7eb; border-radius: 4px; padding: 10px; margin-bottom: 10px;
+}
+.epc-root .crec-audit-head {
+  display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;
+}
+.epc-root .crec-link {
+  border: none; background: transparent; color: #b91c1c;
+  text-decoration: underline; cursor: pointer; font-size: 12px;
+}
+.epc-root .crec-add {
+  margin-top: 4px; padding: 8px 14px; border: 1px solid #d1d5db;
+  border-radius: 4px; background: #f9fafb; cursor: pointer; font-size: 13px;
+}
+.epc-root .crec-check-wrap { overflow-x: auto; }
+.epc-root .crec-check-table {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+}
+.epc-root .crec-check-table th,
+.epc-root .crec-check-table td {
+  border: 1px solid #333; padding: 6px; vertical-align: top;
+}
+.epc-root .crec-check-table th {
+  text-align: center; font-weight: 400; background: #f9fafb;
+}
+.epc-root .crec-check-section {
+  font-weight: 700; background: #e9e9e9;
+}
+.epc-root .crec-answer { text-align: center; width: 42px; }
+.epc-root .crec-tick {
+  width: 22px; height: 22px; border: 1px solid #333; background: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 12px; font-weight: 700;
+}
+.epc-root .crec-tick.is-on { background: #f3f4f6; }
+.epc-root .crec-tick.is-invalid { border-color: #dc2626; }
+.epc-root .crec-tick:disabled { cursor: default; opacity: 0.85; }
+.epc-root .crec-signoff {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px;
+}
+.epc-root .crec-sign-role { font-weight: 700; margin-bottom: 6px; }
+.epc-root .crec-muted { color: #6b7280; margin-top: 6px; font-size: 12px; }
+@media (max-width: 720px) {
+  .epc-root .crec-grid, .epc-root .crec-signoff { grid-template-columns: 1fr; }
+}
+
+/* —— Certificate Approval Letter (FOR-01-19.3) —— */
+.epc-root .capl-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 22px 28px 32px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+.epc-root .capl-doc-code {
+  font-size: 13.5px;
+  line-height: 1.3;
+  margin-bottom: 28px;
+}
+.epc-root .capl-issue {
+  display: block;
+}
+.epc-root .capl-meta {
+  margin-bottom: 12px;
+}
+.epc-root .capl-row {
+  display: grid;
+  grid-template-columns: 90px 18px 1fr;
+  min-height: 28px;
+  align-items: start;
+  margin-bottom: 4px;
+}
+.epc-root .capl-row--wide {
+  grid-template-columns: 120px 18px 1fr;
+}
+.epc-root .capl-colon {
+  text-align: center;
+}
+.epc-root .capl-val.is-editing {
+  padding: 0;
+}
+.epc-root .capl-in {
+  width: 100%;
+  font-size: 13.5px;
+  font-family: inherit;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  background: #fff;
+}
+.epc-root .capl-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+.epc-root .capl-in--inline {
+  width: auto;
+  min-width: 220px;
+  display: inline-block;
+}
+.epc-root .capl-in--underline {
+  width: auto;
+  min-width: 140px;
+  display: inline-block;
+  border: none;
+  border-bottom: 1px solid #111;
+  border-radius: 0;
+  padding: 0 4px 2px;
+  background: transparent;
+}
+.epc-root .capl-in--center {
+  text-align: center;
+  font-weight: 700;
+  max-width: 360px;
+  margin: 0 auto;
+  display: block;
+}
+.epc-root .capl-recipient {
+  margin-top: 8px;
+  margin-bottom: 22px;
+}
+.epc-root .capl-company {
+  font-style: italic;
+  margin-bottom: 4px;
+}
+.epc-root .capl-salutation {
+  margin: 0 0 16px;
+}
+.epc-root .capl-subject {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+.epc-root .capl-product {
+  margin-bottom: 10px;
+}
+.epc-root .capl-annex {
+  margin: 8px 0 16px;
+}
+.epc-root .capl-divider {
+  border-top: 1px solid #111;
+  margin: 0 0 14px;
+}
+.epc-root .capl-paragraph {
+  margin: 0 0 14px;
+  line-height: 1.4;
+}
+.epc-root .capl-underline {
+  display: inline-block;
+  min-width: 140px;
+  border-bottom: 1px solid #111;
+  padding: 0 4px;
+}
+.epc-root .capl-bank {
+  text-align: center;
+  margin: 20px 0 24px;
+  line-height: 1.4;
+}
+.epc-root .capl-bank-label {
+  margin-top: 12px;
+}
+.epc-root .capl-bank-value {
+  font-weight: 700;
+}
+.epc-root .capl-closing {
+  margin-top: 8px;
+}
+.epc-root .capl-signature {
+  margin-top: 18px;
+}
+.epc-root .capl-sig-line {
+  width: 120px;
+  border-top: 1px dotted #111;
+  margin-bottom: 4px;
+}
+.epc-root .capl-sig-dept {
+  margin-top: 4px;
+}
+@media (max-width: 640px) {
+  .epc-root .capl-page {
+    padding: 16px;
+  }
+  .epc-root .capl-row,
+  .epc-root .capl-row--wide {
+    grid-template-columns: 100px 14px 1fr;
+  }
+}
+
+/* —— Certification Deliberation (FOR-01-20) —— */
+.epc-root .cdel-page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 22px 28px 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  position: relative;
+}
+.epc-root .cdel-code {
+  position: absolute;
+  top: 16px;
+  right: 28px;
+  font-size: 12px;
+  text-align: center;
+  width: 120px;
+}
+.epc-root .cdel-title {
+  margin: 36px 0 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.epc-root .cdel-title-sub {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.epc-root .cdel-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 28px;
+  table-layout: fixed;
+}
+.epc-root .cdel-table td {
+  border: 1px solid #333;
+  padding: 8px;
+  vertical-align: top;
+}
+.epc-root .cdel-lbl {
+  width: 23%;
+}
+.epc-root .cdel-val {
+  width: 77%;
+  min-height: 36px;
+}
+.epc-root .cdel-val.is-editing {
+  padding: 4px;
+}
+.epc-root .cdel-row-issue .cdel-val,
+.epc-root .cdel-row-tall .cdel-val {
+  min-height: 56px;
+}
+.epc-root .cdel-pre {
+  white-space: pre-wrap;
+}
+.epc-root .cdel-in {
+  width: 100%;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  background: #fff;
+}
+.epc-root .cdel-in--area {
+  resize: vertical;
+  min-height: 64px;
+}
+.epc-root .cdel-in--date {
+  flex: 1;
+  min-width: 0;
+}
+.epc-root .cdel-in.is-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+.epc-root .cdel-decision {
+  margin-top: 14px;
+  border-top: 2px solid #333;
+  display: grid;
+  grid-template-columns: 43% 57%;
+  align-items: center;
+  min-height: 40px;
+  gap: 8px;
+}
+.epc-root .cdel-decision-label {
+  font-weight: 700;
+  padding-top: 8px;
+}
+.epc-root .cdel-decision-value {
+  text-align: center;
+  padding-top: 8px;
+}
+.epc-root .cdel-decision-value.is-invalid {
+  outline: 1px solid #dc2626;
+  background: #fef2f2;
+}
+.epc-root .cdel-radios {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.epc-root .cdel-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.epc-root .cdel-comments {
+  margin-top: 14px;
+}
+.epc-root .cdel-comments-label {
+  margin-bottom: 4px;
+}
+.epc-root .cdel-comments-area {
+  min-height: 40px;
+  border-bottom: 1px solid #333;
+  white-space: pre-wrap;
+  padding-bottom: 4px;
+}
+.epc-root .cdel-approval {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+.epc-root .cdel-approval-head {
+  min-height: 24px;
+}
+.epc-root .cdel-sig-space {
+  min-height: 48px;
+  border-bottom: 1px solid #333;
+  margin-top: 10px;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 4px;
+  font-size: 12px;
+}
+.epc-root .cdel-sig-space.is-editing {
+  padding: 0 0 2px;
+  align-items: stretch;
+}
+.epc-root .cdel-role {
+  text-align: center;
+  font-size: 11px;
+  margin-top: 4px;
+  min-height: 28px;
+}
+.epc-root .cdel-date-line {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.epc-root .cdel-date-val {
+  flex: 1;
+  border-bottom: 1px solid #333;
+  min-height: 18px;
+}
+.epc-root .cdel-footer {
+  margin-top: 28px;
+  border-top: 1px solid #333;
+  padding-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.epc-root .cdel-footer-center {
+  text-align: center;
+}
+.epc-root .cdel-footer-right {
+  text-align: right;
+}
+@media (max-width: 720px) {
+  .epc-root .cdel-page {
+    padding: 16px;
+  }
+  .epc-root .cdel-code {
+    position: static;
+    width: auto;
+    text-align: right;
+    margin-bottom: 8px;
+  }
+  .epc-root .cdel-decision,
+  .epc-root .cdel-approval,
+  .epc-root .cdel-footer {
+    grid-template-columns: 1fr;
+  }
+  .epc-root .cdel-decision-value,
+  .epc-root .cdel-footer-center,
+  .epc-root .cdel-footer-right {
+    text-align: left;
+  }
+}

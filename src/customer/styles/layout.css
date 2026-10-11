@@ -1,0 +1,433 @@
+/**
+ * AQCTA Customer Portal — layout layer.
+ * Auth shell, the 1184x720 card, the gradient brand panel and the form panel.
+ */
+
+/* Page shell --------------------------------------------------------------- */
+
+/* `align-items: stretch` (not `center`) so a card taller than the viewport
+   grows the shell downwards instead of being clipped at the top. */
+.epc-shell {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: var(--epc-shell-padding);
+  background: var(--epc-page-bg);
+}
+
+/*
+ * Split-screen scrolling (desktop only).
+ *
+ * The gradient panel is decorative and must never be pushed out of view, and a
+ * form that grows — the contacts step gains six fields per extra contact — must
+ * stay fully reachable. So the shell is pinned to exactly the viewport and the
+ * form column scrolls on its own axis. Below the stacking breakpoint the card
+ * becomes a normal document flow that scrolls as one.
+ */
+@media (min-width: 901px) {
+  /* Pinned for the same reason as the portal shell: with no in-flow height the
+     document cannot scroll, so only the form column ever moves. */
+  .epc-shell {
+    position: fixed;
+    inset: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .epc-card {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .epc-brand-panel {
+    overflow: hidden;
+  }
+
+  .epc-form-panel,
+  .epc-centered-card {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Keyboard focus never lands flush against the edge of the scroll box. */
+    scroll-padding-block: var(--epc-scroll-padding);
+    scrollbar-width: thin;
+    scrollbar-color: var(--epc-scrollbar-thumb) transparent;
+  }
+
+  .epc-form-panel::-webkit-scrollbar,
+  .epc-centered-card::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  .epc-form-panel::-webkit-scrollbar-thumb,
+  .epc-centered-card::-webkit-scrollbar-thumb {
+    background: var(--epc-scrollbar-thumb);
+    border: 3px solid var(--epc-surface);
+    border-radius: 999px;
+  }
+
+  .epc-form-panel:hover::-webkit-scrollbar-thumb,
+  .epc-centered-card:hover::-webkit-scrollbar-thumb {
+    background: var(--epc-scrollbar-thumb-hover);
+  }
+
+  .epc-form-panel::-webkit-scrollbar-track,
+  .epc-centered-card::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+.epc-card {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: var(--epc-card-max-width);
+  min-height: var(--epc-card-min-height);
+  display: flex;
+  overflow: hidden;
+  background: var(--epc-surface);
+  border-radius: var(--epc-card-radius);
+  box-shadow: var(--epc-shadow-card);
+}
+
+/* Brand panel -------------------------------------------------------------- */
+
+.epc-brand-panel {
+  position: relative;
+  flex: 0 0 var(--epc-brand-panel-width);
+  width: var(--epc-brand-panel-width);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--epc-brand-panel-padding);
+  background: var(--epc-panel-gradient);
+  background-size: 140% 140%;
+  overflow: hidden;
+  animation: epc-panel-drift var(--epc-transition-panel);
+}
+
+.epc-brand-panel__glow {
+  position: absolute;
+  inset: auto -20% -30% auto;
+  width: 70%;
+  height: 55%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(197, 6, 26, 0.32) 0%,
+    transparent 70%
+  );
+  filter: blur(8px);
+  pointer-events: none;
+  animation: epc-glow-pulse 6s ease-in-out infinite alternate;
+}
+
+@keyframes epc-panel-drift {
+  from {
+    background-position: 0% 0%;
+  }
+  to {
+    background-position: 100% 40%;
+  }
+}
+
+@keyframes epc-glow-pulse {
+  from {
+    opacity: 0.55;
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-8%, -6%) scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .epc-brand-panel,
+  .epc-brand-panel__glow {
+    animation: none;
+  }
+}
+
+.epc-brand-panel__logo {
+  position: relative;
+  z-index: 1;
+  width: min(320px, 100%);
+  max-width: 100%;
+  height: auto;
+  display: block;
+  /* Light-on-dark wordmark: soft red glow so edges stay crisp on black. */
+  filter: drop-shadow(0 0 18px rgba(197, 6, 26, 0.35))
+    drop-shadow(0 10px 28px rgba(0, 0, 0, 0.45));
+}
+
+.epc-brand-panel__copy {
+  position: relative;
+  z-index: 1;
+  max-width: 400px;
+}
+
+.epc-brand-panel__eyebrow {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--epc-brand-cyan);
+  letter-spacing: 0.16em;
+}
+
+.epc-brand-panel__headline {
+  font-family: var(--epc-font-display);
+  font-size: var(--epc-text-panel);
+  line-height: var(--epc-text-panel-lh);
+  font-weight: var(--epc-weight-bold);
+  letter-spacing: -0.02em;
+  color: var(--epc-text-inverse);
+  margin-bottom: 16px;
+}
+
+.epc-brand-panel__body {
+  font-size: var(--epc-text-body);
+  line-height: var(--epc-text-body-lh);
+  color: var(--epc-text-on-navy-muted);
+  max-width: 36ch;
+}
+
+/* Form panel --------------------------------------------------------------- */
+
+.epc-form-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--epc-form-panel-padding-y) var(--epc-form-panel-padding-x);
+}
+
+.epc-form-panel__inner {
+  width: 100%;
+}
+
+/* `center` floats the block in the panel (sign-in); `top` anchors it and lets
+   the footer fall to the bottom edge (registration wizard).
+   Longhands only — the `--narrow`/`--wide` rules below set the inline margins. */
+.epc-form-panel--center .epc-form-panel__inner {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.epc-form-panel--top .epc-form-panel__inner {
+  margin-bottom: auto;
+}
+
+.epc-form-panel__footer {
+  flex: 0 0 auto;
+  width: 100%;
+  padding-top: var(--epc-space-footer);
+}
+
+/* Column width. The footer takes the same constraint as the form body so the
+   two stay aligned when the panel is wider than the column. */
+.epc-form-panel--narrow .epc-form-panel__inner,
+.epc-form-panel--narrow .epc-form-panel__footer {
+  max-width: var(--epc-form-column-narrow);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.epc-form-panel--wide .epc-form-panel__inner,
+.epc-form-panel--wide .epc-form-panel__footer {
+  max-width: var(--epc-form-column-wide);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Centred layout (OTP verification) ---------------------------------------- */
+
+.epc-centered-card {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: var(--epc-card-max-width);
+  min-height: var(--epc-card-min-height);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--epc-centered-panel-padding-y) 24px;
+  background: var(--epc-surface);
+  border-radius: var(--epc-card-radius);
+  box-shadow: var(--epc-shadow-card);
+}
+
+.epc-centered-card__inner {
+  width: 100%;
+  max-width: var(--epc-form-column-narrow);
+  margin: auto 0;
+}
+
+.epc-centered-card__footer {
+  flex: 0 0 auto;
+  padding-top: var(--epc-space-footer);
+}
+
+.epc-centered-card__logo {
+  width: 262px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto clamp(20px, 4.4vh, 44px);
+  mix-blend-mode: multiply;
+}
+
+/* Shared auth blocks ------------------------------------------------------- */
+
+.epc-auth-header {
+  margin-bottom: var(--epc-space-section);
+}
+
+.epc-auth-header__eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.epc-auth-header__subtitle {
+  margin-top: 8px;
+}
+
+.epc-auth-header--airy {
+  margin-bottom: var(--epc-space-footer);
+}
+
+.epc-auth-header--airy .epc-auth-header__subtitle {
+  margin-top: clamp(14px, 3vh, 28px);
+}
+
+/* The wizard puts the step chevrons right under the header. */
+.epc-auth-header--tight {
+  margin-bottom: 0;
+}
+
+.epc-auth-footnote {
+  margin-top: var(--epc-space-footer);
+  font-size: var(--epc-text-body);
+  line-height: var(--epc-text-body-lh);
+  color: var(--epc-text-muted);
+}
+
+.epc-auth-footnotes {
+  margin-top: var(--epc-space-footer);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.epc-auth-footnote > .epc-link {
+  margin-left: 6px;
+}
+
+/* Already spaced by the pinned footer, so it needs no margin of its own. */
+.epc-auth-footnote--flush {
+  margin-top: 0;
+}
+
+.epc-secure-note {
+  text-align: center;
+  font-size: var(--epc-text-caption);
+  line-height: var(--epc-text-caption-lh);
+  color: var(--epc-text-subtle);
+}
+
+/* Vertical rhythm inside a single-column auth form */
+.epc-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 2.4vh, 22px);
+}
+
+.epc-form-stack__submit {
+  margin-top: 10px;
+}
+
+.epc-otp-submit {
+  margin-top: clamp(20px, 3.6vh, 36px);
+}
+
+.epc-otp-submit--split {
+  display: flex;
+  gap: 12px;
+}
+
+.epc-link-button {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: inherit;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+.epc-dropzone-slot {
+  margin-top: var(--epc-grid-gap-y);
+}
+
+.epc-submit-note {
+  margin-top: 14px;
+  text-align: center;
+  font-size: var(--epc-text-caption);
+  line-height: var(--epc-text-caption-lh);
+  color: var(--epc-text-subtle);
+}
+
+/* Responsive --------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .epc-brand-panel {
+    flex-basis: 400px;
+    width: 400px;
+  }
+}
+
+@media (max-width: 900px) {
+  .epc-card {
+    flex-direction: column;
+  }
+
+  /* Stacked: the panel is a band above the form, not a full-height column. */
+  .epc-brand-panel {
+    flex: 0 0 auto;
+    width: 100%;
+    gap: 40px;
+    padding: 32px 28px;
+  }
+
+  .epc-brand-panel__logo {
+    width: 240px;
+  }
+
+  .epc-brand-panel__headline {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .epc-form-panel {
+    padding: 36px 28px;
+  }
+
+  .epc-centered-card {
+    padding: 40px 24px;
+  }
+}
+
+@media (max-width: 560px) {
+  .epc-hero,
+  .epc-display {
+    font-size: 30px;
+    line-height: 38px;
+  }
+
+  .epc-title {
+    font-size: 25px;
+    line-height: 32px;
+  }
+
+  .epc-form-panel {
+    padding: 28px 20px;
+  }
+}

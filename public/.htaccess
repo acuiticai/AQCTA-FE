@@ -1,0 +1,58 @@
+# Root "/" must serve index.html (fixes app.flexaerp.com/ not loading)
+DirectoryIndex index.html
+
+# Prevent content negotiation from serving index.html for /assets/*.js requests
+Options -MultiViews
+
+# Flexa SPA - serve real files first, then fallback to index.html
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # CRITICAL: Never rewrite /assets/ — serve real files only (fixes MIME type error)
+  RewriteRule ^assets/ - [L]
+
+  # Root "/" must explicitly serve index.html
+  RewriteRule ^$ index.html [L]
+
+  # Serve existing files and directories as-is
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # SPA fallback: index.html only for non-asset requests (guard against ErrorDocument 404)
+  RewriteCond %{REQUEST_URI} !^/assets/
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Ensure correct MIME types for JS/CSS (avoid "text/html" for assets)
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+  AddType text/css .css
+</IfModule>
+
+# ─── Cache control ────────────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+  # index.html and version.json must NEVER be cached — always fetch fresh.
+  # This is the critical fix: browser always gets the latest index.html which
+  # references the new hashed JS/CSS filenames after every deployment.
+  <FilesMatch "^(index\.html|version\.json)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  # Hashed assets (JS/CSS/fonts/images) — cache forever.
+  # Vite appends a content hash to every filename (e.g. index-Dj3kF9as.js)
+  # so a new filename is generated on every build, making long-lived cache safe.
+  <FilesMatch "\.(js|mjs|css|woff|woff2|ttf|eot|otf|png|jpg|jpeg|gif|svg|ico|webp)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the "ea-php81" package as the default "PHP" programming language.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php81 .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit

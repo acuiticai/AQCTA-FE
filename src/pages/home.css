@@ -1,0 +1,234 @@
+.home-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 0 clamp(8px, 1.2vw, 20px);
+  box-sizing: border-box;
+  background:
+    radial-gradient(70% 45% at 50% -8%, rgba(197, 6, 26, 0.14) 0%, transparent 55%),
+    radial-gradient(45% 35% at 0% 80%, rgba(254, 0, 50, 0.06) 0%, transparent 50%),
+    radial-gradient(40% 30% at 100% 90%, rgba(197, 6, 26, 0.06) 0%, transparent 45%),
+    linear-gradient(180deg, #f4f0f1 0%, #faf7f8 55%, #f5f2f3 100%);
+  font-family: "Plus Jakarta Sans", "Outfit", "Segoe UI", sans-serif;
+}
+
+.home-page__logout {
+  position: absolute !important;
+  top: 16px !important;
+  right: 16px !important;
+  z-index: 2 !important;
+  text-transform: none !important;
+  padding: 9px 16px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-family: "Plus Jakarta Sans", sans-serif !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #fe0032 0%, #c5061a 50%, #860412 100%) !important;
+  border: none !important;
+  box-shadow: 0 8px 20px rgba(197, 6, 26, 0.28) !important;
+  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.home-page__logout:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px) !important;
+  box-shadow: 0 12px 28px rgba(197, 6, 26, 0.34) !important;
+  background: linear-gradient(135deg, #ff335c 0%, #a30516 50%, #6e0310 100%) !important;
+}
+
+.home-page__hero {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  max-width: 100%;
+  padding: clamp(28px, 4vh, 48px) clamp(8px, 1.2vw, 20px) clamp(16px, 2.2vh, 28px);
+  gap: clamp(10px, 1.4vh, 18px);
+}
+
+.home-page__logo {
+  width: clamp(150px, 17vw, 220px);
+  height: auto;
+  margin: 0 0 clamp(4px, 0.8vh, 10px);
+  filter: drop-shadow(0 12px 32px rgba(197, 6, 26, 0.22));
+}
+
+.home-page__eyebrow {
+  margin: 0 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+  color: #c5061a !important;
+}
+
+.home-page__title {
+  margin: 0 !important;
+  width: 100%;
+  max-width: 720px;
+  white-space: normal;
+  font-family: "Outfit", "Plus Jakarta Sans", sans-serif !important;
+  font-size: clamp(22px, 2.2vw + 0.6rem, 36px) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em;
+  line-height: 1.2 !important;
+  color: #0a0a0a !important;
+}
+
+.home-page__subtitle {
+  margin: 0 !important;
+  font-size: clamp(14px, 1.4vw, 17px) !important;
+  font-weight: 500 !important;
+  font-style: normal !important;
+  line-height: 1.5 !important;
+  color: #5a5a5a !important;
+  max-width: 520px;
+}
+
+.home-page__modules {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  overflow: hidden;
+  padding: 0 clamp(6px, 0.8vw, 12px) clamp(6px, 1vh, 12px);
+}
+
+.home-page__grid {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.home-page__module-card {
+  --card-accent: #c5061a;
+  position: relative;
+  max-width: none;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(197, 6, 26, 0.1) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 247, 248, 0.96) 100%) !important;
+  box-shadow: 0 8px 28px rgba(10, 10, 10, 0.06) !important;
+  overflow: hidden !important;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease !important;
+}
+
+.home-page__module-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    #fe0032 0%,
+    var(--card-accent) 50%,
+    #860412 100%
+  );
+  opacity: 0.55;
+  transition: opacity 0.22s ease;
+}
+
+.home-page__module-card:hover {
+  transform: translateY(-4px) scale(1.015) !important;
+  border-color: rgba(197, 6, 26, 0.28) !important;
+  box-shadow: 0 18px 40px rgba(197, 6, 26, 0.14) !important;
+}
+
+.home-page__module-card:hover::before {
+  opacity: 1;
+}
+
+.home-page__module-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+}
+
+.home-page__module-title {
+  font-family: "Outfit", "Plus Jakarta Sans", sans-serif !important;
+  color: #0a0a0a !important;
+  letter-spacing: -0.01em;
+}
+
+.home-page__module-text {
+  color: #5a5a5a !important;
+}
+
+.home-page__footer {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 100%;
+  text-align: center;
+  font-size: clamp(11px, 1.2vw, 13px) !important;
+  color: #848484 !important;
+  padding: clamp(4px, 0.8vh, 10px) 0 clamp(8px, 1.2vh, 14px);
+  margin: 0 !important;
+  letter-spacing: 0.02em;
+}
+
+@media (max-height: 700px) {
+  .home-page__hero {
+    padding-top: 16px;
+    padding-bottom: 10px;
+    gap: 8px;
+  }
+
+  .home-page__logo {
+    width: clamp(120px, 13vw, 160px);
+  }
+
+  .home-page__title {
+    font-size: clamp(18px, 1.6vw + 0.5rem, 28px) !important;
+  }
+
+  .home-page__subtitle {
+    font-size: clamp(12px, 1.4vw, 15px) !important;
+  }
+}
+
+@media (max-height: 560px) {
+  .home-page__title {
+    font-size: clamp(16px, 2.4vw, 22px) !important;
+  }
+
+  .home-page__subtitle {
+    font-size: 12px !important;
+  }
+
+  .home-page__logo {
+    width: 104px;
+  }
+
+  .home-page__eyebrow {
+    display: none !important;
+  }
+}

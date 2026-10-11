@@ -1,0 +1,1014 @@
+/**
+ * AQCTA Customer Portal — component layer.
+ * Fields, buttons, the registration step chevrons, dropzone and OTP input.
+ */
+
+/* Fields ------------------------------------------------------------------- */
+
+.epc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.epc-field__label {
+  font-size: var(--epc-text-label);
+  line-height: var(--epc-text-label-lh);
+  font-weight: var(--epc-weight-semibold);
+  color: var(--epc-text);
+}
+
+.epc-field__required {
+  color: var(--epc-danger);
+  font-weight: var(--epc-weight-bold);
+  margin-left: 1px;
+}
+
+.epc-field--lg > .epc-field__label {
+  font-size: var(--epc-text-body);
+  line-height: var(--epc-text-body-lh);
+}
+
+.epc-field__control {
+  position: relative;
+  display: block;
+}
+
+.epc-input,
+.epc-select,
+.epc-textarea {
+  width: 100%;
+  height: var(--epc-field-height);
+  padding: 0 var(--epc-field-padding-x);
+  font-size: var(--epc-text-input);
+  line-height: normal;
+  color: var(--epc-text-strong);
+  background: var(--epc-field-bg);
+  border: 1px solid var(--epc-field-border);
+  border-radius: var(--epc-radius-md);
+  outline: none;
+  transition:
+    border-color var(--epc-transition-fast),
+    box-shadow var(--epc-transition-fast);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.epc-input::placeholder,
+.epc-textarea::placeholder {
+  color: var(--epc-placeholder);
+}
+
+.epc-input:hover,
+.epc-select:hover,
+.epc-textarea:hover {
+  border-color: var(--epc-field-border-hover);
+}
+
+.epc-input:focus,
+.epc-select:focus,
+.epc-textarea:focus {
+  border-color: var(--epc-primary);
+  box-shadow: var(--epc-shadow-focus);
+}
+
+.epc-input:disabled,
+.epc-select:disabled,
+.epc-textarea:disabled {
+  background: var(--epc-surface-muted);
+  color: var(--epc-text-subtle);
+  cursor: not-allowed;
+}
+
+.epc-textarea {
+  height: auto;
+  min-height: var(--epc-textarea-min-height);
+  padding: 11px var(--epc-field-padding-x);
+  line-height: var(--epc-text-body-lh);
+  resize: vertical;
+}
+
+/* Larger field used on the sign-in screen */
+.epc-input--lg,
+.epc-select--lg {
+  height: var(--epc-field-height-lg);
+  font-size: var(--epc-text-body);
+}
+
+/* Phone number: dial-code select butted against the number input. */
+.epc-phone {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+/* Wide enough for the longest label ("+971") plus the caret. */
+.epc-phone__code {
+  position: relative;
+  flex: 0 0 100px;
+}
+
+.epc-phone__code .epc-select {
+  padding-right: 26px;
+  padding-left: 12px;
+}
+
+.epc-phone__code .epc-select-caret {
+  right: 10px;
+}
+
+.epc-phone__number {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.epc-input--has-affix {
+  padding-right: 46px;
+}
+
+/* Native select keeps keyboard/AT behaviour; the caret is drawn separately. */
+.epc-select {
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+.epc-select[data-placeholder="true"] {
+  color: var(--epc-placeholder);
+}
+
+.epc-select-caret {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--epc-text-subtle);
+  display: flex;
+}
+
+.epc-field__affix {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--epc-text-subtle);
+  background: transparent;
+  border: 0;
+  border-radius: var(--epc-radius-sm);
+  transition: color var(--epc-transition-fast);
+}
+
+.epc-field__affix:hover {
+  color: var(--epc-text);
+}
+
+.epc-field__error {
+  font-size: var(--epc-text-caption);
+  line-height: var(--epc-text-caption-lh);
+  color: var(--epc-danger);
+}
+
+/* Shown in place of the error, never alongside it. */
+.epc-field__hint {
+  font-size: var(--epc-text-caption);
+  line-height: var(--epc-text-caption-lh);
+  color: var(--epc-text-subtle);
+}
+
+.epc-field--invalid .epc-input,
+.epc-field--invalid .epc-select {
+  border-color: var(--epc-danger);
+}
+
+/* Form grid ---------------------------------------------------------------- */
+
+.epc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--epc-grid-gap-x);
+  row-gap: var(--epc-grid-gap-y);
+}
+
+.epc-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.epc-grid__full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .epc-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Buttons ------------------------------------------------------------------ */
+
+.epc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--epc-control-height);
+  padding: 0 24px;
+  font-size: var(--epc-text-body);
+  font-weight: var(--epc-weight-semibold);
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: var(--epc-radius-md);
+  transition:
+    background-color var(--epc-transition-fast),
+    border-color var(--epc-transition-fast),
+    color var(--epc-transition-fast),
+    box-shadow var(--epc-transition-fast);
+  white-space: nowrap;
+}
+
+.epc-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--epc-shadow-focus);
+}
+
+.epc-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.epc-btn--primary {
+  color: var(--epc-text-inverse);
+  background: linear-gradient(
+    135deg,
+    var(--epc-brand-cyan) 0%,
+    var(--epc-primary) 48%,
+    var(--epc-brand-royal) 100%
+  );
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(11, 120, 232, 0.28);
+}
+
+.epc-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    #29b4f9 0%,
+    var(--epc-primary-hover) 48%,
+    #1f2ec4 100%
+  );
+  border-color: transparent;
+  filter: brightness(1.03);
+}
+
+.epc-btn--primary:active:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    var(--epc-primary) 0%,
+    var(--epc-primary-active) 100%
+  );
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.epc-btn--secondary {
+  color: var(--epc-text);
+  background: var(--epc-surface);
+  border-color: var(--epc-border);
+  box-shadow: var(--epc-shadow-control);
+}
+
+.epc-btn--secondary:hover:not(:disabled) {
+  border-color: var(--epc-border-strong);
+  background: var(--epc-surface-muted);
+}
+
+.epc-btn--danger {
+  color: var(--epc-text-inverse);
+  background: var(--epc-danger);
+  border-color: var(--epc-danger);
+}
+
+.epc-btn--danger:hover:not(:disabled) {
+  background: #a72b28;
+  border-color: #a72b28;
+}
+
+.epc-btn--ghost {
+  height: var(--epc-control-height-sm);
+  padding: 0 18px;
+  font-size: var(--epc-text-label);
+  font-weight: var(--epc-weight-medium);
+  color: var(--epc-text);
+  background: var(--epc-surface);
+  border-color: var(--epc-border);
+}
+
+.epc-btn--ghost:hover:not(:disabled) {
+  border-color: var(--epc-border-strong);
+  background: var(--epc-surface-muted);
+}
+
+.epc-btn--lg {
+  height: var(--epc-control-height-lg);
+  font-size: 15px;
+}
+
+/* A compact button for row actions — a table cell or a card footer, where the
+   default 48px height and 24px padding crowd three buttons into an unusable
+   row. Works with every variant, unlike `ghost`, which is compact but always
+   neutral in color. */
+.epc-btn--sm {
+  height: var(--epc-control-height-sm);
+  padding: 0 14px;
+  font-size: var(--epc-text-label);
+  gap: 6px;
+}
+
+.epc-btn--block {
+  width: 100%;
+}
+
+.epc-btn--grow {
+  flex: 1 1 auto;
+}
+
+.epc-btn__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: epc-spin 0.7s linear infinite;
+}
+
+@keyframes epc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Wizard footer ------------------------------------------------------------ */
+
+.epc-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: var(--epc-space-section);
+}
+
+.epc-form-actions--end {
+  justify-content: flex-end;
+  margin-top: clamp(14px, 2.4vh, 24px);
+}
+
+.epc-form-actions__back {
+  flex: 0 0 166px;
+  width: 166px;
+}
+
+.epc-form-actions--end .epc-form-actions__back {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 149px;
+}
+
+.epc-form-actions--end .epc-form-actions__next {
+  min-width: 166px;
+}
+
+@media (max-width: 560px) {
+  .epc-form-actions__back {
+    flex: 1 1 auto;
+    width: auto;
+  }
+}
+
+/* Step chevrons ------------------------------------------------------------ */
+
+.epc-steps {
+  display: flex;
+  align-items: stretch;
+  margin: clamp(12px, 2vh, 20px) 0 clamp(14px, 2.4vh, 24px);
+  padding: 0;
+  list-style: none;
+}
+
+.epc-step {
+  position: relative;
+  /* Flexes so 5- and 7-step application wizards share one component with the
+     4-step registration one; the token is the ceiling, not a fixed width. */
+  flex: 1 1 0;
+  max-width: var(--epc-step-width);
+  min-width: 0;
+  height: var(--epc-step-height);
+  margin-left: calc(var(--epc-step-overlap) * -1);
+  /* Outer layer paints the 1px border; the inner face is inset by 1px. */
+  background: var(--epc-step-idle-border);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--epc-step-notch)) 0,
+    100% 50%,
+    calc(100% - var(--epc-step-notch)) 100%,
+    0 100%,
+    var(--epc-step-notch) 50%
+  );
+}
+
+.epc-step:first-child {
+  margin-left: 0;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--epc-step-notch)) 0,
+    100% 50%,
+    calc(100% - var(--epc-step-notch)) 100%,
+    0 100%
+  );
+}
+
+.epc-step:last-child {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, var(--epc-step-notch) 50%);
+}
+
+.epc-step__face {
+  position: absolute;
+  inset: 1px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  padding-left: calc(var(--epc-step-notch) + 8px);
+  padding-right: var(--epc-step-notch);
+  background: var(--epc-step-idle-bg);
+  clip-path: inherit;
+}
+
+.epc-step:first-child .epc-step__face {
+  padding-left: 16px;
+}
+
+.epc-step__title {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: var(--epc-weight-semibold);
+  color: var(--epc-step-idle-title);
+}
+
+.epc-step__caption {
+  font-size: var(--epc-text-micro);
+  line-height: var(--epc-text-micro-lh);
+  color: var(--epc-step-idle-caption);
+}
+
+.epc-step--done {
+  background: var(--epc-step-done-border);
+}
+
+.epc-step--done .epc-step__face {
+  background: var(--epc-step-done-bg);
+}
+
+.epc-step--done .epc-step__title {
+  color: var(--epc-step-done-title);
+}
+
+.epc-step--done .epc-step__caption {
+  color: var(--epc-step-done-caption);
+}
+
+.epc-step--active {
+  background: var(--epc-step-active-border);
+}
+
+.epc-step--active .epc-step__face {
+  background: var(--epc-step-active-bg);
+}
+
+.epc-step--active .epc-step__title {
+  color: var(--epc-step-active-title);
+}
+
+.epc-step--active .epc-step__caption {
+  color: var(--epc-step-active-caption);
+}
+
+@media (max-width: 560px) {
+  .epc-steps {
+    --epc-step-width: 96px;
+  }
+
+  .epc-step__caption {
+    display: none;
+  }
+}
+
+/* Dropzone ----------------------------------------------------------------- */
+
+.epc-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: var(--epc-dropzone-height);
+  padding: 16px;
+  text-align: center;
+  background: #fafafa;
+  border: 1px dashed var(--epc-border-strong);
+  border-radius: var(--epc-radius-md);
+  transition:
+    border-color var(--epc-transition-fast),
+    background-color var(--epc-transition-fast);
+}
+
+.epc-dropzone:hover,
+.epc-dropzone--active {
+  background: var(--epc-primary-soft);
+  border-color: var(--epc-primary);
+}
+
+.epc-dropzone__icon {
+  color: var(--epc-primary);
+  display: flex;
+}
+
+.epc-dropzone__title {
+  font-size: var(--epc-text-body);
+  font-weight: var(--epc-weight-semibold);
+  color: var(--epc-text);
+}
+
+.epc-dropzone__hint {
+  font-size: var(--epc-text-caption);
+  color: var(--epc-text-subtle);
+}
+
+.epc-filelist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.epc-filelist__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  font-size: var(--epc-text-label);
+  background: var(--epc-surface-muted);
+  border: 1px solid var(--epc-border);
+  border-radius: var(--epc-radius-md);
+}
+
+.epc-filelist__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--epc-text);
+}
+
+.epc-filelist__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  color: var(--epc-text-subtle);
+  font-size: var(--epc-text-caption);
+}
+
+.epc-filelist__remove {
+  display: flex;
+  padding: 2px;
+  color: var(--epc-text-subtle);
+  background: none;
+  border: 0;
+  border-radius: var(--epc-radius-sm);
+}
+
+.epc-filelist__remove:hover {
+  color: var(--epc-danger);
+}
+
+/* OTP ---------------------------------------------------------------------- */
+
+.epc-otp {
+  display: flex;
+  gap: var(--epc-otp-gap);
+}
+
+.epc-otp__box {
+  width: var(--epc-otp-box-width);
+  height: var(--epc-otp-box-height);
+  flex: 0 1 var(--epc-otp-box-width);
+  min-width: 0;
+  text-align: center;
+  font-size: 18px;
+  font-weight: var(--epc-weight-semibold);
+  color: var(--epc-text-strong);
+  background: var(--epc-field-bg);
+  border: 1px solid var(--epc-field-border);
+  border-radius: var(--epc-radius-md);
+  outline: none;
+  transition:
+    border-color var(--epc-transition-fast),
+    box-shadow var(--epc-transition-fast);
+}
+
+.epc-otp__box::placeholder {
+  color: #c9c9c9;
+  font-weight: var(--epc-weight-regular);
+}
+
+.epc-otp__box:focus {
+  border-color: var(--epc-primary);
+  box-shadow: var(--epc-shadow-focus);
+}
+
+@media (max-width: 560px) {
+  .epc-otp {
+    gap: 10px;
+  }
+}
+
+
+/* Multi-entry chips (Type(s), Model(s), Size(s), …) ----------------------- */
+
+.epc-multientry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.epc-multientry__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.epc-multientry__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 6px 4px 10px;
+  border-radius: 999px;
+  background: var(--epc-surface-muted, #f3f4f6);
+  border: 1px solid var(--epc-border, #e5e7eb);
+  font-size: var(--epc-text-caption, 12px);
+  color: var(--epc-text, #111827);
+}
+
+.epc-multientry__chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.epc-multientry__chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--epc-text-muted, #6b7280);
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+.epc-multientry__chip-remove:hover {
+  color: var(--epc-danger, #dc2626);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.epc-multientry__row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.epc-multientry__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.epc-multientry__add {
+  flex-shrink: 0;
+  padding: 0 14px;
+  border-radius: var(--epc-radius-md, 8px);
+  border: 1px solid var(--epc-border, #e5e7eb);
+  background: var(--epc-surface, #fff);
+  font-size: var(--epc-text-caption, 12px);
+  font-weight: var(--epc-weight-semibold, 600);
+  color: var(--epc-text, #111827);
+  cursor: pointer;
+}
+
+.epc-multientry__add:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.epc-multientry__add:not(:disabled):hover {
+  background: var(--epc-surface-muted, #f3f4f6);
+}
+
+/* Repeating contact block (registration step 3) ---------------------------- */
+
+.epc-repeater {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.epc-repeater__item + .epc-repeater__item {
+  padding-top: 24px;
+  border-top: 1px solid var(--epc-border);
+}
+
+.epc-repeater__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.epc-repeater__title {
+  font-size: var(--epc-text-label);
+  font-weight: var(--epc-weight-semibold);
+  color: var(--epc-text-muted);
+}
+
+.epc-repeater__remove {
+  padding: 0;
+  font-size: var(--epc-text-caption);
+  font-weight: var(--epc-weight-semibold);
+  color: var(--epc-danger);
+  background: none;
+  border: 0;
+}
+
+.epc-add-row {
+  margin-top: clamp(12px, 2vh, 20px);
+}
+
+/* Contact person field (datalist + clear) ---------------------------------- */
+
+.epc-contact-person .epc-input--has-clear.epc-input--has-caret {
+  padding-right: 64px;
+}
+
+.epc-contact-person .epc-input--has-clear:not(.epc-input--has-caret) {
+  padding-right: 46px;
+}
+
+.epc-contact-person__clear {
+  position: absolute;
+  top: 50%;
+  right: 36px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: var(--epc-text-subtle);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+}
+
+.epc-contact-person__clear:hover {
+  color: var(--epc-text);
+  background: var(--epc-surface-subtle);
+}
+
+/* Combobox (searchable select) --------------------------------------------- */
+
+.epc-combo {
+  position: relative;
+}
+
+/* Wears .epc-select so it is pixel-identical to the native control it replaced. */
+.epc-combo__trigger {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.epc-combo__trigger:disabled,
+.epc-combo__trigger[aria-disabled="true"] {
+  background: var(--epc-surface-muted);
+  color: var(--epc-text-subtle);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.epc-combo__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Admin-style multi-select chips inside the trigger. */
+.epc-combo--multi .epc-combo__trigger {
+  height: auto;
+  min-height: var(--epc-field-height);
+  align-items: flex-start;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  padding-right: 64px;
+}
+
+.epc-combo__chips {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.epc-combo__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 3px 4px 3px 8px;
+  font-size: var(--epc-text-caption);
+  line-height: 1.3;
+  color: var(--epc-text-strong);
+  background: rgba(16, 16, 16, 0.08);
+  border-radius: 8px;
+}
+
+.epc-combo__chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 18rem;
+}
+
+.epc-combo__chip-remove {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  color: var(--epc-text-subtle);
+  background: none;
+  border: 0;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+}
+
+.epc-combo__chip-remove:hover {
+  color: var(--epc-text);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.epc-combo__clear {
+  position: absolute;
+  top: 50%;
+  right: 36px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: var(--epc-text-subtle);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+}
+
+.epc-combo--multi .epc-combo__clear,
+.epc-combo--multi .epc-select-caret {
+  top: 18px;
+  transform: none;
+}
+
+.epc-combo__clear:hover {
+  color: var(--epc-text);
+  background: var(--epc-surface-subtle);
+}
+
+.epc-select-caret--shifted {
+  right: 14px;
+}
+
+.epc-combo__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(420px, 92vw);
+  overflow: hidden;
+  background: var(--epc-surface);
+  border: 1px solid var(--epc-border);
+  border-radius: var(--epc-radius-md);
+  box-shadow: 0 12px 32px rgba(16, 16, 16, 0.14);
+}
+
+/* Long multi-select labels (inspection services) need the full field width. */
+.epc-combo--multi .epc-combo__panel {
+  width: 100%;
+  max-width: 100%;
+}
+
+.epc-combo__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: var(--epc-text-subtle);
+  border-bottom: 1px solid var(--epc-border);
+}
+
+.epc-combo__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  font-size: var(--epc-text-input);
+  color: var(--epc-text-strong);
+  background: none;
+  border: 0;
+  outline: none;
+}
+
+.epc-combo__list {
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--epc-scrollbar-thumb) transparent;
+}
+
+.epc-combo__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  font-size: var(--epc-text-input);
+  color: var(--epc-text);
+  border-radius: var(--epc-radius-sm);
+  cursor: pointer;
+}
+
+.epc-combo__option.is-active {
+  background: var(--epc-primary-soft);
+  color: var(--epc-primary);
+}
+
+.epc-combo__option.is-selected {
+  color: var(--epc-primary);
+  font-weight: var(--epc-weight-semibold);
+}
+
+.epc-combo__option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.epc-combo--multi .epc-combo__option-label {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.epc-combo__empty,
+.epc-combo__more {
+  padding: 12px;
+  font-size: var(--epc-text-caption);
+  color: var(--epc-text-subtle);
+  text-align: center;
+}
+
+.epc-combo__more {
+  border-top: 1px solid var(--epc-border);
+}

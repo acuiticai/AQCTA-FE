@@ -1,0 +1,71 @@
+export const headerSales = [
+  "Contract No",
+  "Customer",
+  "Quantity",
+  "Price Per Metric Ton",
+  "Total Price",
+  "Contract Date (Agreed)",
+  "Created Date",
+  "Business",
+  "Item Name",
+  "Agent Name",
+  "Vendor Name",
+  "Grade",
+  "Quantity (MTS)",
+  "Container Type",
+  "Packing",
+  "Total Value",
+
+  "Status",
+  "Action",
+];
+
+export const headersToHide = [
+  "Created Date",
+  "Item Name",
+  "Agent Name",
+  "Vendor Name",
+  "Quantity (MTS)",
+  "Container Type",
+  "Packing",
+  "Total Value",
+];
+
+export const contractSales = [
+  {
+    id: "1",
+    contractNo: "S2165-2154",
+    buyerName: "Jeff Bezos",
+    quantity: "60.48MT(AT 20.16..)",
+    price: "126,514.15",
+    perMetricTon: "12,651.41",
+    status: "Open",
+  },
+  {
+    id: "2",
+    contractNo: "S2165-2154",
+    buyerName: "Jeff Bezos",
+    quantity: "60.48MT(AT 20.16..)",
+    price: "126,514.15",
+    perMetricTon: "12,651.41",
+    status: "Completed",
+  },
+  {
+    id: "3",
+    contractNo: "S2165-2154",
+    buyerName: "Jeff Bezos",
+    quantity: "60.48MT(AT 20.16..)",
+    price: "126,514.15",
+    perMetricTon: "12,651.41",
+    status: "Cancelled",
+  },
+  {
+    id: "4",
+    contractNo: "S2165-2154",
+    buyerName: "Jeff Bezos",
+    quantity: "60.48MT(AT 20.16..)",
+    price: "126,514.15",
+    perMetricTon: "12,651.41",
+    status: "Completed",
+  },
+];

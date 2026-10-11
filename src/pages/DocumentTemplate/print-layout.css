@@ -1,0 +1,41 @@
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .MuiPaper-root {
+    box-shadow: none !important;
+    transform: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 11.69in !important; /* A4 height */
+    padding: 0.5in !important;
+    margin: 0 !important;
+  }
+
+  .bg-gray-100 {
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  .w-full {
+    width: 100% !important;
+  }
+
+  .max-w-\[9\.5in\] {
+    max-width: none !important;
+  }
+
+  .page-section {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}

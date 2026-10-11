@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-size: 14px;
+    font-family: theme("fontFamily.serif");
+  }
+
+  .no-background {
+    background: none !important;
+    background-color: none !important;
+    -webkit-tap-highlight-color: none;
+    &:active,
+    &:focus,
+    &:hover,
+    &:focus-visible {
+      background: none !important;
+      background-color: none !important;
+      outline: none;
+      -webkit-tap-highlight-color: none;
+    }
+  }
+}

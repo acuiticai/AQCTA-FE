@@ -1,0 +1,7 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="7" y="7" width="10" height="12" rx="2" fill="#2563EB"/>
+  <rect x="3" y="3" width="10" height="12" rx="2" fill="#fff" stroke="#2563EB" stroke-width="2"/>
+  <filter id="shadow" x="0" y="0" width="24" height="24">
+    <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.15"/>
+  </filter>
+</svg>

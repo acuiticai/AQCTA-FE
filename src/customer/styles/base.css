@@ -1,0 +1,134 @@
+/**
+ * AQCTA Customer Portal — base layer.
+ *
+ * Everything is scoped under `.epc-root` (the element rendered by
+ * `CustomerBrandingProvider`) so none of it leaks into the admin app, which
+ * runs a different type scale and a 14px root font size. For that reason the
+ * customer portal is authored entirely in `px` — `rem` would inherit the
+ * admin's root size and break the Figma measurements.
+ *
+ * Design tokens are injected as `--epc-*` custom properties by the provider;
+ * see `src/customer/branding/brand.config.js`.
+ */
+
+.epc-root {
+  font-family: var(--epc-font-body);
+  font-size: var(--epc-text-body);
+  line-height: var(--epc-text-body-lh);
+  color: var(--epc-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.epc-root *,
+.epc-root *::before,
+.epc-root *::after {
+  box-sizing: border-box;
+}
+
+/* `:where` keeps the reset at zero specificity, so component rules such as
+   `.epc-auth-footnote { margin-top: … }` still out-rank it. */
+.epc-root :where(h1, h2, h3, h4, p, figure, ol, ul) {
+  margin: 0;
+  padding: 0;
+}
+
+.epc-root :where(ol, ul) {
+  list-style: none;
+}
+
+.epc-root :where(button) {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.epc-root :where(input, select, textarea) {
+  font-family: inherit;
+  color: inherit;
+}
+
+.epc-root :where(a) {
+  color: var(--epc-primary);
+  text-decoration: none;
+}
+
+/* Typography primitives ---------------------------------------------------- */
+
+.epc-hero {
+  font-family: var(--epc-font-display);
+  font-size: var(--epc-text-hero);
+  line-height: var(--epc-text-hero-lh);
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+  letter-spacing: -0.01em;
+}
+
+.epc-display {
+  font-family: var(--epc-font-display);
+  font-size: var(--epc-text-display);
+  line-height: var(--epc-text-display-lh);
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+  letter-spacing: -0.01em;
+}
+
+.epc-title {
+  font-family: var(--epc-font-display);
+  font-size: var(--epc-text-title);
+  line-height: var(--epc-text-title-lh);
+  font-weight: var(--epc-weight-bold);
+  color: var(--epc-text-strong);
+  letter-spacing: -0.01em;
+}
+
+.epc-lead {
+  font-size: var(--epc-text-lead);
+  line-height: var(--epc-text-lead-lh);
+  color: var(--epc-text-muted);
+}
+
+.epc-caption {
+  font-size: var(--epc-text-caption);
+  line-height: var(--epc-text-caption-lh);
+  color: var(--epc-text-subtle);
+}
+
+/* No `text-transform` here on purpose: eyebrows use explicit casing
+   from brand copy. Screens that need caps opt in. */
+.epc-eyebrow {
+  font-size: var(--epc-text-caption);
+  line-height: var(--epc-text-caption-lh);
+  font-weight: var(--epc-weight-bold);
+  letter-spacing: var(--epc-tracking-eyebrow);
+  color: var(--epc-primary);
+}
+
+.epc-link {
+  color: var(--epc-primary);
+  font-weight: var(--epc-weight-bold);
+  text-decoration: none;
+  transition: color var(--epc-transition-fast);
+}
+
+.epc-link:hover {
+  color: var(--epc-primary-hover);
+  text-decoration: underline;
+}
+
+.epc-link--underlined {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.epc-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
