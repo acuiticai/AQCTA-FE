@@ -179,8 +179,8 @@ export function applyThemeColorVars({
     if (isDarkSurface(effectiveLeftbar)) {
       root.style.setProperty("--sidebar-border", "rgba(255, 255, 255, 0.08)");
       root.style.setProperty("--sidebar-hover-bg", "rgba(255, 255, 255, 0.06)");
-      root.style.setProperty("--sidebar-text", "rgba(245, 245, 245, 0.68)");
-      root.style.setProperty("--sidebar-text-hover", "#F5F5F5");
+      root.style.setProperty("--sidebar-text", "#FFFFFF");
+      root.style.setProperty("--sidebar-text-hover", "#FFFFFF");
       root.style.setProperty("--sidebar-active-bg", "rgba(197, 6, 26, 0.22)");
       root.style.setProperty("--sidebar-active", "#FE0032");
       root.style.setProperty("--sidebar-hover", "#FE0032");
