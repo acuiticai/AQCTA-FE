@@ -420,6 +420,20 @@ export const WORKFLOW_STAGES = [
     },
   },
   {
+    key: "official_certificate",
+    phase: "audit",
+    title: "Official Certificate",
+    documentCode: "",
+    description:
+      "Issue the framed Certificate of Conformity or Registration (MDA CAB artwork). Submitted for digital approval, then released to the customer.",
+    serviceTypes: ["certification"],
+    available: true,
+    statusFrom: (application) => {
+      const raw = String(application?.officialCertificateStatus || "").trim();
+      return !raw || raw === "—" ? "Not Started" : raw;
+    },
+  },
+  {
     key: "project",
     phase: "application",
     title: "Project",
