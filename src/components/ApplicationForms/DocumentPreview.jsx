@@ -62,9 +62,20 @@ const DocumentPreview = ({
         urlRef.current = next;
         setUrl(next);
       } catch (err) {
-        setError(
-          err?.response?.data?.message || "This document could not be generated.",
-        );
+        let message = "This document could not be generated.";
+        const data = err?.response?.data;
+        if (typeof data?.message === "string" && data.message) {
+          message = data.message;
+        } else if (data instanceof Blob) {
+          try {
+            const text = await data.text();
+            const parsed = JSON.parse(text);
+            if (parsed?.message) message = parsed.message;
+          } catch (_) {
+            /* keep generic message */
+          }
+        }
+        setError(message);
       } finally {
         setLoading(false);
       }
