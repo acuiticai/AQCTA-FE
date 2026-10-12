@@ -1,47 +1,20 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useContext, useRef, useMemo, useCallback } from "react";
 import {
   Button,
-  Card,
-  CardBody,
   Input,
-  Pagination,
   Select,
-  Table,
-  TableCell,
-  TableContainer,
-  TableFooter,
-  TableHeader,
-  TableBody,
-  TableRow,
-  Avatar,
 } from "@windmill/react-ui";
 import { Modal, ModalBody, ModalFooter } from "@windmill/react-ui";
 import { useTranslation } from "react-i18next";
 import {
-  FiPlus,
-  FiEdit,
   FiTrash2,
-  FiUploadCloud,
-  FiXCircle,
-  FiEye,
   FiUsers,
   FiLock,
 } from "react-icons/fi";
 import axios from "axios";
-import useFilter from "@/hooks/useFilter";
-import useUtilsFunction from "@/hooks/useUtilsFunction";
-import useToggleDrawer from "@/hooks/useToggleDrawer";
-import AnimatedContent from "@/components/common/AnimatedContent";
-import PageTitle from "@/components/Typography/PageTitle";
-import TableLoading from "@/components/preloader/TableLoading";
-import NotFound from "@/components/table/NotFound";
-import Status from "@/components/table/Status";
-import Tooltip from "@/components/tooltip/Tooltip";
-import DeleteModal from "@/components/modal/DeleteModal";
 import MainDrawer from "@/components/drawer/MainDrawer";
 import { AdminContext } from "@/context/AdminContext";
 import { SidebarContext } from "@/context/SidebarContext";
-import spinnerLoadingImage from "@/assets/img/spinner.gif";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import useButtonColor from "@/hooks/useButtonColor";
 import { useModulePermissions } from "@/utils/permissionUtils";
@@ -52,14 +25,17 @@ import {
   getProductNavDisplayName,
 } from "@/utils/hiddenSidebarPaths";
 import {
-  DropdownBasic,
-  InputField,
-  PageHeader,
-  Button as LayoutButton,
-  DataTable,
   ToggleSwitch,
   ActionButtons,
 } from "@/page-layouts/index";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import PortalButton from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
@@ -280,7 +256,7 @@ const roleHasRestrictedPermissions = (mods) =>
 const UserRoles = () => {
   const { state } = useContext(AdminContext);
   const { adminInfo } = state;
-  const { toggleDrawer, lang } = useContext(SidebarContext);
+  const { toggleDrawer } = useContext(SidebarContext);
   const [data, setData] = useState([]);
   const [id, setId] = useState("");
   const [name, setName] = useState("");
@@ -292,7 +268,6 @@ const UserRoles = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ name: "", landingPage: "" });
   const { t } = useTranslation();
-  const { showDateFormat, showingTranslateValue } = useUtilsFunction();
   const [landingPage, setLandingPage] = useState(""); // Landing page
   const [selectedModules, setSelectedModules] = useState({}); // Module selection
   const [modules, setModules] = useState([]);
@@ -1377,167 +1352,242 @@ const UserRoles = () => {
     );
   };
 
-  const content = (
-    <div className="p-6 bg-white min-h-screen">
-      <PageHeader title={t("userRoles.title")} />
-      <AnimatedContent>
-        <Card>
-          <CardBody>
-            <div className="flex flex-col md:flex-row gap-3 justify-end pb-4 flex-wrap items-center">
-              <div className="w-full md:w-[220px] shrink-0">
-                <InputField
-                  type="text"
-                  name="search"
-                  value={FilterName}
-                  onChange={(e) => {
-                    setFilterText(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder={t("systemUsers.searchText")}
-                />
-              </div>
+  const clearAllFilters = useCallback(() => {
+    setFilterStatus("");
+    setFilterText("");
+    setFilterBusinessGroup(
+      businessGroups.length === 1 ? businessGroups[0]._id : "",
+    );
+    setCurrentPage(1);
+  }, [businessGroups]);
 
-              {businessGroups.length !== 1 && (
-                <div className="w-full md:w-[220px] shrink-0">
-                  <DropdownBasic
-                    value={FilterBusinessGroup}
-                    onChange={(value) => {
-                      setFilterBusinessGroup(value);
-                      setCurrentPage(1);
-                    }}
-                    width="220px"
-                    options={[
-                      {
-                        label:
-                          t("userRoles.allBusinessGroups") ||
-                          "All Business Groups",
-                        value: "",
-                      },
-                      ...businessGroups.map((bg) => ({
-                        label: bg.companyName,
-                        value: bg._id,
-                      })),
-                    ]}
-                  />
+  const portalFilterValues = {
+    status: FilterStatus === "" ? "" : String(FilterStatus),
+    businessGroup: FilterBusinessGroup || "",
+  };
+
+  const portalFilters = useMemo(
+    () => [
+      ...(businessGroups.length !== 1
+        ? [
+            {
+              key: "businessGroup",
+              placeholder:
+                t("userRoles.allBusinessGroups") || "All Business Groups",
+              options: [
+                {
+                  value: "",
+                  label:
+                    t("userRoles.allBusinessGroups") || "All Business Groups",
+                },
+                ...businessGroups.map((bg) => ({
+                  value: bg._id,
+                  label: bg.companyName,
+                })),
+              ],
+            },
+          ]
+        : []),
+      {
+        key: "status",
+        placeholder: t("All"),
+        options: [
+          { value: "", label: t("All") },
+          { value: "true", label: t("active") },
+          { value: "false", label: t("inactive") },
+        ],
+      },
+    ],
+    [businessGroups, t],
+  );
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "status") {
+      setFilterStatus(value === "" ? "" : value === "true");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "businessGroup") {
+      setFilterBusinessGroup(value || "");
+      setCurrentPage(1);
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      ...(businessGroups.length !== 1
+        ? [
+            {
+              key: "businessGroup",
+              header: t("userRoles.businessGroup") || "Business Group",
+              width: "16%",
+              render: (row) => (
+                <div className="epc-cell__primary">
+                  {row.businessGroup?.companyName ??
+                    (row.businessGroup
+                      ? "—"
+                      : t("userRoles.global") || "Global")}
                 </div>
-              )}
+              ),
+            },
+          ]
+        : []),
+      {
+        key: "name",
+        header: t("hrReports.common.name"),
+        width: "16%",
+        render: (row) => (
+          <div className="epc-cell__primary">{row.name || "—"}</div>
+        ),
+      },
+      {
+        key: "internalName",
+        header: t("userRoles.internalName") || "Internal Name",
+        width: "14%",
+        render: (row) => (
+          <div className="epc-cell__secondary">{row.internalName || "—"}</div>
+        ),
+      },
+      {
+        key: "landingPage",
+        header: t("userRoles.selectLandingPage"),
+        width: "18%",
+        render: (row) => (
+          <div className="epc-cell__secondary">{row.landing_page || "—"}</div>
+        ),
+      },
+      {
+        key: "status",
+        header: t("hrReports.common.status"),
+        width: "14%",
+        render: (row) => (
+          <div className="flex items-center gap-2">
+            <StatusPill
+              status={row.status === true ? t("active") : t("inactive")}
+              tone={row.status === true ? "success" : "danger"}
+            />
+            <ToggleSwitch
+              isOn={row.status === true}
+              handleToggle={() => handleStatusToggle(row)}
+              disabled={
+                !isSuperAdmin && (!canUpdate || !canEditRole(row))
+              }
+            />
+          </div>
+        ),
+      },
+      {
+        key: "actions",
+        header: t("Actions"),
+        width: "14%",
+        align: "right",
+        render: (row) => (
+          <ActionButtons
+            maxVisibleActions={2}
+            items={[
+              {
+                action: ACTION_BUTTON_TYPES.VIEW,
+                title: t("userRoles.viewAssignedMembers"),
+                permission: isSuperAdmin || canViewDetails,
+                onClick: () =>
+                  handleViewAssignedMembers(row._id, row.name),
+              },
+              {
+                action: ACTION_BUTTON_TYPES.EDIT,
+                title: canEditRole(row)
+                  ? t("userRoles.editRole")
+                  : t("userRoles.cannotEditOwnRole"),
+                permission:
+                  isSuperAdmin || (canUpdate && canEditRole(row)),
+                onClick: () => handleUpdate(row._id),
+              },
+              {
+                action: ACTION_BUTTON_TYPES.DELETE,
+                title: canEditRole(row)
+                  ? t("userRoles.deleteRole")
+                  : t("userRoles.cannotEditOwnRole"),
+                permission:
+                  isSuperAdmin || (canDelete && canEditRole(row)),
+                onClick: () => handleDelete(row._id),
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    [
+      businessGroups.length,
+      canDelete,
+      canUpdate,
+      canViewDetails,
+      isSuperAdmin,
+      t,
+    ],
+  );
 
-              <div className="w-full md:w-[180px] shrink-0">
-                <DropdownBasic
-                  value={FilterStatus}
-                  onChange={(value) => {
-                    setFilterStatus(value);
-                    setCurrentPage(1);
-                  }}
-                  width="180px"
-                  options={[
-                    { label: t("All"), value: "" },
-                    { label: t("active"), value: true },
-                    { label: t("inactive"), value: false },
-                  ]}
-                />
-              </div>
-
-              {(isSuperAdmin || canAdd) && (
-                <LayoutButton
-                  onClick={handleAdd}
-                  className="whitespace-nowrap shrink-0"
-                  style={{
-                    backgroundColor: buttonColor,
-                    whiteSpace: "nowrap",
-                    width: "auto",
-                    minWidth: "max-content",
-                  }}
-                  startIcon={<FiPlus />}
-                >
-                  {t("userRoles.addRole")}
-                </LayoutButton>
-              )}
-            </div>
-          </CardBody>
-        </Card>
-      </AnimatedContent>
-
-      <DataTable
-        headers={[
-          ...(businessGroups.length !== 1
-            ? [t("userRoles.businessGroup") || "Business Group"]
-            : []),
-          t("hrReports.common.name"),
-          t("userRoles.internalName") || "Internal Name",
-          t("userRoles.selectLandingPage"),
-          t("hrReports.common.status"),
-          t("Actions"),
-        ]}
-        data={data}
-        loading={loading}
-        noPadding={true}
-        // pagination
-        currentPage={currentPage}
-        recordsPerPage={resultsPerPage}
-        totalRecords={totalRecords}
-        totalPages={Math.ceil(totalRecords / resultsPerPage)}
-        onPageChange={(page) => {
-          setCurrentPage(page);
-          fetchData(FilterStatus, FilterName, FilterBusinessGroup, page, resultsPerPage);
-        }}
-        onRecordsPerPageChange={(limit) => {
-          const newLimit = Number(limit);
-          setRecordsPerPage(newLimit);
-          setCurrentPage(1);
-          fetchData(FilterStatus, FilterName, FilterBusinessGroup, 1, newLimit);
-        }}
-        // rendering
-        colWidths={{
-          Actions: "150px",
-        }}
-        renderRow={(UserRoles) => (
-          <TableRow key={UserRoles._id}>
-            {businessGroups.length !== 1 && (
-            <TableCell>
-              {UserRoles.businessGroup?.companyName ?? (UserRoles.businessGroup ? "-" : t("userRoles.global") || "Global")}
-            </TableCell>
-            )}
-            <TableCell>{UserRoles.name}</TableCell>
-            <TableCell>{UserRoles.internalName || "-"}</TableCell>
-            <TableCell>{UserRoles.landing_page}</TableCell>
-            <TableCell>
-              <ToggleSwitch
-                isOn={UserRoles.status === true}
-                handleToggle={() => handleStatusToggle(UserRoles)}
-                disabled={!isSuperAdmin && (!canUpdate || !canEditRole(UserRoles))}
-              />
-            </TableCell>
-
-            <TableCell>
-              <ActionButtons
-                isCell={true}
-                items={[
-                  {
-                    action: ACTION_BUTTON_TYPES.VIEW,
-                    tooltip: t("userRoles.viewAssignedMembers"),
-                    permission: isSuperAdmin || canViewDetails,
-                    onClick: () =>
-                      handleViewAssignedMembers(UserRoles._id, UserRoles.name),
-                  },
-                  {
-                    action: ACTION_BUTTON_TYPES.EDIT,
-                    tooltip: canEditRole(UserRoles) ? t("userRoles.editRole") : t("userRoles.cannotEditOwnRole"),
-                    permission: isSuperAdmin || (canUpdate && canEditRole(UserRoles)),
-                    onClick: () => handleUpdate(UserRoles._id),
-                  },
-                  {
-                    action: ACTION_BUTTON_TYPES.DELETE,
-                    tooltip: canEditRole(UserRoles) ? t("userRoles.deleteRole") : t("userRoles.cannotEditOwnRole"),
-                    permission: isSuperAdmin || (canDelete && canEditRole(UserRoles)),
-                    onClick: () => handleDelete(UserRoles._id),
-                  },
-                ]}
-              />
-            </TableCell>
-          </TableRow>
+  const content = (
+    <EpcPage
+      flush
+      title={t("userRoles.title")}
+      subtitle={t(
+        "userRoles.subtitle",
+        "Define roles, landing pages, and module permissions.",
+      )}
+      action={
+        isSuperAdmin || canAdd ? (
+          <PortalButton onClick={handleAdd}>
+            <PlusIcon size={15} />
+            {t("userRoles.addRole")}
+          </PortalButton>
+        ) : null
+      }
+    >
+      <FilterBar
+        subtitle={t(
+          "userRoles.filterSubtitle",
+          "Narrow by name, business group, or status.",
         )}
+        searchPlaceholder={t("systemUsers.searchText")}
+        searchValue={FilterName}
+        onSearchChange={(value) => {
+          setFilterText(value);
+          setCurrentPage(1);
+        }}
+        values={portalFilterValues}
+        onChange={handlePortalFilterChange}
+        onReset={clearAllFilters}
+        filters={portalFilters}
       />
+
+      <Card>
+        <CardHeader
+          title={t("userRoles.title")}
+          subtitle={loading ? "Loading…" : `${totalRecords} total roles`}
+        />
+        <PortalDataTable
+          columns={columns}
+          rows={loading ? [] : data}
+          rowKey="_id"
+          emptyMessage={
+            loading
+              ? "Loading roles…"
+              : t("userRoles.noRolesFound", "No roles found.")
+          }
+        />
+        {!loading && totalRecords > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={resultsPerPage}
+            total={totalRecords}
+            itemLabel="roles"
+            onPageChange={(page) => setCurrentPage(page)}
+            onPageSizeChange={(perPage) => {
+              setRecordsPerPage(perPage);
+              setCurrentPage(1);
+            }}
+          />
+        ) : null}
+      </Card>
 
       <MainDrawer>{renderDrawerContent()}</MainDrawer>
 
@@ -1654,7 +1704,7 @@ const UserRoles = () => {
           </Button>
         </ModalFooter>
       </Modal>
-    </div>
+    </EpcPage>
   );
 
   if (isSuperAdmin) return content;

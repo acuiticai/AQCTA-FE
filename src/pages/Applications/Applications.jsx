@@ -1,13 +1,25 @@
-import React, { useState, useEffect, useContext, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useMemo,
+  useCallback,
+} from "react";
 import { useHistory } from "react-router-dom";
-import { Building, FileText, Layers } from "lucide-react";
 import {
-  DataTable,
   ActionButtons,
-  SummaryCards,
   CustomModal,
   DropdownBasic,
+  SummaryCards,
 } from "@/page-layouts";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import useCheckTokenExpired from "@/hooks/useCheckTokenExpired";
@@ -54,19 +66,6 @@ const hasIssuedContractReviewLetter = (row) => {
   return ISSUED_CONTRACT_REVIEW_STATUSES.includes(stage?.status);
 };
 
-const STATUS_STYLES = {
-  Draft: "bg-gray-100 text-gray-800",
-  "Under Review": "bg-amber-100 text-amber-800",
-  Resubmitted: "bg-orange-100 text-orange-800",
-  Approved: "bg-teal-100 text-teal-800",
-  Rejected: "bg-rose-100 text-rose-800",
-  Scheduled: "bg-blue-100 text-blue-800",
-  "In Progress": "bg-indigo-100 text-indigo-800",
-  Certified: "bg-green-100 text-green-800",
-  Completed: "bg-emerald-100 text-emerald-800",
-  "Action Required": "bg-red-100 text-red-800",
-};
-
 const Applications = () => {
   const checkTokenExpired = useCheckTokenExpired();
   const history = useHistory();
@@ -94,7 +93,6 @@ const Applications = () => {
   const [serviceFilter, setServiceFilter] = useState("all");
   const [businessFilter, setBusinessFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [businesses, setBusinesses] = useState([]);
@@ -108,31 +106,6 @@ const Applications = () => {
   const [statusChangeValue, setStatusChangeValue] = useState("");
   const [downloadingNotificationId, setDownloadingNotificationId] =
     useState("");
-
-  const headers = [
-    "Reference",
-    "Stage",
-    "Customer / Company",
-    "Type",
-    "Purpose / Summary",
-    "Status",
-    "Submitted",
-    "Actions",
-  ];
-
-  const colWidths = {
-    Reference: "200px",
-    Stage: "140px",
-    "Customer / Company": "220px",
-    Type: "160px",
-    "Purpose / Summary": "220px",
-    Status: "130px",
-    Submitted: "110px",
-    Actions: "160px",
-  };
-
-  // Shown only in the row expand panel (not in the main listing).
-  const headersToHide = ["Stage", "Submitted"];
 
   useEffect(() => {
     let cancelled = false;
@@ -183,7 +156,6 @@ const Applications = () => {
       if (response.data?.status) {
         setRows(response.data.data || []);
         setTotal(response.data.total || 0);
-        setTotalPages(response.data.totalPages || 1);
         if (response.data.stats) {
           setStats((prev) => ({ ...prev, ...response.data.stats }));
         }
@@ -243,16 +215,6 @@ const Applications = () => {
       year: "numeric",
     });
   };
-
-  const getStatusBadge = (status) => (
-    <span
-      className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
-        STATUS_STYLES[status] || "bg-gray-100 text-gray-800"
-      }`}
-    >
-      {status || "—"}
-    </span>
-  );
 
   const downloadContractReviewNotification = async (row) => {
     if (!row?._id || downloadingNotificationId) return;
@@ -351,73 +313,276 @@ const Applications = () => {
     setCurrentPage(1);
   };
 
-  const filters = [
-    {
-      isClearButton: true,
-      buttonProps: { onClick: clearAllFilters },
-    },
+  const underReviewCount = stats["Under Review"] || 0;
+  const actionRequiredCount =
+    (stats["Action Required"] || 0) + (stats.Rejected || 0);
+
+  const buildActionItems = useCallback(
+    (row) => [
+      {
+        action: ACTION_BUTTON_TYPES.VIEW,
+        title: "View",
+        onClick: () => history.push(`/applications/view/${row._id}`),
+      },
+      {
+        action: ACTION_BUTTON_TYPES.HISTORY,
+        title: "Activity log",
+        onClick: () => setHistoryRow(row),
+      },
+      ...(routePerms.canUpdate
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.CHANGE_STATUS,
+              title: "Change Status",
+              onClick: () => openStatusChangeModal(row),
+            },
+          ]
+        : []),
+      ...(row.status !== "Draft"
+        ? [currentWorkflowStage(row.workflow)]
+            .filter(Boolean)
+            .map((stage) => ({
+              action: ACTION_BUTTON_TYPES.WORKFLOW,
+              title: stage.title,
+              description: [stage.documentCode, stage.status]
+                .filter(Boolean)
+                .join(" · "),
+              href: applicationActionsPath(row._id, stage.key),
+              target: "_blank",
+            }))
+        : []),
+      ...(hasIssuedContractReviewLetter(row)
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.DOWNLOAD,
+              title:
+                downloadingNotificationId === row._id
+                  ? "Downloading…"
+                  : "Download customer notification",
+              description: "AQCTA-FOR-01-24 · sent to the customer",
+              onClick: () => downloadContractReviewNotification(row),
+            },
+          ]
+        : []),
+      ...(row.canEdit ||
+      ["Draft", "Action Required", "Rejected"].includes(row.status)
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.EDIT,
+              title:
+                row.status === "Draft"
+                  ? "Complete draft"
+                  : "Edit / resubmit",
+              onClick: () =>
+                history.push(`/applications/${row.type}/new`, {
+                  applicationId: row._id,
+                  customerId: row.customerId
+                    ? String(row.customerId)
+                    : undefined,
+                  businessId: row.business_id
+                    ? String(row.business_id)
+                    : undefined,
+                  customerLabel:
+                    row.companyName || row.customerName || "",
+                }),
+            },
+          ]
+        : []),
+      ...(routePerms.canUpdate && ASSIGNABLE_STATUSES.includes(row.status)
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.ASSIGN,
+              title: row.assignedTo
+                ? "Reassign System User"
+                : "Assign System User",
+              onClick: () => setAssignRow(row),
+            },
+          ]
+        : []),
+      ...(routePerms.canUpdate && REVIEWABLE_STATUSES.includes(row.status)
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.APPROVE,
+              title: "Approve",
+              onClick: () => handleStatusChange(row, "Approved"),
+            },
+            {
+              action: ACTION_BUTTON_TYPES.REQUEST_MODIFICATION,
+              title: "Request Modification",
+              description:
+                "Not a rejection — customer edits and resubmits the same application",
+              onClick: () => handleStatusChange(row, "Action Required"),
+            },
+            {
+              action: ACTION_BUTTON_TYPES.REJECT,
+              title: "Reject",
+              onClick: () => handleStatusChange(row, "Rejected"),
+            },
+          ]
+        : []),
+      ...(routePerms.canDelete && (row.canDelete || row.status === "Draft")
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.DELETE,
+              title: "Delete",
+              onClick: () => openDeleteModal(row),
+            },
+          ]
+        : []),
+    ],
+    [
+      history,
+      routePerms.canUpdate,
+      routePerms.canDelete,
+      downloadingNotificationId,
+      handleStatusChange,
+    ],
+  );
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "reference",
+        header: "Reference",
+        width: "14%",
+        render: (row) =>
+          routePerms.canViewDetails && row._id ? (
+            <button
+              type="button"
+              className="epc-cell__link"
+              title={row.applicationNumber || ""}
+              onClick={() => history.push(`/applications/view/${row._id}`)}
+            >
+              {row.applicationNumber || "—"}
+            </button>
+          ) : (
+            row.applicationNumber || "—"
+          ),
+      },
+      {
+        key: "customer",
+        header: "Customer / Company",
+        width: "16%",
+        render: (row) => (
+          <>
+            <div className="epc-cell__primary">{row.companyName || "—"}</div>
+            {(row.commercialStage || row.stage) && (
+              <div className="epc-cell__secondary">
+                {row.commercialStage || row.stage}
+              </div>
+            )}
+          </>
+        ),
+      },
+      {
+        key: "service",
+        header: "Service",
+        width: "14%",
+        render: (row) => (
+          <>
+            <div className="epc-cell__primary">{row.service || "—"}</div>
+            {(row.certificationType ||
+              (row.type === "inspection" ? "Inspection application" : "")) && (
+              <div className="epc-cell__secondary">
+                {row.certificationType || "Inspection application"}
+              </div>
+            )}
+          </>
+        ),
+      },
+      {
+        key: "summary",
+        header: "Summary",
+        width: "18%",
+        render: (row) => (
+          <>
+            <div className="epc-cell__primary">
+              {row.summary ||
+                row.purpose ||
+                row.productName ||
+                row.projectName ||
+                "—"}
+            </div>
+            {row.standardNumber ? (
+              <div className="epc-cell__secondary">
+                Std: {row.standardNumber}
+                {row.standardTitle ? ` — ${row.standardTitle}` : ""}
+              </div>
+            ) : null}
+            {row.type ? (
+              <div className="epc-cell__secondary capitalize">{row.type}</div>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: "12%",
+        render: (row) => <StatusPill status={row.status || "—"} />,
+      },
+      {
+        key: "submitted",
+        header: "Submitted",
+        width: "10%",
+        render: (row) => formatDate(row.submittedAt || row.createdAt),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        width: "10%",
+        align: "right",
+        render: (row) => (
+          <ActionButtons maxVisibleActions={2} items={buildActionItems(row)} />
+        ),
+      },
+    ],
+    [buildActionItems, history, routePerms.canViewDetails],
+  );
+
+  const portalFilterValues = {
+    status: statusFilter === "all" ? "" : statusFilter,
+    type: typeFilter === "all" ? "" : typeFilter,
+    service: serviceFilter === "all" ? "" : serviceFilter,
+    business: businessFilter || "",
+  };
+
+  const portalFilters = [
     ...(!isSingleAssignedBusiness()
       ? [
           {
-            label: "Business",
-            value: businessFilter,
-            onChange: (value) => {
-              setBusinessFilter(value);
-              setCurrentPage(1);
-            },
+            key: "business",
+            placeholder: "All Businesses",
             options: [
-              ...(businesses.length > 1
-                ? [{ value: "", label: "All Businesses" }]
-                : []),
+              { value: "", label: "All Businesses" },
               ...businesses.map((b) => ({ value: b._id, label: b.name })),
             ],
-            placeholder:
-              businesses.length > 1 ? "All Businesses" : "Select Business",
-            icon: Building,
           },
         ]
       : []),
     {
-      label: "Status",
-      value: statusFilter,
-      onChange: (value) => {
-        setStatusFilter(value);
-        setCurrentPage(1);
-      },
+      key: "status",
+      placeholder: "All Statuses",
       options: [
-        { value: "all", label: "All Statuses" },
+        { value: "", label: "All Statuses" },
         ...APPLICATION_STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
       ],
-      placeholder: "Select Status",
-      icon: FileText,
     },
     {
-      label: "Type",
-      value: typeFilter,
-      onChange: (value) => {
-        setTypeFilter(value);
-        setCurrentPage(1);
-      },
+      key: "type",
+      placeholder: "All Types",
       options: [
-        { value: "all", label: "All Types" },
+        { value: "", label: "All Types" },
         { value: "certification", label: "Conformity Assessment" },
       ],
-      placeholder: "Select Type",
-      icon: Layers,
     },
     {
-      label: "Scheme",
-      value: serviceFilter,
-      onChange: (value) => {
-        setServiceFilter(value);
-        setCurrentPage(1);
-      },
+      key: "service",
+      placeholder: "All Schemes",
       options: [
-        { value: "all", label: "All Schemes" },
+        { value: "", label: "All Schemes" },
         ...APPLICATION_SERVICE_OPTIONS.map((s) => ({ value: s, label: s })),
       ],
-      placeholder: "Select Scheme",
-      icon: FileText,
     },
   ];
 
@@ -452,261 +617,99 @@ const Applications = () => {
     },
   ];
 
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "status") {
+      setStatusFilter(value || "all");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "type") {
+      setTypeFilter(value || "all");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "service") {
+      setServiceFilter(value || "all");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "business") {
+      setBusinessFilter(value || "");
+      setCurrentPage(1);
+    }
+  };
+
   return (
-    <div className="bg-gray-50 min-h-screen w-full max-w-full overflow-x-hidden">
-      <div className="w-full max-w-full mx-auto px-6 py-8 min-w-0 overflow-x-hidden">
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Applications</h1>
-              <p className="text-gray-600 mt-2">
-                Review and manage customer certification and inspection
-                applications.
-              </p>
-            </div>
-            {routePerms.canAdd ? (
-              <button
-                type="button"
-                onClick={() => history.push("/applications/new")}
-                className="flex items-center gap-2 px-6 py-3 bg-[var(--p-blue)] text-white rounded-lg hover:bg-[var(--p-blue-dark)] transition-colors shadow-sm"
-              >
-                Create Application
-              </button>
-            ) : null}
-          </div>
-        </div>
+    <EpcPage
+      flush
+      title="Applications"
+      subtitle="Review and manage customer certification and inspection applications."
+      action={
+        routePerms.canAdd ? (
+          <Button onClick={() => history.push("/applications/new")}>
+            <PlusIcon size={15} />
+            Create Application
+          </Button>
+        ) : null
+      }
+    >
+      <SummaryCards
+        cards={summaryCardsData}
+        columnsCount={4}
+        loading={loading && rows.length === 0}
+      />
 
-        <SummaryCards cards={summaryCardsData} columnsCount={4} />
+      <FilterBar
+        subtitle="Narrow the list by reference, customer, status, type or scheme."
+        searchPlaceholder="Search by reference, customer or summary…"
+        searchValue={searchTerm}
+        onSearchChange={(value) => {
+          setSearchTerm(value);
+          setCurrentPage(1);
+        }}
+        values={portalFilterValues}
+        onChange={handlePortalFilterChange}
+        onReset={clearAllFilters}
+        filters={portalFilters}
+      />
 
-        <DataTable
-          onSearch={(value) => {
-            setSearchTerm(value);
-            setCurrentPage(1);
-          }}
-          searchValue={searchTerm}
-          searchPlaceholder="Search by text..."
-          filters={filters}
-          headers={headers}
-          headersToHide={headersToHide}
-          colWidths={colWidths}
-          wideTable
-          skipDynamicColumnWidths
-          data={rows}
-          totalRecords={total}
-          loading={loading}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          recordsPerPage={recordsPerPage}
-          onPageChange={setCurrentPage}
-          onRecordsPerPageChange={(perPage) => {
-            setRecordsPerPage(perPage);
-            setCurrentPage(1);
-          }}
-          renderRow={(row) => (
-            <tr key={row._id} className="border-b">
-              <td className="py-2 px-4 whitespace-nowrap">
-                {routePerms.canViewDetails && row._id ? (
-                  <button
-                    type="button"
-                    className="text-[var(--p-blue)] hover:underline font-medium text-left whitespace-nowrap"
-                    title={row.applicationNumber || ""}
-                    onClick={() => history.push(`/applications/view/${row._id}`)}
-                  >
-                    {row.applicationNumber || "—"}
-                  </button>
-                ) : (
-                  <span className="whitespace-nowrap">
-                    {row.applicationNumber || "—"}
-                  </span>
-                )}
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap text-sm">
-                {row.commercialStage || row.stage || "—"}
-              </td>
-              <td className="py-2 px-4">
-                <div className="font-medium text-gray-900">
-                  {row.companyName || "—"}
-                </div>
-              </td>
-              <td className="py-2 px-4 text-sm" title={row.service || ""}>
-                <div className="font-medium text-gray-900">
-                  {row.service || "—"}
-                </div>
-                {(row.certificationType ||
-                  (row.type === "inspection"
-                    ? "Inspection application"
-                    : "")) && (
-                  <div className="text-xs text-gray-500">
-                    {row.certificationType || "Inspection application"}
-                  </div>
-                )}
-              </td>
-              <td className="py-2 px-4">
-                <div
-                  className="text-sm"
-                  title={row.summary || row.purpose || ""}
-                >
-                  {row.summary ||
-                    row.purpose ||
-                    row.productName ||
-                    row.projectName ||
-                    "—"}
-                </div>
-                {row.standardNumber ? (
-                  <div className="text-xs text-gray-500">
-                    Std: {row.standardNumber}
-                    {row.standardTitle ? ` — ${row.standardTitle}` : ""}
-                  </div>
-                ) : null}
-                <div className="text-xs text-gray-500 capitalize">
-                  {row.type || ""}
-                </div>
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap">
-                {getStatusBadge(row.status)}
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap">
-                {formatDate(row.submittedAt || row.createdAt)}
-              </td>
-              <td className="py-2 px-4">
-                <ActionButtons
-                  maxVisibleActions={2}
-                  items={[
-                    {
-                      action: ACTION_BUTTON_TYPES.VIEW,
-                      title: "View",
-                      onClick: () =>
-                        history.push(`/applications/view/${row._id}`),
-                    },
-                    {
-                      action: ACTION_BUTTON_TYPES.HISTORY,
-                      title: "Activity log",
-                      onClick: () => setHistoryRow(row),
-                    },
-                    ...(routePerms.canUpdate
-                      ? [
-                          {
-                            action: ACTION_BUTTON_TYPES.CHANGE_STATUS,
-                            title: "Change Status",
-                            onClick: () => openStatusChangeModal(row),
-                          },
-                        ]
-                      : []),
-                    /* List menu: only the next unfinished stage, and only after
-                       the application is submitted (not Draft). Completed ones
-                       stay off this overflow — the view page shows all. */
-                    ...(row.status !== "Draft"
-                      ? [currentWorkflowStage(row.workflow)]
-                          .filter(Boolean)
-                          .map((stage) => ({
-                            action: ACTION_BUTTON_TYPES.WORKFLOW,
-                            title: stage.title,
-                            description: [stage.documentCode, stage.status]
-                              .filter(Boolean)
-                              .join(" · "),
-                            href: applicationActionsPath(row._id, stage.key),
-                            target: "_blank",
-                          }))
-                      : []),
-                    ...(hasIssuedContractReviewLetter(row)
-                      ? [
-                          {
-                            action: ACTION_BUTTON_TYPES.DOWNLOAD,
-                            title:
-                              downloadingNotificationId === row._id
-                                ? "Downloading…"
-                                : "Download customer notification",
-                            description: "AQCTA-FOR-01-24 · sent to the customer",
-                            onClick: () =>
-                              downloadContractReviewNotification(row),
-                          },
-                        ]
-                      : []),
-                    ...(row.canEdit ||
-                    ["Draft", "Action Required", "Rejected"].includes(
-                      row.status,
-                    )
-                      ? [
-                          {
-                            action: ACTION_BUTTON_TYPES.EDIT,
-                            title:
-                              row.status === "Draft"
-                                ? "Complete draft"
-                                : "Edit / resubmit",
-                            onClick: () =>
-                              history.push(
-                                `/applications/${row.type}/new`,
-                                {
-                                  applicationId: row._id,
-                                  customerId: row.customerId
-                                    ? String(row.customerId)
-                                    : undefined,
-                                  businessId: row.business_id
-                                    ? String(row.business_id)
-                                    : undefined,
-                                  customerLabel:
-                                    row.companyName ||
-                                    row.customerName ||
-                                    "",
-                                },
-                              ),
-                          },
-                        ]
-                      : []),
-                    ...(routePerms.canUpdate &&
-                    ASSIGNABLE_STATUSES.includes(row.status)
-                      ? [
-                          {
-                            action: ACTION_BUTTON_TYPES.ASSIGN,
-                            title: row.assignedTo
-                              ? "Reassign System User"
-                              : "Assign System User",
-                            onClick: () => setAssignRow(row),
-                          },
-                        ]
-                      : []),
-                    ...(routePerms.canUpdate &&
-                    REVIEWABLE_STATUSES.includes(row.status)
-                      ? [
-                          {
-                            action: ACTION_BUTTON_TYPES.APPROVE,
-                            title: "Approve",
-                            onClick: () =>
-                              handleStatusChange(row, "Approved"),
-                          },
-                          {
-                            action: ACTION_BUTTON_TYPES.REQUEST_MODIFICATION,
-                            title: "Request Modification",
-                            description:
-                              "Not a rejection — customer edits and resubmits the same application",
-                            onClick: () =>
-                              handleStatusChange(row, "Action Required"),
-                          },
-                          {
-                            action: ACTION_BUTTON_TYPES.REJECT,
-                            title: "Reject",
-                            onClick: () =>
-                              handleStatusChange(row, "Rejected"),
-                          },
-                        ]
-                      : []),
-                    ...(routePerms.canDelete &&
-                    (row.canDelete || row.status === "Draft")
-                      ? [
-                          {
-                            action: ACTION_BUTTON_TYPES.DELETE,
-                            title: "Delete",
-                            onClick: () => openDeleteModal(row),
-                          },
-                        ]
-                      : []),
-                  ]}
-                />
-              </td>
-            </tr>
-          )}
+      <Card>
+        <CardHeader
+          title="Applications"
+          subtitle={
+            loading ? "Loading…" : `${total} total applications`
+          }
+          action={
+            <span className="epc-chip">
+              {underReviewCount} under review · {actionRequiredCount} need action
+            </span>
+          }
         />
-      </div>
+
+        <PortalDataTable
+          columns={columns}
+          rows={loading ? [] : rows}
+          rowKey="_id"
+          emptyMessage={
+            loading
+              ? "Loading applications…"
+              : "No applications match these filters."
+          }
+        />
+        {!loading && total > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={recordsPerPage}
+            total={total}
+            itemLabel="applications"
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(perPage) => {
+              setRecordsPerPage(perPage);
+              setCurrentPage(1);
+            }}
+          />
+        ) : null}
+      </Card>
 
       {statusModals}
 
@@ -746,7 +749,9 @@ const Applications = () => {
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Current status
               </label>
-              <div>{getStatusBadge(statusChangeRow.status)}</div>
+              <div>
+                <StatusPill status={statusChangeRow.status || "—"} />
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -816,7 +821,7 @@ const Applications = () => {
           </p>
         )}
       </CustomModal>
-    </div>
+    </EpcPage>
   );
 };
 

@@ -225,8 +225,8 @@ export default function SecurityTab({
   const renderDeviceIcon = (item) => {
     const iconProps = {
       className: `w-8 h-8 text-gray-600 ${
-        isCurrentDevice(item) ? "text-[#bcd374]" : ""
-      } group-hover:text-[#bcd374] transition-colors`,
+        isCurrentDevice(item) ? "text-[#fe3a55]" : ""
+      } group-hover:text-[#fe3a55] transition-colors`,
     };
 
     switch ((item.deviceType || "").toLowerCase()) {
@@ -250,7 +250,7 @@ export default function SecurityTab({
       case "security-2fa":
         return (
           <div className="bg-white rounded-lg">
-            <h4 className="text-base font-medium text-[#2d3748] mb-4">
+            <h4 className="ep-title">
               Two-Factor Authentication
             </h4>
             <Form
@@ -271,7 +271,7 @@ export default function SecurityTab({
       case "security-password":
         return (
           <div className="bg-white rounded-lg">
-            <h4 className="text-base font-medium text-[#2d3748] mb-4">
+            <h4 className="ep-title">
               Change Password
             </h4>
             {error && (
@@ -304,13 +304,14 @@ export default function SecurityTab({
           <div className="bg-white rounded-lg">
             {devices && (
               <div className="mt-0">
-                <div className="flex justify-between items-center mb-6">
-                  <h4 className="text-base font-medium text-[#2d3748] mb-4">
+                <div className="flex justify-between items-center mb-6 gap-4">
+                  <h4 className="ep-title" style={{ marginBottom: 0 }}>
                     Trusted Devices
                   </h4>
                   <button
+                    type="button"
                     onClick={() => setAddTrustedDeviceModalOpen(true)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#bcd374] rounded-lg hover:bg-[#bcd374]/90 transition-colors"
+                    className="ep-btn"
                   >
                     Add This Device
                   </button>
@@ -345,7 +346,7 @@ export default function SecurityTab({
                   renderIcon={renderDeviceIcon}
                   renderBadge={(item) =>
                     isCurrentDevice(item) ? (
-                      <span className="px-2 py-1 text-xs font-medium text-[#bcd374] bg-[#bcd374]/10 rounded-full">
+                      <span className="ep-chip">
                         Current Device
                       </span>
                     ) : (
@@ -390,11 +391,11 @@ export default function SecurityTab({
       default:
         return (
           <div className="space-y-8">
-            <h3 className="text-lg font-medium text-[#2d3748]">
+            <h3 className="ep-title">
               Security Settings
             </h3>
             <div className="bg-white rounded-lg">
-              <h4 className="text-base font-medium text-[#2d3748] mb-4">
+              <h4 className="ep-title">
                 Two-Factor Authentication
               </h4>
               <Form
@@ -412,7 +413,7 @@ export default function SecurityTab({
             </div>
 
             <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-              <h4 className="text-base font-medium text-[#2d3748] mb-4">
+              <h4 className="ep-title">
                 Change Password
               </h4>
               {error && (

@@ -28,8 +28,8 @@ const SummaryCard = ({
 
   return (
     <div
-      className={`relative p-[12px] rounded-lg bg-white shadow-sm h-[${
-        renderIconAsComponent && Icon ? "130px" : "85px"
+      className={`admin-stat-card relative h-[${
+        renderIconAsComponent && Icon ? "130px" : "96px"
       }]`}
       style={{ backgroundColor: `var(--${bgColor})` }}
     >

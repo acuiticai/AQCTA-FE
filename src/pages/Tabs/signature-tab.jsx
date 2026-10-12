@@ -164,11 +164,11 @@ export default function SignatureTab({ profileData }) {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-medium text-[#2d3748]">Digital Signature</h3>
+      <h3 className="ep-title">Digital Signature</h3>
 
       {!isEditing && currentSignature && (
         <div className="space-y-4">
-          <div className="p-4 border rounded-md">
+          <div className="ep-surface">
             <img
               src={`${currentSignature}`}
               alt="Signature"
@@ -184,14 +184,16 @@ export default function SignatureTab({ profileData }) {
               href={currentSignature}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-blue-600 underline"
+              className="text-sm underline"
+              style={{ color: "#fe3a55" }}
             >
               Open signature in new tab
             </a>
           )}
           <button
+            type="button"
             onClick={() => setIsEditing(true)}
-            className="bg-[#bcd374] text-white px-6 py-2 rounded-lg hover:bg-[#a8bf60] transition-colors"
+            className="ep-btn"
           >
             Change Signature
           </button>
@@ -201,17 +203,19 @@ export default function SignatureTab({ profileData }) {
       {(isEditing || !currentSignature) && (
         <div className="space-y-6">
           <div>
-            <label className="block text-sm text-[#4a5568] mb-2">Draw Signature</label>
-            <div className="rounded-md bg-[#f8fafc] p-4">
+            <label className="ep-label">Draw Signature</label>
+            <div className="ep-surface">
               <SignaturePad
                 ref={signaturePad}
                 canvasProps={{
-                  className: "w-full h-48 bg-[#f1f5f9] rounded-md",
+                  className: "w-full h-48 rounded-md",
+                  style: { background: "#f3eee8" },
                 }}
               />
               <button
+                type="button"
                 onClick={handleClear}
-                className="mt-2 text-sm text-[#64748b] hover:text-[#4a5568]"
+                className="mt-2 text-sm text-[#6e6e6e] hover:text-[#2f2f2f]"
               >
                 Clear
               </button>
@@ -219,8 +223,8 @@ export default function SignatureTab({ profileData }) {
           </div>
 
           <div>
-            <label className="block text-sm text-[#4a5568] mb-2">Upload Signature</label>
-            <div className="border border-dashed border-[#e2e8f0] rounded-md p-8">
+            <label className="ep-label">Upload Signature</label>
+            <div className="ep-upload">
               <div className="flex flex-col items-center justify-center">
                 <input
                   type="file"
@@ -230,29 +234,31 @@ export default function SignatureTab({ profileData }) {
                   id="signature-upload"
                 />
                 <label htmlFor="signature-upload" className="flex flex-col items-center cursor-pointer">
-                  <Upload className="w-6 h-6 text-[#94a3b8] mb-2" />
-                  <span className="text-sm text-[#64748b]">Choose File</span>
+                  <Upload className="w-6 h-6 mb-2" style={{ color: "#fe3a55" }} />
+                  <span className="text-sm text-[#6e6e6e]">Choose File</span>
                 </label>
                 {signatureFile && (
-                  <div className="mt-2 text-sm text-[#64748b]">{signatureFile.name}</div>
+                  <div className="mt-2 text-sm text-[#6e6e6e]">{signatureFile.name}</div>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end space-x-3">
             {isEditing && (
               <button
+                type="button"
                 onClick={() => setIsEditing(false)}
-                className="px-6 py-2 rounded-lg border border-[#e2e8f0] hover:bg-[#f8fafc] transition-colors"
+                className="ep-btn ep-btn--ghost"
               >
                 Cancel
               </button>
             )}
             <button
+              type="button"
               onClick={handleSave}
               disabled={loading}
-              className="bg-[#bcd374] text-white px-8 py-2 rounded-lg hover:bg-[#a8bf60] transition-colors disabled:opacity-50"
+              className="ep-btn"
             >
               {loading ? "Saving..." : "Save"}
             </button>

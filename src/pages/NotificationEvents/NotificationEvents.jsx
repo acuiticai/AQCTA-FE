@@ -10,7 +10,6 @@ import axios from "axios";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import useButtonColor from "@/hooks/useButtonColor";
 import { useLocation } from "react-router-dom";
-import { formatDate } from "@/components/formatAmount";
 import Header from "@/components/header/Header";
 import AppLayout from "@/pages/Settings/app-layout.jsx";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
@@ -20,24 +19,21 @@ import { CKEditor } from "ckeditor4-react";
 import {
   FiPlus as PlusIcon,
   FiEdit as PencilIcon,
-  FiTrash2 as TrashIcon,
-  FiEye as EyeIcon,
-  FiCheck as CheckIcon,
   FiX as XMarkIcon,
   FiBell,
   FiUsers,
   FiSettings,
   FiActivity,
 } from "react-icons/fi";
-import { Button } from "@/page-layouts";
-import {
-  PageHeader,
-  SummaryCards,
-  DataTable,
-  DropdownBasic,
-} from "@/page-layouts/index";
-import ActionButtons from "@/page-layouts/components/ActionButtons";
-import { useHistory } from "react-router-dom";
+import { Button, SummaryCards, DropdownBasic, ActionButtons } from "@/page-layouts/index";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import PortalButton from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon as PortalPlusIcon } from "@/customer/components/ui/icons";
 import { getPredefinedEventCodes } from "./predefinedEventCodes";
 import GlobalBusinessServices from "@/services/GlobalBusinessServices";
 import SettingsOrgBanner from "@/pages/Settings/SettingsOrgBanner";
@@ -69,19 +65,6 @@ function eventHasSavedEmailFromName(ev) {
   );
 }
 
-/**
- * Explicit widths: DataTable applies these as real <th>/<td> widths (not overridden by width:100% on every cell).
- * skipDynamicColumnWidths prevents auto detection from capping columns at 200px / fit-content.
- */
-const NOTIFICATION_EVENTS_TABLE_COL_WIDTHS = {
-  "Event Name": "52%",
-  Status: "85px",
-  Recipients: "200px",
-  Notifications: "118px",
-  Email: "85px",
-  Action: "136px",
-};
-
 const NotificationEvents = () => {
   const { state } = useContext(AdminContext);
   const { adminInfo } = state;
@@ -112,7 +95,6 @@ const NotificationEvents = () => {
   }, [adminInfo?.businesses]);
 
   const buttonColor = useButtonColor();
-  const history = useHistory();
   const [organization, setOrganization] = useState(null); // Set initially as null
   const [isOrgLoaded, setIsOrgLoaded] = useState(false); // To track when organization is loaded
   const location = useLocation();
@@ -296,16 +278,6 @@ const NotificationEvents = () => {
   //   (group) => group.options
   // );
 
-  // Table headers (description is shown inside Event Name; hover shows description only)
-  const headers = [
-    "Event Name",
-    "Status",
-    "Recipients",
-    "Notifications",
-    "Email",
-    "Action",
-  ];
-
   // Summary cards data
   const summaryCardsData = [
     {
@@ -327,22 +299,6 @@ const NotificationEvents = () => {
       value: stats.inactiveEvents,
       iconColor: "gray-100",
       backgroundColor: "gray-50",
-    },
-  ];
-
-  // Filters for DataTable
-  const filters = [
-    {
-      name: "status",
-      label: "Status",
-      type: "select",
-      value: filterStatus,
-      onChange: (value) => setFilterStatus(value),
-      options: [
-        { value: "all", label: "All Status" },
-        { value: "true", label: "Active" },
-        { value: "false", label: "Inactive" },
-      ],
     },
   ];
 
@@ -1045,135 +1001,151 @@ const NotificationEvents = () => {
     );
   }
 
-  // Render row function for DataTable
-  const renderRow = (event) => {
-    const roleNames =
-      event.userRoles
-        ?.map((role) => role?.name)
-        .filter(Boolean)
-        .join(", ") || "";
-    const userNames =
-      event.specificUsers
-        ?.map((user) => user?.name || user?.email)
-        .filter(Boolean)
-        .join(", ") || "";
-    const customEmails =
-      event.customEmailRecipients
-        ?.map((email) => String(email || "").trim())
-        .filter(Boolean)
-        .join(", ") || "";
+  const clearAllFilters = () => {
+    setFilterStatus("all");
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
 
-    return (
-      <tr
-        key={event._id}
-        className="border-b border-gray-100 transition-colors duration-200 hover:bg-[rgba(var(--p-blue-rgb),0.08)]"
-      >
-        <td className="min-w-0 px-4 py-5 align-top">
-          <div className="flex min-w-0 w-full max-w-full flex-col gap-1">
-            <p className="truncate font-semibold text-gray-900">{event.name}</p>
-            {/* Event code pill (hidden — uncomment to show again)
-            {event.eventCode && (
-              <span className="block w-full min-w-0 rounded-md bg-gray-100 px-2 py-1 font-mono text-[11px] font-medium leading-snug text-gray-600">
-                <span className="block truncate">{event.eventCode}</span>
-              </span>
-            )}
-            */}
+  const portalFilterValues = {
+    status: filterStatus === "all" ? "" : filterStatus,
+  };
+
+  const portalFilters = [
+    {
+      key: "status",
+      placeholder: "All Status",
+      options: [
+        { value: "", label: "All Status" },
+        { value: "true", label: "Active" },
+        { value: "false", label: "Inactive" },
+      ],
+    },
+  ];
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "status") {
+      setFilterStatus(value || "all");
+      setCurrentPage(1);
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: "Event Name",
+        width: "28%",
+        render: (event) => (
+          <>
+            <div className="epc-cell__primary">{event.name || "—"}</div>
             {event.description?.trim() ? (
-              <p
-                className="min-w-0 truncate text-xs leading-5 text-gray-600"
+              <div
+                className="epc-cell__secondary"
                 title={event.description.trim()}
               >
                 {event.description.trim()}
-              </p>
+              </div>
             ) : (
-              <p className="min-w-0 truncate text-xs text-gray-400">
-                No description
-              </p>
+              <div className="epc-cell__secondary">No description</div>
             )}
-          </div>
-        </td>
-        <td className="whitespace-nowrap px-2 py-5">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${
-              event.isActive
-                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                : "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
-            }`}
-          >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                event.isActive ? "bg-emerald-500" : "bg-rose-500"
-              }`}
-            />
-            {event.isActive ? "Active" : "Inactive"}
-          </span>
-        </td>
-        <td className="min-w-0 px-3 py-5 text-sm text-gray-900">
-          <div className="flex min-w-0 max-w-full flex-col gap-1.5">
-            {event.notifyAllUsers && (
-              <span className="text-xs text-blue-700">
-                <span className="font-semibold">All users:</span> every active
-                user in this business
-              </span>
-            )}
-            {roleNames && (
-              <span
-                className="truncate text-xs text-indigo-700"
-                title={roleNames}
-              >
-                <span className="font-semibold">Roles:</span> {roleNames}
-              </span>
-            )}
-            {userNames && (
-              <span
-                className="truncate text-xs text-purple-700"
-                title={userNames}
-              >
-                <span className="font-semibold">Users:</span> {userNames}
-              </span>
-            )}
-            {customEmails && (
-              <span
-                className="truncate text-xs text-amber-700"
-                title={customEmails}
-              >
-                <span className="font-semibold">Custom emails:</span>{" "}
-                {customEmails}
-              </span>
-            )}
-            {!event.notifyAllUsers &&
+          </>
+        ),
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: "10%",
+        render: (event) => (
+          <StatusPill
+            status={event.isActive ? "Active" : "Inactive"}
+            tone={event.isActive ? "success" : "danger"}
+          />
+        ),
+      },
+      {
+        key: "recipients",
+        header: "Recipients",
+        width: "22%",
+        render: (event) => {
+          const roleNames =
+            event.userRoles
+              ?.map((role) => role?.name)
+              .filter(Boolean)
+              .join(", ") || "";
+          const userNames =
+            event.specificUsers
+              ?.map((user) => user?.name || user?.email)
+              .filter(Boolean)
+              .join(", ") || "";
+          const customEmails =
+            event.customEmailRecipients
+              ?.map((email) => String(email || "").trim())
+              .filter(Boolean)
+              .join(", ") || "";
+
+          return (
+            <div className="flex min-w-0 flex-col gap-1">
+              {event.notifyAllUsers ? (
+                <span className="epc-cell__secondary">
+                  All users: every active user in this business
+                </span>
+              ) : null}
+              {roleNames ? (
+                <span className="epc-cell__secondary" title={roleNames}>
+                  Roles: {roleNames}
+                </span>
+              ) : null}
+              {userNames ? (
+                <span className="epc-cell__secondary" title={userNames}>
+                  Users: {userNames}
+                </span>
+              ) : null}
+              {customEmails ? (
+                <span className="epc-cell__secondary" title={customEmails}>
+                  Custom emails: {customEmails}
+                </span>
+              ) : null}
+              {!event.notifyAllUsers &&
               !roleNames &&
               !userNames &&
-              !customEmails && (
-                <span className="text-xs text-gray-400">No recipients</span>
-              )}
-          </div>
-        </td>
-        <td className="whitespace-nowrap px-2 py-5 text-sm text-gray-900">
-          <span
-            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-              event.sendNotification
-                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                : "bg-gray-100 text-gray-600 ring-1 ring-gray-200"
-            }`}
-          >
-            {event.sendNotification ? "Enabled" : "Disabled"}
-          </span>
-        </td>
-        <td className="whitespace-nowrap px-2 py-5 text-sm text-gray-900">
-          <span
-            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-              event.sendEmail
-                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                : "bg-gray-100 text-gray-600 ring-1 ring-gray-200"
-            }`}
-          >
-            {event.sendEmail ? "Enabled" : "Disabled"}
-          </span>
-        </td>
-        <td className="overflow-visible px-2 py-5 align-middle">
+              !customEmails ? (
+                <span className="epc-cell__secondary">No recipients</span>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        key: "notifications",
+        header: "Notifications",
+        width: "12%",
+        render: (event) => (
+          <StatusPill
+            status={event.sendNotification ? "Enabled" : "Disabled"}
+            tone={event.sendNotification ? "success" : "neutral"}
+          />
+        ),
+      },
+      {
+        key: "email",
+        header: "Email",
+        width: "12%",
+        render: (event) => (
+          <StatusPill
+            status={event.sendEmail ? "Enabled" : "Disabled"}
+            tone={event.sendEmail ? "success" : "neutral"}
+          />
+        ),
+      },
+      {
+        key: "actions",
+        header: "Action",
+        width: "14%",
+        align: "right",
+        render: (event) => (
           <ActionButtons
-            isCell
+            maxVisibleActions={2}
             items={[
               {
                 action: ACTION_BUTTON_TYPES.EDIT,
@@ -1183,7 +1155,9 @@ const NotificationEvents = () => {
               },
               {
                 action: ACTION_BUTTON_TYPES.CHANGE_STATUS,
-                title: event.isActive ? "Deactivate Event" : "Activate Event",
+                title: event.isActive
+                  ? "Deactivate Event"
+                  : "Activate Event",
                 onClick: () => toggleEventStatus(event._id),
                 permission: canUpdate,
               },
@@ -1198,15 +1172,11 @@ const NotificationEvents = () => {
               },
             ]}
           />
-        </td>
-      </tr>
-    );
-  };
-
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
-  };
+        ),
+      },
+    ],
+    [canDelete, canUpdate],
+  );
 
   if (adminInfo?.token && adminInfo?.role && !isSuperAdmin) {
     if (!organization) {
@@ -1243,58 +1213,81 @@ const NotificationEvents = () => {
   return (
     <AppLayout>
       <Header />
-      <div className="h-full max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 px-5 py-4 pb-[120px]">
-        {/* Page Header */}
-        <div className="mb-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <PageHeader
-            title="Notification Events"
-            onAddNew={() => openModal()}
-            showAddButton={canAccessSelectedBusiness && canAdd}
-            addButtonText="Add Event"
-          />
-          {!(isSuperAdmin && activeTab === "default") && <SettingsOrgBanner />}
-          <p className="mt-1 text-xs text-slate-500">
-            {isSuperAdmin
+      <div className="h-full max-h-[90vh] overflow-y-auto pb-[120px]">
+        <EpcPage
+          flush
+          title="Notification Events"
+          subtitle={
+            isSuperAdmin
               ? "PCI global notification templates. Deploying from here creates per-business copies with empty recipients."
-              : "Manage event triggers, recipients, push notifications, and email delivery for your business."}
-          </p>
-        </div>
+              : "Manage event triggers, recipients, push notifications, and email delivery for your business."
+          }
+          action={
+            canAccessSelectedBusiness && canAdd ? (
+              <PortalButton onClick={() => openModal()}>
+                <PortalPlusIcon size={15} />
+                Add Event
+              </PortalButton>
+            ) : null
+          }
+        >
+          {!(isSuperAdmin && activeTab === "default") && <SettingsOrgBanner />}
 
-        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-          {isSuperAdmin && (
-            <h2
-              className="mb-4 text-sm font-semibold text-gray-900 border-b-2 border-[var(--p-blue)] pb-2"
-            >
-              PCI
-            </h2>
-          )}
-          <div className="space-y-3">
-            <SummaryCards cards={summaryCardsData} columnsCount={3} />
-            <DataTable
-              onSearch={handleSearch}
-              searchValue={searchTerm}
-              searchPlaceholder="Search events..."
-              filters={filters}
-              headers={headers}
-              colWidths={NOTIFICATION_EVENTS_TABLE_COL_WIDTHS}
-              skipDynamicColumnWidths
-              headersWithoutCellTooltip={["Event Name"]}
-              data={events}
-              loading={loading}
-              currentPage={currentPage}
-              totalRecords={totalRecords}
-              totalPages={Math.ceil(totalRecords / resultsPerPage)}
-              recordsPerPage={resultsPerPage}
-              onPageChange={(page) => setCurrentPage(page)}
-              onRecordsPerPageChange={(perPage) => {
-                setResultsPerPage(perPage);
-                setCurrentPage(1);
-              }}
-              renderRow={renderRow}
-              emptyMessage="No notification events found"
+          {isSuperAdmin ? (
+            <p className="mb-2 text-sm font-semibold text-gray-900">PCI</p>
+          ) : null}
+
+          <SummaryCards
+            cards={summaryCardsData}
+            columnsCount={3}
+            loading={loading && events.length === 0}
+          />
+
+          <FilterBar
+            subtitle="Narrow by status or search event names."
+            searchPlaceholder="Search events..."
+            searchValue={searchTerm}
+            onSearchChange={(value) => {
+              setSearchTerm(value);
+              setCurrentPage(1);
+            }}
+            values={portalFilterValues}
+            onChange={handlePortalFilterChange}
+            onReset={clearAllFilters}
+            filters={portalFilters}
+          />
+
+          <Card>
+            <CardHeader
+              title="Notification Events"
+              subtitle={
+                loading ? "Loading…" : `${totalRecords} total events`
+              }
             />
-          </div>
-        </div>
+            <PortalDataTable
+              columns={columns}
+              rows={loading ? [] : events}
+              rowKey="_id"
+              emptyMessage={
+                loading
+                  ? "Loading notification events…"
+                  : "No notification events found"
+              }
+            />
+            {!loading && totalRecords > 0 ? (
+              <Pagination
+                page={currentPage}
+                pageSize={resultsPerPage}
+                total={totalRecords}
+                itemLabel="events"
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(perPage) => {
+                  setResultsPerPage(perPage);
+                  setCurrentPage(1);
+                }}
+              />
+            ) : null}
+          </Card>
 
         {/* Add/Edit Modal */}
         {isModalOpen && (
@@ -2254,6 +2247,7 @@ const NotificationEvents = () => {
             </div>
           </div>
         )}
+        </EpcPage>
       </div>
     </AppLayout>
   );

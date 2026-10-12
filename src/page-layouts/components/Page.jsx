@@ -3,8 +3,8 @@ import { PageHeader } from "../index";
 export default function Page({ children, header, customClassName }) {
   return (
     <div
-      className={` ${customClassName} min-h-screen overflow-x-hidden p-5 sm:p-6 ${
-        !header ? "pt-3" : "pt-5"
+      className={` ${customClassName} min-h-screen overflow-x-hidden py-4 ${
+        !header ? "pt-2" : "pt-3"
       }`}
       style={{
         background: "transparent",

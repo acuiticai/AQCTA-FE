@@ -1,201 +1,34 @@
-import { useState, useEffect, useContext } from "react";
-import { Plus, ChevronDown, X, Edit, Trash2, Eye } from "lucide-react";
+import { useState, useEffect, useContext, useMemo } from "react";
+import { Plus, X } from "lucide-react";
 import Header from "@/components/header/Header";
 import AppLayout from "../app-layout";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { AdminContext } from "@/context/AdminContext";
 import ToggleSwitch from "@/components/toggle/ToggleSwitch";
-import {
-  FiPlus,
-  FiEdit,
-  FiTrash2,
-  FiUploadCloud,
-  FiXCircle,
-  FiEye,
-} from "react-icons/fi";
-import { useTableSorting, SortIcon } from "@/utils/tableSorting.jsx";
+import { useTableSorting } from "@/utils/tableSorting.jsx";
 import useCheckTokenExpired from "@/hooks/useCheckTokenExpired";
 import SettingsOrgBanner from "../SettingsOrgBanner";
 import { useSettingsCrudPermissions } from "@/hooks/useSettingsCrudPermissions";
+import useSingleBusinessMode from "@/hooks/useSingleBusinessMode";
+import { getSoleAssignedBusinessId } from "@/utils/sessionAssignedBusinesses";
 import { notifyError, notifySuccess } from "@/utils/toast";
+import { ActionButtons } from "@/page-layouts";
+import { ACTION_BUTTON_TYPES } from "@/utils/constants";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import EpcSurface from "@/components/Epc/EpcSurface";
 
 const BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
-const ItemTable = ({
-  items,
-  onEdit,
-  onDelete,
-  onToggleStatus,
-  onView,
-  activeTab,
-  sortKey,
-  sortDirection,
-  handleSort,
-  canUpdate,
-  canDelete,
-}) => (
-  <div className="overflow-x-auto">
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="bg-gray-50">
-        <tr>
-          <th
-            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-            onClick={() => handleSort("name")}
-          >
-            <div className="flex items-center space-x-1">
-              <span>Name</span>
-              <SortIcon
-                sortKey="name"
-                currentSortKey={sortKey}
-                sortDirection={sortDirection}
-              />
-            </div>
-          </th>
-          {activeTab === "Payment Terms" && (
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Number of Days
-            </th>
-          )}
-          {activeTab === "Invoice Recurrence" && (
-            <>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Every
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Unit
-              </th>
-            </>
-          )}
-          {activeTab === "Terms and Conditions" && (
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Content
-            </th>
-          )}
-          {activeTab === "Address Types" && (
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              System Type
-            </th>
-          )}
-          {activeTab === "Sales Person" && (
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Commission (%)
-            </th>
-          )}
-          <th
-            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-            onClick={() => handleSort("status")}
-          >
-            <div className="flex items-center space-x-1">
-              <span>Status</span>
-              <SortIcon
-                sortKey="status"
-                currentSortKey={sortKey}
-                sortDirection={sortDirection}
-              />
-            </div>
-          </th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Actions
-          </th>
-        </tr>
-      </thead>
-      <tbody className="bg-white divide-y divide-gray-200">
-        {items.map((item) => {
-          const isLoginUserDefault = Boolean(item.isLoginUserDefaultSalesperson);
-          return (
-            <tr key={item._id}>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {item.name}
-                {isLoginUserDefault && (
-                  <span className="ml-2 text-xs text-gray-500">(login user)</span>
-                )}
-              </td>
-              {activeTab === "Payment Terms" && (
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {item.numberOfDays ?? 0}
-                </td>
-              )}
-              {activeTab === "Invoice Recurrence" && (
-                <>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {item.repeatInterval ?? 1}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap capitalize">
-                    {item.repeatUnit === "day"
-                      ? "Day(s)"
-                      : item.repeatUnit === "week"
-                        ? "Week(s)"
-                        : item.repeatUnit === "year"
-                          ? "Year(s)"
-                          : "Month(s)"}
-                  </td>
-                </>
-              )}
-              {activeTab === "Terms and Conditions" && (
-                <td
-                  className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate"
-                  title={item.content || ""}
-                >
-                  {(item.content || "").slice(0, 80)}
-                  {(item.content || "").length > 80 ? "…" : ""}
-                </td>
-              )}
-              {activeTab === "Address Types" && (
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {item.systemType || "OTHER"}
-                </td>
-              )}
-              {activeTab === "Sales Person" && (
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {Number(item.commission ?? 0)}
-                </td>
-              )}
-              <td className="px-6 py-4 whitespace-nowrap">
-                <ToggleSwitch
-                  isOn={item.status === "active"}
-                  handleToggle={() => canUpdate && onToggleStatus(item)}
-                />
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                {activeTab === "Sales Person" && (
-                  <button
-                    onClick={() => onView(item)}
-                    className="text-gray-600 hover:text-gray-900 mr-2"
-                    title="View details"
-                  >
-                    <FiEye className="w-5 h-5" />
-                  </button>
-                )}
-                {canUpdate && (
-                  <button
-                    onClick={() => onEdit(item)}
-                    className="text-blue-600 hover:text-blue-900 mr-2"
-                    title={
-                      isLoginUserDefault
-                        ? "Edit commission for login user"
-                        : "Edit"
-                    }
-                  >
-                    <FiEdit className="w-5 h-5" />
-                  </button>
-                )}
-                {canDelete && !isLoginUserDefault && (
-                  <button
-                    onClick={() => onDelete(item._id)}
-                    className="text-red-600 hover:text-red-900 mr-2"
-                  >
-                    <FiTrash2 className="w-5 h-5" />
-                  </button>
-                )}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
-);
+const repeatUnitLabel = (unit) => {
+  if (unit === "day") return "Day(s)";
+  if (unit === "week") return "Week(s)";
+  if (unit === "year") return "Year(s)";
+  return "Month(s)";
+};
 
 const SalesPersonViewModal = ({ isOpen, onClose, item }) => {
   if (!isOpen || !item) return null;
@@ -395,7 +228,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                 value={formData.name}
                 onChange={handleChange}
                 placeholder={isTermsAndConditions ? "e.g. Standard, Net 30" : undefined}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 required
               />
             </div>
@@ -422,7 +255,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                     name="staffId"
                     value={formData.staffId}
                     onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                     required
                     disabled={Boolean(item?._id)}
                   >
@@ -474,7 +307,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                   step="0.01"
                   value={formData.commission}
                   onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 />
                 <p className="mt-1 text-xs text-gray-500">
                   Enter a number only (e.g. 5 for 5%).
@@ -497,7 +330,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                 min={0}
                 value={formData.numberOfDays}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 required={isPaymentTerms}
               />
               {errors.numberOfDays && (
@@ -518,7 +351,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                   min={1}
                   value={formData.repeatInterval}
                   onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                   required
                 />
                 {errors.repeatInterval && (
@@ -533,7 +366,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                   name="repeatUnit"
                   value={formData.repeatUnit}
                   onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 >
                   <option value="day">Day(s)</option>
                   <option value="week">Week(s)</option>
@@ -555,7 +388,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                 onChange={handleChange}
                 rows={6}
                 placeholder="Enter terms and conditions text..."
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent resize-y"
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent resize-y"
               />
               <p className="mt-1 text-xs text-gray-500">
                 Same as Create Customer Invoice — this content can be used on invoices.
@@ -571,7 +404,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                 name="systemType"
                 value={formData.systemType}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 required
               >
                 <option value="BILLING">BILLING</option>
@@ -584,7 +417,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-4 py-2 bg-[#A6C437] text-white rounded-lg hover:bg-opacity-90 transition-colors"
+              className="px-4 py-2 bg-[var(--p-blue)] text-white rounded-lg hover:bg-opacity-90 transition-colors"
             >
               {item ? "Update" : "Add"} {type}
             </button>
@@ -635,7 +468,6 @@ const EstimatesPage = () => {
   const { adminInfo } = state;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [locations, setLocation] = useState("All");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState(null);
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
@@ -645,23 +477,40 @@ const EstimatesPage = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const checkTokenExpired = useCheckTokenExpired(); // ✅ hook used properly
   const { canAdd, canUpdate, canDelete } = useSettingsCrudPermissions();
+  const { singleBusinessId } = useSingleBusinessMode();
 
   const [organization, setOrganization] = useState(null); // Set initially as null
   const [isOrgLoaded, setIsOrgLoaded] = useState(false); // To track when organization is loaded
   const location = useLocation();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(() => {
+    try {
+      const c = localStorage.getItem("configurations");
+      if (c) {
+        const parsed = JSON.parse(c);
+        const p = parsed && parsed.table_entries_per_page;
+        if (Number.isFinite(p) && p > 0) return Number(p);
+      }
+    } catch (_) {}
+    return 10;
+  });
 
   // Sorting functionality
-  const { sortedData, sortKey, sortDirection, handleSort } =
-    useTableSorting(items);
+  const { sortedData } = useTableSorting(items);
 
-  const dropdownOptions = Array.from(
-    new Set((items || []).map((item) => item.name).filter(Boolean))
+  const filteredItems = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return sortedData;
+    return sortedData.filter((item) =>
+      String(item.name || "").toLowerCase().includes(q)
+    );
+  }, [sortedData, searchTerm]);
+
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage
   );
-
-  const filteredItems =
-    locations === "All"
-      ? sortedData
-      : sortedData.filter((item) => item.name === locations);
 
   const mapStaffToSalespersonRow = (staff, { isLoginDefault = false } = {}) => ({
     ...staff,
@@ -801,31 +650,33 @@ const EstimatesPage = () => {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    const selectedOrg = searchParams.get("selectedOrg");
+    const selectedOrg =
+      searchParams.get("selectedOrg") ||
+      sessionStorage.getItem("settingsSelectedOrg") ||
+      singleBusinessId ||
+      getSoleAssignedBusinessId() ||
+      "";
 
     if (selectedOrg) {
       setOrganization(selectedOrg);
+      sessionStorage.setItem("settingsSelectedOrg", selectedOrg);
+      setIsOrgLoaded(true);
+      return;
     }
 
-    setIsOrgLoaded(true); // Organization has been fetched
-  }, [location]);
+    // Fixed single-business mode: wait for assigned business sync
+    setIsOrgLoaded(false);
+  }, [location, singleBusinessId]);
 
   useEffect(() => {
     if (isOrgLoaded && organization) {
       // Ensure organization is loaded before fetching items
       fetchItems(activeTab, organization);
+    } else if (isOrgLoaded) {
+      setLoading(false);
     }
-  }, [
-    activeTab,
-    organization,
-    isOrgLoaded,
-    adminInfo?.id,
-    adminInfo?._id,
-    adminInfo?.email,
-    adminInfo?.name,
-    adminInfo?.last_name,
-    adminInfo?.lastName,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch when tab/org ready; admin identity read inside fetchItems
+  }, [activeTab, organization, isOrgLoaded]);
 
   const headers = {
     "Content-Type": "application/json",
@@ -1204,6 +1055,138 @@ const EstimatesPage = () => {
     }
   };
 
+  const canDeleteRow = activeTab === "Sales Person" ? false : canDelete;
+
+  const columns = useMemo(() => {
+    const cols = [
+      {
+        key: "name",
+        header: "Name",
+        render: (item) => (
+          <>
+            <span className="epc-cell__primary">{item.name}</span>
+            {item.isLoginUserDefaultSalesperson ? (
+              <span className="epc-cell__secondary"> (login user)</span>
+            ) : null}
+          </>
+        ),
+      },
+    ];
+
+    if (activeTab === "Payment Terms") {
+      cols.push({
+        key: "numberOfDays",
+        header: "Number of Days",
+        render: (item) => item.numberOfDays ?? 0,
+      });
+    }
+    if (activeTab === "Invoice Recurrence") {
+      cols.push(
+        {
+          key: "repeatInterval",
+          header: "Every",
+          render: (item) => item.repeatInterval ?? 1,
+        },
+        {
+          key: "repeatUnit",
+          header: "Unit",
+          render: (item) => repeatUnitLabel(item.repeatUnit),
+        }
+      );
+    }
+    if (activeTab === "Terms and Conditions") {
+      cols.push({
+        key: "content",
+        header: "Content",
+        render: (item) => (
+          <span className="epc-cell__secondary" title={item.content || ""}>
+            {(item.content || "").slice(0, 80)}
+            {(item.content || "").length > 80 ? "…" : ""}
+          </span>
+        ),
+      });
+    }
+    if (activeTab === "Address Types") {
+      cols.push({
+        key: "systemType",
+        header: "System Type",
+        render: (item) => item.systemType || "OTHER",
+      });
+    }
+    if (activeTab === "Sales Person") {
+      cols.push({
+        key: "commission",
+        header: "Commission (%)",
+        render: (item) => Number(item.commission ?? 0),
+      });
+    }
+
+    cols.push(
+      {
+        key: "status",
+        header: "Status",
+        render: (item) => (
+          <ToggleSwitch
+            isOn={item.status === "active"}
+            handleToggle={() => canUpdate && handleToggleStatus(item)}
+            disabled={!canUpdate}
+          />
+        ),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        align: "right",
+        render: (item) => {
+          const isLoginUserDefault = Boolean(
+            item.isLoginUserDefaultSalesperson
+          );
+          return (
+            <ActionButtons
+              rbac={{
+                canView: activeTab === "Sales Person",
+                canViewDetails: activeTab === "Sales Person",
+                canUpdate,
+                canDelete: canDeleteRow && !isLoginUserDefault,
+              }}
+              items={[
+                ...(activeTab === "Sales Person"
+                  ? [
+                      {
+                        tooltip: "View details",
+                        action: ACTION_BUTTON_TYPES.VIEW,
+                        onClick: () => handleView(item),
+                      },
+                    ]
+                  : []),
+                {
+                  tooltip: isLoginUserDefault
+                    ? "Edit commission for login user"
+                    : "Edit",
+                  action: ACTION_BUTTON_TYPES.EDIT,
+                  onClick: () => handleEdit(item),
+                },
+                {
+                  tooltip: "Delete",
+                  action: ACTION_BUTTON_TYPES.DELETE,
+                  onClick: () => handleDelete(item._id),
+                },
+              ]}
+            />
+          );
+        },
+      }
+    );
+
+    return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, canUpdate, canDeleteRow]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setSearchTerm("");
+  }, [activeTab]);
+
   return (
     <AppLayout>
       <Header />
@@ -1215,7 +1198,7 @@ const EstimatesPage = () => {
           {canAdd && (
             <button
               onClick={handleAddNew}
-              className="flex items-center px-4 py-2 bg-[#A6C437] text-white rounded-lg hover:bg-opacity-90 transition-colors"
+              className="flex items-center px-4 py-2 bg-[var(--p-blue)] text-white rounded-lg hover:bg-opacity-90 transition-colors"
             >
               <Plus className="w-5 h-5 mr-2" />
               Add New
@@ -1235,7 +1218,7 @@ const EstimatesPage = () => {
                 }}
                 className={`mr-8 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === tab
-                    ? "border-[#A6C437] text-[#A6C437]"
+                    ? "border-[var(--p-blue)] text-[var(--p-blue)]"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
@@ -1245,62 +1228,76 @@ const EstimatesPage = () => {
           </nav>
         </div>
 
-        {!isOrgLoaded && !organization ? (
+        {!isOrgLoaded || !organization ? (
           <div className="fixed inset-0 flex items-center justify-center bg-white">
             <p className="text-gray-600">Loading organization...</p>
           </div>
-        ) : loading ? (
-          <div>Loading...</div>
         ) : (
-          <div className="bg-gray-50 rounded-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <label className="text-sm font-medium text-gray-700">
-                {activeTab}
-              </label>
-              <div className="flex items-center gap-3">
-                {activeTab === "Terms and Conditions" && items.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setDeleteAllModalOpen(true)}
-                    className="px-3 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    Delete all
-                  </button>
-                )}
-                <div className="relative">
-                <select
-                  value={locations}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="appearance-none bg-white border border-gray-300 rounded-lg py-2 pl-4 pr-10 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
-                >
-                  <option value="All">All</option>
-                  {dropdownOptions.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm">
-              <ItemTable
-                items={filteredItems}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onToggleStatus={handleToggleStatus}
-                onView={handleView}
-                activeTab={activeTab}
-                sortKey={sortKey}
-                sortDirection={sortDirection}
-                handleSort={handleSort}
-                canUpdate={canUpdate}
-                canDelete={activeTab === "Sales Person" ? false : canDelete}
+          <EpcSurface>
+            <div className="epc-stack">
+              <FilterBar
+                subtitle={`Filter ${activeTab.toLowerCase()} by name.`}
+                searchPlaceholder={`Search ${activeTab.toLowerCase()}…`}
+                searchValue={searchTerm}
+                onSearchChange={(value) => {
+                  setSearchTerm(value || "");
+                  setCurrentPage(1);
+                }}
+                filters={[]}
+                values={{}}
+                onChange={() => {}}
+                onReset={() => {
+                  setSearchTerm("");
+                  setCurrentPage(1);
+                }}
               />
+
+              <Card>
+                <CardHeader
+                  title={activeTab}
+                  subtitle={
+                    loading
+                      ? "Loading…"
+                      : `${filteredItems.length} ${
+                          filteredItems.length === 1 ? "item" : "items"
+                        }`
+                  }
+                  action={
+                    activeTab === "Terms and Conditions" && items.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteAllModalOpen(true)}
+                        className="px-3 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        Delete all
+                      </button>
+                    ) : null
+                  }
+                />
+                <PortalDataTable
+                  columns={columns}
+                  rows={loading ? [] : paginatedItems}
+                  rowKey="_id"
+                  emptyMessage={
+                    loading ? "Loading…" : "No data available"
+                  }
+                />
+                {!loading && filteredItems.length > 0 ? (
+                  <Pagination
+                    page={currentPage}
+                    pageSize={recordsPerPage}
+                    total={filteredItems.length}
+                    itemLabel="items"
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={(perPage) => {
+                      setRecordsPerPage(perPage);
+                      setCurrentPage(1);
+                    }}
+                  />
+                ) : null}
+              </Card>
             </div>
-          </div>
+          </EpcSurface>
         )}
         <AddEditModal
           isOpen={modalOpen}

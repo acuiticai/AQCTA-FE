@@ -1,13 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { Building, FileText, Inbox, Eye, Upload, Trash2 } from "lucide-react";
+import { Eye, Upload, Trash2 } from "lucide-react";
 import {
-  DataTable,
   ActionButtons,
   SummaryCards,
   CustomModal,
   ToggleSwitch,
 } from "@/page-layouts";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import ApplicationDocumentTypeServices from "@/services/applicationDocumentTypeService";
@@ -36,21 +43,6 @@ const EMPTY_FORM = {
   status: "Active",
   sortOrder: 0,
   business: "",
-};
-
-const REQUIREMENT_STYLES = {
-  Required: "bg-red-100 text-red-800",
-  Conditional: "bg-amber-100 text-amber-800",
-  Optional: "bg-gray-100 text-gray-800",
-};
-
-const TABLE_COL_WIDTHS = {
-  Name: "38%",
-  Requirement: "110px",
-  Service: "120px",
-  Order: "70px",
-  Status: "130px",
-  Actions: "140px",
 };
 
 const hasCustomTemplateFile = (row) => {
@@ -124,15 +116,6 @@ export default function TabApplicationDocumentTypes() {
   const fileInputRef = useRef(null);
   const modalFileInputRef = useRef(null);
   const uploadTargetRef = useRef(null);
-
-  const headers = [
-    "Name",
-    "Requirement",
-    "Service",
-    "Order",
-    "Status",
-    "Actions",
-  ];
 
   useEffect(() => {
     let cancelled = false;
@@ -566,63 +549,38 @@ export default function TabApplicationDocumentTypes() {
     setCurrentPage(1);
   };
 
-  const filters = useMemo(
+  const portalFilters = useMemo(
     () => [
-      {
-        isClearButton: true,
-        buttonProps: { onClick: clearAllFilters },
-      },
       ...(!isSingleAssignedBusiness()
         ? [
             {
-              label: "Business",
-              value: businessId,
-              onChange: (value) => {
-                setBusinessId(value);
-                setCurrentPage(1);
-              },
+              key: "business",
+              placeholder: "Select Business",
               options: businesses.map((b) => ({
                 value: String(b._id || b.id || ""),
                 label: b.name || b.businessName || "Business",
               })),
-              placeholder: "Select Business",
-              icon: Building,
             },
           ]
         : []),
       {
-        label: "Service",
-        value: serviceFilter,
-        onChange: (value) => {
-          setServiceFilter(value);
-          setCurrentPage(1);
-        },
+        key: "service",
+        placeholder: "All Services",
         options: [
-          { value: "all", label: "All Services" },
           { value: "certification", label: "Certification" },
           { value: "inspection", label: "Inspection" },
         ],
-        placeholder: "Select Service",
-        icon: Inbox,
       },
       {
-        label: "Status",
-        value: statusFilter,
-        onChange: (value) => {
-          setStatusFilter(value);
-          setCurrentPage(1);
-        },
+        key: "status",
+        placeholder: "All Statuses",
         options: [
-          { value: "all", label: "All Status" },
           { value: "Active", label: "Active" },
           { value: "Inactive", label: "Inactive" },
         ],
-        placeholder: "Select Status",
-        icon: FileText,
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [businessId, businesses, serviceFilter, statusFilter]
+    [businesses]
   );
 
   const summaryCardsData = [
@@ -659,207 +617,255 @@ export default function TabApplicationDocumentTypes() {
   const serviceLabel = (value) => {
     if (value === "certification") return "Certification";
     if (value === "inspection") return "Inspection";
-    return value || "-";
+    return value || "—";
   };
 
-  return (
-    <div className="w-full max-w-full min-w-0 overflow-x-hidden">
-      <div className="mb-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Application Document Types
-            </h2>
-            <p className="text-gray-600 mt-2">
-              Configure supporting documents shown on customer certification /
-              inspection applications.
-            </p>
-          </div>
-          {canAdd ? (
-            <div className="flex flex-wrap items-center gap-3 lg:gap-4">
-              <button
-                type="button"
-                onClick={openCreate}
-                className="flex items-center gap-2 px-6 py-3 text-white rounded-lg hover:opacity-90 transition-opacity shadow-sm"
-                style={{ backgroundColor: buttonColor }}
-              >
-                Add Document Type
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <SummaryCards cards={summaryCardsData} columnsCount={4} />
-
-      <DataTable
-        onSearch={(value) => {
-          setSearchTerm(value);
-          setCurrentPage(1);
-        }}
-        searchValue={searchTerm}
-        searchPlaceholder="Search by document type name…"
-        filters={filters}
-        headers={headers}
-        headersToHide={[]}
-        colWidths={TABLE_COL_WIDTHS}
-        skipDynamicColumnWidths
-        headersWithoutCellTooltip={["Name", "Actions"]}
-        data={rows}
-        totalRecords={total}
-        loading={loading}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        recordsPerPage={recordsPerPage}
-        onPageChange={setCurrentPage}
-        onRecordsPerPageChange={(perPage) => {
-          setRecordsPerPage(perPage);
-          setCurrentPage(1);
-        }}
-        emptyMessage="No document types found"
-        isCollapsible={false}
-        renderRow={(row) => (
-          <tr key={row._id} className="border-b">
-            <td className="py-2 px-4 min-w-0 align-middle">
-              <div
-                className="font-medium text-gray-900 whitespace-normal break-words leading-snug"
-                title={row.name || ""}
-              >
-                {row.name || "-"}
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: "Name",
+        render: (row) => (
+          <>
+            <div className="epc-cell__primary">{row.name || "—"}</div>
+            {row.description ? (
+              <div className="epc-cell__secondary line-clamp-1">
+                {row.description}
               </div>
-              {row.description ? (
-                <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                  {row.description}
-                </div>
-              ) : null}
-              {row.templateFile?.fileName ? (
-                <div
-                  className="text-xs text-blue-600 mt-0.5 truncate"
-                  title={row.templateFile.fileName}
-                >
-                  File: {row.templateFile.fileName}
-                </div>
-              ) : null}
-            </td>
-            <td className="py-2 px-4 whitespace-nowrap">
-              <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  REQUIREMENT_STYLES[row.requirement] ||
-                  "bg-gray-100 text-gray-800"
-                }`}
-              >
-                {row.requirement || "-"}
-              </span>
-            </td>
-            <td className="py-2 px-4 whitespace-nowrap">
-              {serviceLabel(row.serviceType)}
-            </td>
-            <td className="py-2 px-4 whitespace-nowrap">{row.sortOrder ?? 0}</td>
-            <td className="py-2 px-4 whitespace-nowrap">
-              {canUpdate ? (
-                <div className="flex items-center gap-2">
-                  <ToggleSwitch
-                    isOn={row.status === "Active"}
-                    handleToggle={() => handleToggleStatus(row)}
-                    disabled={loading}
-                  />
-                  <span className="text-sm text-gray-600">
-                    {row.status || "-"}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-sm text-gray-600">
-                  {row.status || "-"}
-                </span>
-              )}
-            </td>
-            <td className="py-2 px-4 whitespace-nowrap">
-              <ActionButtons
-                maxVisibleActions={2}
-                items={[
-                  ...(canUpdate
-                    ? [
-                        {
-                          action: ACTION_BUTTON_TYPES.EDIT,
-                          title: "Edit",
-                          onClick: () => openEdit(row),
-                        },
-                      ]
-                    : []),
-                  ...(row.hasTemplate
-                    ? [
-                        {
-                          action: ACTION_BUTTON_TYPES.DOWNLOAD,
-                          title:
-                            downloadingId === String(row._id)
-                              ? "Downloading…"
-                              : "Download document",
-                          onClick: () => handleDownload(row),
-                          disabled:
-                            downloadingId === String(row._id) ||
-                            uploadingId === String(row._id),
-                          loading: downloadingId === String(row._id),
-                        },
-                      ]
-                    : canUploadTemplate(row)
-                      ? [
-                          {
-                            action: ACTION_BUTTON_TYPES.UPLOAD,
-                            title: "Upload document",
-                            onClick: () => handleUploadClick(row),
-                            disabled:
-                              downloadingId === String(row._id) ||
-                              uploadingId === String(row._id) ||
-                              removeDocLoading,
-                            loading: uploadingId === String(row._id),
-                          },
-                        ]
-                      : []),
-                  ...(canUploadTemplate(row) && row.hasTemplate
-                    ? [
-                        {
-                          action: ACTION_BUTTON_TYPES.UPLOAD,
-                          title: "Replace document",
-                          onClick: () => handleUploadClick(row),
-                          disabled:
-                            downloadingId === String(row._id) ||
-                            uploadingId === String(row._id) ||
-                            removeDocLoading,
-                          loading: uploadingId === String(row._id),
-                        },
-                      ]
-                    : []),
-                  ...(canUploadTemplate(row) && hasCustomTemplateFile(row)
-                    ? [
-                        {
-                          action: ACTION_BUTTON_TYPES.REMOVE_FILE,
-                          title: "Remove document",
-                          onClick: () => openRemoveDocModal(row),
-                          disabled:
-                            downloadingId === String(row._id) ||
-                            uploadingId === String(row._id) ||
-                            removeDocLoading,
-                          loading:
-                            removeDocLoading &&
-                            rowToRemoveDoc?._id === row._id,
-                        },
-                      ]
-                    : []),
-                  ...(canDeleteRow(row)
-                    ? [
-                        {
-                          action: ACTION_BUTTON_TYPES.DELETE,
-                          title: "Delete",
-                          onClick: () => openDeleteModal(row),
-                        },
-                      ]
-                    : []),
-                ]}
+            ) : null}
+            {row.templateFile?.fileName ? (
+              <div className="epc-cell__secondary truncate">
+                File: {row.templateFile.fileName}
+              </div>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        key: "requirement",
+        header: "Requirement",
+        width: "12%",
+        render: (row) => (
+          <StatusPill status={row.requirement || "—"} />
+        ),
+      },
+      {
+        key: "service",
+        header: "Service",
+        width: "12%",
+        render: (row) => serviceLabel(row.serviceType),
+      },
+      {
+        key: "order",
+        header: "Order",
+        width: "8%",
+        render: (row) => row.sortOrder ?? 0,
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: "12%",
+        render: (row) =>
+          canUpdate ? (
+            <div className="flex items-center gap-2">
+              <ToggleSwitch
+                isOn={row.status === "Active"}
+                handleToggle={() => handleToggleStatus(row)}
+                disabled={loading}
               />
-            </td>
-          </tr>
-        )}
-      />
+              <StatusPill status={row.status || "—"} />
+            </div>
+          ) : (
+            <StatusPill status={row.status || "—"} />
+          ),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        align: "right",
+        width: "14%",
+        render: (row) => (
+          <ActionButtons
+            maxVisibleActions={2}
+            items={[
+              ...(canUpdate
+                ? [
+                    {
+                      action: ACTION_BUTTON_TYPES.EDIT,
+                      title: "Edit",
+                      onClick: () => openEdit(row),
+                    },
+                  ]
+                : []),
+              ...(row.hasTemplate
+                ? [
+                    {
+                      action: ACTION_BUTTON_TYPES.DOWNLOAD,
+                      title:
+                        downloadingId === String(row._id)
+                          ? "Downloading…"
+                          : "Download document",
+                      onClick: () => handleDownload(row),
+                      disabled:
+                        downloadingId === String(row._id) ||
+                        uploadingId === String(row._id),
+                      loading: downloadingId === String(row._id),
+                    },
+                  ]
+                : canUploadTemplate(row)
+                  ? [
+                      {
+                        action: ACTION_BUTTON_TYPES.UPLOAD,
+                        title: "Upload document",
+                        onClick: () => handleUploadClick(row),
+                        disabled:
+                          downloadingId === String(row._id) ||
+                          uploadingId === String(row._id) ||
+                          removeDocLoading,
+                        loading: uploadingId === String(row._id),
+                      },
+                    ]
+                  : []),
+              ...(canUploadTemplate(row) && row.hasTemplate
+                ? [
+                    {
+                      action: ACTION_BUTTON_TYPES.UPLOAD,
+                      title: "Replace document",
+                      onClick: () => handleUploadClick(row),
+                      disabled:
+                        downloadingId === String(row._id) ||
+                        uploadingId === String(row._id) ||
+                        removeDocLoading,
+                      loading: uploadingId === String(row._id),
+                    },
+                  ]
+                : []),
+              ...(canUploadTemplate(row) && hasCustomTemplateFile(row)
+                ? [
+                    {
+                      action: ACTION_BUTTON_TYPES.REMOVE_FILE,
+                      title: "Remove document",
+                      onClick: () => openRemoveDocModal(row),
+                      disabled:
+                        downloadingId === String(row._id) ||
+                        uploadingId === String(row._id) ||
+                        removeDocLoading,
+                      loading:
+                        removeDocLoading &&
+                        rowToRemoveDoc?._id === row._id,
+                    },
+                  ]
+                : []),
+              ...(canDeleteRow(row)
+                ? [
+                    {
+                      action: ACTION_BUTTON_TYPES.DELETE,
+                      title: "Delete",
+                      onClick: () => openDeleteModal(row),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      canUpdate,
+      loading,
+      downloadingId,
+      uploadingId,
+      removeDocLoading,
+      rowToRemoveDoc,
+    ]
+  );
+
+  return (
+    <EpcPage
+      flush
+      title="Application Document Types"
+      subtitle="Configure supporting documents shown on customer certification / inspection applications."
+      action={
+        canAdd ? (
+          <Button size="sm" onClick={openCreate}>
+            <PlusIcon size={15} />
+            Add Document Type
+          </Button>
+        ) : null
+      }
+    >
+      <div className="epc-stack">
+        <SummaryCards cards={summaryCardsData} columnsCount={4} />
+
+        <FilterBar
+          subtitle="Narrow by business, service, status or name."
+          searchPlaceholder="Search by document type name…"
+          searchValue={searchTerm}
+          onSearchChange={(value) => {
+            setSearchTerm(value);
+            setCurrentPage(1);
+          }}
+          filters={portalFilters}
+          values={{
+            business: businessId || "",
+            service: serviceFilter === "all" ? "" : serviceFilter,
+            status: statusFilter === "all" ? "" : statusFilter,
+          }}
+          onChange={(key, value) => {
+            if (key === "business") {
+              setBusinessId(value || "");
+              setCurrentPage(1);
+              return;
+            }
+            if (key === "service") {
+              setServiceFilter(value || "all");
+              setCurrentPage(1);
+              return;
+            }
+            if (key === "status") {
+              setStatusFilter(value || "all");
+              setCurrentPage(1);
+            }
+          }}
+          onReset={clearAllFilters}
+        />
+
+        <Card>
+          <CardHeader
+            title="Document types"
+            subtitle={
+              loading ? "Loading…" : `${total} total document types`
+            }
+            action={
+              <span className="epc-chip">
+                {stats.active} active · {stats.required} required
+              </span>
+            }
+          />
+          <PortalDataTable
+            columns={columns}
+            rows={loading ? [] : rows}
+            rowKey="_id"
+            emptyMessage={
+              loading ? "Loading…" : "No document types found"
+            }
+          />
+          {!loading && total > 0 ? (
+            <Pagination
+              page={currentPage}
+              pageSize={recordsPerPage}
+              total={total}
+              itemLabel="document types"
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(perPage) => {
+                setRecordsPerPage(perPage);
+                setCurrentPage(1);
+              }}
+            />
+          ) : null}
+        </Card>
+      </div>
 
       <CustomModal
         open={modalOpen}
@@ -1146,6 +1152,6 @@ export default function TabApplicationDocumentTypes() {
         accept={APPLICATION_DOCUMENT_ACCEPT}
         onChange={handleTemplateFileSelected}
       />
-    </div>
+    </EpcPage>
   );
 }

@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useContext, useMemo } from "react";
+import React, { useState, useEffect, useContext, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import moment from "moment";
 import axios from "axios";
 import { AdminContext } from "@/context/AdminContext";
-import StandardPageHeader from "@/components/StandardPageHeader";
-import { DataTable, Loader } from "@/page-layouts";
-import { ActionButtons, TableData } from "@/page-layouts/index";
+import { ActionButtons, DateRangeComponent, Loader } from "@/page-layouts/index";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
 import { formatActivityFieldLabel } from "@/utils/activityLogFieldLabels";
+import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
@@ -233,22 +237,6 @@ const ActivityLogs = () => {
     return moment(dateString).format(`${dateFormat} ${timeFormat}`);
   };
 
-  const headers = useMemo(
-    () => [
-      ...(businesses.length !== 1
-        ? [t("activityLogs.business", "Business")]
-        : []),
-      t("activityLogs.module", "Module"),
-      t("activityLogs.userName", "User Name"),
-      t("activityLogs.actionType", "Action Type"),
-      t("activityLogs.reference", "Reference"),
-      t("activityLogs.date", "Date"),
-      t("activityLogs.deviceInfo", "IP / Device"),
-      t("activityLogs.action", "Action"),
-    ],
-    [t, businesses.length]
-  );
-
   const authHeaders = useMemo(
     () =>
       adminInfo
@@ -342,8 +330,6 @@ const ActivityLogs = () => {
       });
   };
 
-  const totalPages = Math.ceil(totalResults / recordsPerPage);
-
   const tableRows = useMemo(() => dedupeById(data, "_id"), [data]);
 
   const businessOptions = useMemo(
@@ -359,75 +345,203 @@ const ActivityLogs = () => {
   const userOptions = useMemo(() => uniqueUserOptions(systemUsers), [systemUsers]);
   const actionOptions = useMemo(() => uniqueActionOptions(actions), [actions]);
 
-  const filters = [
-    {
-      isClearButton: true,
-      buttonProps: {
-        onClick: clearAllFilters,
-      },
-    },
-    ...(businesses.length !== 1
-      ? [
-          {
-            value: filterBusinessId,
-            onChange: (value) => {
-              setFilterBusinessId(value);
-              setCurrentPage(1);
+  const portalFilterValues = {
+    business: filterBusinessId || "",
+    module: filterModule || "",
+    user: filterUserId || "",
+    action: filterAction || "",
+  };
+
+  const portalFilters = useMemo(
+    () => [
+      ...(businesses.length !== 1
+        ? [
+            {
+              key: "business",
+              placeholder: t("activityLogs.selectBusiness", "Select Business"),
+              options: [
+                {
+                  value: "",
+                  label: t("activityLogs.selectBusiness", "Select Business"),
+                },
+                ...businessOptions,
+              ],
             },
-            placeholder: t("activityLogs.selectBusiness", "Select Business"),
-            isClearable: false,
-            options: businessOptions,
+          ]
+        : []),
+      {
+        key: "module",
+        placeholder: t("activityLogs.selectModule", "Select Module"),
+        options: [
+          {
+            value: "",
+            label: t("activityLogs.selectModule", "Select Module"),
           },
-        ]
-      : []),
-    {
-      value: filterModule,
-      onChange: (value) => {
-        setFilterModule(value);
-        setCurrentPage(1);
+          ...moduleOptions,
+        ],
       },
-      placeholder: t("activityLogs.selectModule", "Select Module"),
-      options: moduleOptions,
-    },
-    {
-      value: filterUserId,
-      onChange: (value) => {
-        setFilterUserId(value);
-        setCurrentPage(1);
+      {
+        key: "user",
+        placeholder: t("activityLogs.selectUser", "Select User"),
+        options: [
+          { value: "", label: t("activityLogs.selectUser", "Select User") },
+          ...userOptions,
+        ],
       },
-      placeholder: t("activityLogs.selectUser", "Select User"),
-      options: userOptions,
-    },
-    {
-      value: filterAction,
-      onChange: (value) => {
-        setFilterAction(value);
-        setCurrentPage(1);
+      {
+        key: "action",
+        placeholder: t("activityLogs.selectAction", "Select Action"),
+        options: [
+          {
+            value: "",
+            label: t("activityLogs.selectAction", "Select Action"),
+          },
+          ...actionOptions,
+        ],
       },
-      placeholder: t("activityLogs.selectAction", "Select Action"),
-      options: actionOptions,
-    },
-    {
-      value: dateRangeStart,
-      onChange: (value) => {
-        setDateRangeStart(value);
-        setCurrentPage(1);
+    ],
+    [
+      actionOptions,
+      businessOptions,
+      businesses.length,
+      moduleOptions,
+      t,
+      userOptions,
+    ],
+  );
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "business") {
+      setFilterBusinessId(value || "");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "module") {
+      setFilterModule(value || "");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "user") {
+      setFilterUserId(value || "");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "action") {
+      setFilterAction(value || "");
+      setCurrentPage(1);
+    }
+  };
+
+  const handleDateRangeApply = useCallback((start, end) => {
+    setDateRangeStart(start || "");
+    setDateRangeEnd(end || "");
+    setCurrentPage(1);
+  }, []);
+
+  const handleDateRangeClear = useCallback(() => {
+    setDateRangeStart("");
+    setDateRangeEnd("");
+    setCurrentPage(1);
+  }, []);
+
+  const columns = useMemo(
+    () => [
+      ...(businesses.length !== 1
+        ? [
+            {
+              key: "business",
+              header: t("activityLogs.business", "Business"),
+              width: "12%",
+              render: (row) => (
+                <div className="epc-cell__primary">
+                  {row.businessName ||
+                    t("activityLogs.notAvailable", "N/A")}
+                </div>
+              ),
+            },
+          ]
+        : []),
+      {
+        key: "module",
+        header: t("activityLogs.module", "Module"),
+        width: "12%",
+        render: (row) => (
+          <div className="epc-cell__primary">
+            {row.moduleName || row.Collection || "—"}
+          </div>
+        ),
       },
-      placeholder: t("activityLogs.startDate", "Start Date"),
-      isDatePicker: true,
-      clearable: true,
-    },
-    {
-      value: dateRangeEnd,
-      onChange: (value) => {
-        setDateRangeEnd(value);
-        setCurrentPage(1);
+      {
+        key: "user",
+        header: t("activityLogs.userName", "User Name"),
+        width: "14%",
+        render: (row) => (
+          <div className="epc-cell__primary">
+            {row.userDetails?.name ||
+              t("activityLogs.notAvailable", "N/A")}
+          </div>
+        ),
       },
-      placeholder: t("activityLogs.endDate", "End Date"),
-      isDatePicker: true,
-      clearable: true,
-    },
-  ];
+      {
+        key: "actionType",
+        header: t("activityLogs.actionType", "Action Type"),
+        width: "12%",
+        render: (row) => (
+          <div className="epc-cell__secondary">{row.Action || "—"}</div>
+        ),
+      },
+      {
+        key: "reference",
+        header: t("activityLogs.reference", "Reference"),
+        width: "12%",
+        render: (row) => (
+          <div className="epc-cell__secondary">
+            {row.documentRef || t("activityLogs.notAvailable", "N/A")}
+          </div>
+        ),
+      },
+      {
+        key: "date",
+        header: t("activityLogs.date", "Date"),
+        width: "14%",
+        render: (row) => (
+          <div className="epc-cell__secondary">
+            {formatDateTime(row.Date)}
+          </div>
+        ),
+      },
+      {
+        key: "device",
+        header: t("activityLogs.deviceInfo", "IP / Device"),
+        width: "14%",
+        render: (row) => (
+          <div className="epc-cell__secondary">
+            {[row.ipAddress, row.deviceInfo].filter(Boolean).join(" / ") ||
+              t("activityLogs.notAvailable", "N/A")}
+          </div>
+        ),
+      },
+      {
+        key: "actions",
+        header: t("activityLogs.action", "Action"),
+        width: "10%",
+        align: "right",
+        render: (row) => (
+          <ActionButtons
+            maxVisibleActions={1}
+            items={[
+              {
+                action: ACTION_BUTTON_TYPES.VIEW,
+                title: t("activityLogs.view"),
+                onClick: () => handleView(row._id),
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    [businesses.length, dateFormat, t, timeFormat],
+  );
 
   const renderDetailsDrawer = () => {
     if (!detailsLoading && !selectedLog) return null;
@@ -554,72 +668,77 @@ const ActivityLogs = () => {
   };
 
   return (
-    <div className="sm:container mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg">
-      <StandardPageHeader
-        title={t("activityLogs.title")}
+    <EpcPage
+      flush
+      title={t("activityLogs.title")}
+      subtitle={t(
+        "activityLogs.subtitle",
+        "Audit trail of user actions across businesses and modules.",
+      )}
+      action={
+        <DateRangeComponent
+          startDate={dateRangeStart}
+          endDate={dateRangeEnd}
+          onApply={handleDateRangeApply}
+          onClear={handleDateRangeClear}
+          placeholder={t("activityLogs.filterByDateRange", "Filter by date range")}
+        />
+      }
+    >
+      <FilterBar
         subtitle={t(
-          "activityLogs.subtitle",
-          "Audit trail of user actions across businesses and modules."
+          "activityLogs.filterSubtitle",
+          "Narrow by business, module, user, or action.",
         )}
-        className="mb-6"
-        titleClassName="dark:text-gray-100"
-        subtitleClassName="dark:text-gray-400"
-      />
-
-      <DataTable
-        headers={headers}
-        data={tableRows}
-        loading={fetchingData}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalRecords={totalResults}
-        recordsPerPage={recordsPerPage}
-        colWidths={{
-          Action: "70px",
-        }}
-        onPageChange={(page) => setCurrentPage(page)}
-        onRecordsPerPageChange={(perPage) => {
-          setRecordsPerPage(perPage);
-          setCurrentPage(1);
-        }}
-        filters={filters}
+        searchPlaceholder={t(
+          "activityLogs.searchPlaceholder",
+          "Search module, action, reference...",
+        )}
         searchValue={searchTerm}
-        onSearch={(value) => {
+        onSearchChange={(value) => {
           setSearchTerm(value);
           setCurrentPage(1);
         }}
-        searchPlaceholder={t("activityLogs.searchPlaceholder", "Search module, action, reference...")}
-        emptyMessage={t("activityLogs.sorryThereIsNoDataRightNow")}
-        renderRow={(activityLog, index) => (
-          <tr key={activityLog._id || index}>
-            {businesses.length !== 1 && (
-            <TableData>{activityLog.businessName || t("activityLogs.notAvailable", "N/A")}</TableData>
-            )}
-            <TableData>{activityLog.moduleName || activityLog.Collection}</TableData>
-            <TableData>{activityLog.userDetails?.name || t("activityLogs.notAvailable", "N/A")}</TableData>
-            <TableData>{activityLog.Action}</TableData>
-            <TableData>{activityLog.documentRef || t("activityLogs.notAvailable", "N/A")}</TableData>
-            <TableData>{formatDateTime(activityLog.Date)}</TableData>
-            <TableData>
-              {[activityLog.ipAddress, activityLog.deviceInfo].filter(Boolean).join(" / ") ||
-                t("activityLogs.notAvailable", "N/A")}
-            </TableData>
-            <TableData>
-              <ActionButtons
-                items={[
-                  {
-                    action: "view",
-                    title: t("activityLogs.view"),
-                    onClick: () => handleView(activityLog._id),
-                  },
-                ]}
-              />
-            </TableData>
-          </tr>
-        )}
+        values={portalFilterValues}
+        onChange={handlePortalFilterChange}
+        onReset={clearAllFilters}
+        filters={portalFilters}
       />
+
+      <Card>
+        <CardHeader
+          title={t("activityLogs.title")}
+          subtitle={
+            fetchingData ? "Loading…" : `${totalResults} total activity logs`
+          }
+        />
+        <PortalDataTable
+          columns={columns}
+          rows={fetchingData ? [] : tableRows}
+          rowKey="_id"
+          emptyMessage={
+            fetchingData
+              ? "Loading activity logs…"
+              : t("activityLogs.sorryThereIsNoDataRightNow")
+          }
+        />
+        {!fetchingData && totalResults > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={recordsPerPage}
+            total={totalResults}
+            itemLabel="activity logs"
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(perPage) => {
+              setRecordsPerPage(perPage);
+              setCurrentPage(1);
+            }}
+          />
+        ) : null}
+      </Card>
+
       {renderDetailsDrawer()}
-    </div>
+    </EpcPage>
   );
 };
 

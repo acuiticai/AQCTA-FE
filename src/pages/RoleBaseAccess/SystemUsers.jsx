@@ -1,17 +1,12 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo, useCallback } from "react";
 import {
   Button,
-  Card,
+  Card as WindmillCard,
   CardBody,
-  TableCell,
-  TableRow,
-  Avatar,
 } from "@windmill/react-ui";
 import { Modal, ModalBody, ModalFooter } from "@windmill/react-ui";
 import { useTranslation } from "react-i18next";
 import {
-  FiPlus,
-  FiEdit,
   FiTrash2,
   FiUploadCloud,
   FiXCircle,
@@ -26,12 +21,8 @@ import { Scrollbars } from "react-custom-scrollbars-2";
 import { useDropzone } from "react-dropzone";
 import axios from "axios";
 import Title from "@/components/form/others/Title";
-import useUtilsFunction from "@/hooks/useUtilsFunction";
-import AnimatedContent from "@/components/common/AnimatedContent";
-import Status from "@/components/table/Status";
 import MainDrawer from "@/components/drawer/MainDrawer";
 import LabelArea from "@/components/form/selectOption/LabelArea";
-import Error from "@/components/form/others/Error";
 import { AdminContext } from "@/context/AdminContext";
 import { SidebarContext } from "@/context/SidebarContext";
 import spinnerLoadingImage from "@/assets/img/spinner.gif";
@@ -40,13 +31,19 @@ import { useHistory } from "react-router-dom";
 import useButtonColor from "@/hooks/useButtonColor";
 import ToggleSwitch from "@/components/toggle/ToggleSwitch";
 import {
-  DataTable,
   DropdownBasic,
   InputField,
-  PageHeader,
   Tooltip,
   ActionButtons,
 } from "@/page-layouts/index";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import PortalButton from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import { useModulePermissions } from "@/utils/permissionUtils";
 import ModuleAccessGate from "@/components/ModuleAccessGate";
@@ -57,7 +54,7 @@ const SystemUsers = () => {
   const history = useHistory();
   const { state } = useContext(AdminContext);
   const { adminInfo } = state;
-  const { toggleDrawer, lang } = useContext(SidebarContext);
+  const { toggleDrawer } = useContext(SidebarContext);
   const [data, setData] = useState([]);
   const [id, setId] = useState("");
   const [name, setName] = useState("");
@@ -73,7 +70,6 @@ const SystemUsers = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
-  const { showDateFormat, showingTranslateValue } = useUtilsFunction();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [contact, setContact] = useState("");
@@ -112,18 +108,6 @@ const SystemUsers = () => {
     canDelete,
     canView,
   } = useModulePermissions("Global Settings", "System Users");
-
-  const handleChangePage = (page) => {
-    setCurrentPage(page);
-    fetchData(FilterStatus, FilterName, FilterRole, page, rowsPerPage);
-  };
-
-  const handleChangeRowsPerPage = (e) => {
-    const newLimit = parseInt(e.target.value, 10);
-    setRowsPerPage(newLimit);
-    setCurrentPage(1);
-    fetchData(FilterStatus, FilterName, FilterRole, 1, newLimit);
-  };
 
   const getPlaceholderImage = (name) => {
     const initials = name ? name.substring(0, 2).toUpperCase() : "NA";
@@ -258,17 +242,6 @@ const SystemUsers = () => {
     }
   };
 
-  const HandleFilter = async () => {
-    try {
-      setCurrentPage(1); // reset to first page on filter
-      fetchData(FilterStatus, FilterName, FilterRole, 1, rowsPerPage);
-    } catch (err) {
-      console.error("Error filtering data:", err);
-      notifyError(err || t("systemUsers.failedToFilterData"));
-      setLoading(false);
-    }
-  };
-
   // Fetch business groups for the form dropdown
   const fetchBusinessGroupsList = async () => {
     const headers = adminInfo
@@ -378,7 +351,6 @@ const SystemUsers = () => {
   useEffect(() => {
     fetchBusinessGroupsList();
     fetchAllRolesForFilter();
-    fetchData(FilterStatus, FilterName, FilterRole, currentPage, rowsPerPage);
   }, []);
 
   useEffect(() => {
@@ -559,12 +531,70 @@ const SystemUsers = () => {
     return () => files.forEach((file) => URL.revokeObjectURL(file.preview));
   }, [files]);
 
-  const handleResetField = () => {
+  const handleResetField = useCallback(() => {
     setFilterStatus("");
     setFilterText("");
     setFilterRole("");
     setCurrentPage(1);
-    fetchData("", "", "", 1, rowsPerPage); // ✅ reset to first page
+  }, []);
+
+  useEffect(() => {
+    if (!adminInfo?.token) return;
+    fetchData(FilterStatus, FilterName, FilterRole, currentPage, rowsPerPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [FilterStatus, FilterRole, currentPage, rowsPerPage]);
+
+  useEffect(() => {
+    if (!adminInfo?.token) return;
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1);
+      fetchData(FilterStatus, FilterName, FilterRole, 1, rowsPerPage);
+    }, 400);
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [FilterName]);
+
+  const portalFilterValues = {
+    status: FilterStatus === "" ? "" : String(FilterStatus),
+    role: FilterRole || "",
+  };
+
+  const portalFilters = useMemo(
+    () => [
+      {
+        key: "status",
+        placeholder: t("systemUsers.selectStatus"),
+        options: [
+          { value: "", label: t("systemUsers.selectStatus") },
+          { value: "true", label: t("active") },
+          { value: "false", label: t("inactive") },
+        ],
+      },
+      {
+        key: "role",
+        placeholder: t("systemUsers.selectRole"),
+        options: [
+          { value: "", label: t("systemUsers.selectRole") },
+          ...allRolesForFilter.map((roleOption) => ({
+            value: roleOption._id,
+            label: roleOption.name || roleOption.internalName || "",
+          })),
+        ],
+      },
+    ],
+    [allRolesForFilter, t],
+  );
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "status") {
+      setFilterStatus(value === "" ? "" : value === "true");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "role") {
+      setFilterRole(value || "");
+      setCurrentPage(1);
+    }
   };
 
   const handleAdd = () => {
@@ -863,8 +893,123 @@ const SystemUsers = () => {
     }
   };
 
+  const columns = useMemo(
+    () => [
+      {
+        key: "picture",
+        header: t("systemUsers.picture"),
+        width: "8%",
+        render: (row) => (
+          <img
+            className="h-9 w-9 rounded-full object-cover"
+            src={row.image || getPlaceholderImage(row.name)}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = getPlaceholderImage(row.name);
+            }}
+            alt={row.name || ""}
+          />
+        ),
+      },
+      {
+        key: "name",
+        header: t("hrReports.common.name"),
+        width: "16%",
+        render: (row) => (
+          <div className="epc-cell__primary">{row.name || "—"}</div>
+        ),
+      },
+      {
+        key: "email",
+        header: t("systemUsers.userEmail"),
+        width: "22%",
+        render: (row) => (
+          <span className="epc-cell__secondary break-all">{row.email || "—"}</span>
+        ),
+      },
+      {
+        key: "role",
+        header: t("systemUsers.role"),
+        width: "16%",
+        render: (row) => (
+          <div className="epc-cell__primary">{row?.role?.name || "—"}</div>
+        ),
+      },
+      {
+        key: "status",
+        header: t("hrReports.common.status"),
+        width: "12%",
+        render: (row) => (
+          <StatusPill
+            status={row.status === true ? t("active") : t("inactive")}
+            tone={row.status === true ? "success" : "danger"}
+          />
+        ),
+      },
+      {
+        key: "actions",
+        header: t("Actions"),
+        width: "16%",
+        align: "right",
+        render: (row) =>
+          canUpdate || canDelete ? (
+            <div className="flex items-center justify-end gap-3">
+              {canUpdate && (
+                <ToggleSwitch
+                  isOn={row.status === true}
+                  handleToggle={() => handleQuickStatusToggle(row)}
+                />
+              )}
+              <ActionButtons
+                maxVisibleActions={2}
+                items={[
+                  {
+                    action: ACTION_BUTTON_TYPES.EDIT,
+                    title: t("systemUsers.updateSystemUser"),
+                    permission: canUpdate,
+                    onClick: () => handleUpdate(row._id),
+                  },
+                  {
+                    action: ACTION_BUTTON_TYPES.DELETE,
+                    title: t("Delete"),
+                    permission: canDelete,
+                    onClick: () => handleDelete(row._id),
+                  },
+                ]}
+              />
+            </div>
+          ) : (
+            <Tooltip
+              id={`tooltip-lock-${row._id}`}
+              tooltipContent="Access restricted"
+            >
+              <span className="inline-flex items-center text-gray-400 cursor-default">
+                <FiLock size={18} />
+              </span>
+            </Tooltip>
+          ),
+      },
+    ],
+    [canDelete, canUpdate, t],
+  );
+
   const content = (
-    <div className="p-4 mt-6">
+    <EpcPage
+      flush
+      title={t("systemUsers.title")}
+      subtitle={t(
+        "systemUsers.subtitle",
+        "Manage system users, roles, and account status.",
+      )}
+      action={
+        canAdd ? (
+          <PortalButton onClick={handleAdd}>
+            <PlusIcon size={15} />
+            {t("systemUsers.addSystemUser")}
+          </PortalButton>
+        ) : null
+      }
+    >
       {/* Generated Password Popup (kept above System User drawer for higher visual priority) */}
       <Modal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)}>
         <ModalBody className="px-6 pt-6 pb-4">
@@ -909,184 +1054,55 @@ const SystemUsers = () => {
         </ModalFooter>
       </Modal>
 
-      <PageHeader title={t("systemUsers.title")} />
-      <AnimatedContent>
-        <Card>
-          <CardBody>
-            <form
-              className="flex flex-col md:flex-row md:items-center md:justify-end gap-3 flex-wrap"
-              onSubmit={(e) => {
-                e.preventDefault();
-                HandleFilter();
-              }}
-            >
-              <div className="w-full md:w-[220px] shrink-0">
-                <InputField
-                  type="text"
-                  name="search"
-                  value={FilterName}
-                  onChange={(e) => setFilterText(e.target.value)}
-                  placeholder={t("systemUsers.searchText")}
-                />
-              </div>
-
-              <div className="w-full md:w-[180px] shrink-0">
-                <DropdownBasic
-                  value={FilterStatus}
-                  onChange={(value) => setFilterStatus(value)}
-                  width="180px"
-                  options={[
-                    { label: t("systemUsers.selectStatus"), value: "" },
-                    { label: t("active"), value: true },
-                    { label: t("inactive"), value: false },
-                  ]}
-                />
-              </div>
-
-              <div className="w-full md:w-[180px] shrink-0">
-                <DropdownBasic
-                  value={FilterRole}
-                  onChange={(value) => setFilterRole(value)}
-                  width="180px"
-                  options={[
-                    { label: t("systemUsers.selectRole"), value: "" },
-                    ...allRolesForFilter.map((role) => ({
-                      label: role.name || role.internalName || "",
-                      value: role._id,
-                    })),
-                  ]}
-                />
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                <LayoutButton
-                  onClick={HandleFilter}
-                  style={{ backgroundColor: buttonColor }}
-                >
-                  {t("filter")}
-                </LayoutButton>
-
-                <LayoutButton
-                  secondary
-                  onClick={handleResetField}
-                  type="reset"
-                >
-                  {t("reset")}
-                </LayoutButton>
-
-                {canAdd && (
-                  <LayoutButton
-                    onClick={handleAdd}
-                    className="whitespace-nowrap shrink-0"
-                    style={{
-                      backgroundColor: buttonColor,
-                      whiteSpace: "nowrap",
-                      width: "auto",
-                      minWidth: "max-content",
-                    }}
-                    startIcon={<FiPlus />}
-                  >
-                    {t("systemUsers.addSystemUser")}
-                  </LayoutButton>
-                )}
-              </div>
-            </form>
-          </CardBody>
-        </Card>
-      </AnimatedContent>
-
-      <DataTable
-        loading={loading}
-        data={data}
-        currentPage={currentPage}
-        recordsPerPage={rowsPerPage}
-        totalPages={Math.ceil(totalRecords / rowsPerPage)} // ✅ Fix here
-        totalRecords={totalRecords}
-        onPageChange={(page) => {
-          setCurrentPage(page);
-          fetchData(FilterStatus, FilterName, FilterRole, page, rowsPerPage);
-        }}
-        onRecordsPerPageChange={(limit) => {
-          setRowsPerPage(limit);
-          setCurrentPage(1);
-          fetchData(FilterStatus, FilterName, FilterRole, 1, limit);
-        }}
-        colWidths={{
-          [t("systemUsers.picture")]: "70px",
-          [t("systemUsers.userEmail")]: "240px",
-          [t("systemUsers.role")]: "160px",
-          [t("hrReports.common.status")]: "110px",
-          [t("Actions")]: "210px",
-        }}
-        headers={[
-          t("systemUsers.picture"),
-          t("hrReports.common.name"),
-          t("systemUsers.userEmail"),
-          t("systemUsers.role"),
-          t("hrReports.common.status"),
-          t("Actions"),
-        ]}
-        renderRow={(data) => (
-          <TableRow key={data._id}>
-            <TableCell>
-              <Avatar
-                src={data.image || getPlaceholderImage(data.name)}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = getPlaceholderImage(data.name);
-                }}
-                alt={data.name}
-              />
-            </TableCell>
-            <TableCell>{data.name}</TableCell>
-            <TableCell>
-              <span className="break-all">{data.email}</span>
-            </TableCell>
-            <TableCell>{data?.role?.name}</TableCell>
-            <TableCell>
-              <Status status={data.status === true ? "Active" : "Inactive"} />
-            </TableCell>
-            <TableCell>
-              {canUpdate || canDelete ? (
-                <div className="flex items-center gap-3">
-                  {canUpdate && (
-                    <ToggleSwitch
-                      isOn={data.status === true}
-                      handleToggle={() => handleQuickStatusToggle(data)}
-                    />
-                  )}
-                  <ActionButtons
-                    isCell
-                    items={[
-                      {
-                        action: ACTION_BUTTON_TYPES.EDIT,
-                        tooltip: t("systemUsers.updateSystemUser"),
-                        permission: canUpdate,
-                        onClick: () => handleUpdate(data._id),
-                      },
-                      {
-                        action: ACTION_BUTTON_TYPES.DELETE,
-                        tooltip: t("Delete"),
-                        permission: canDelete,
-                        onClick: () => handleDelete(data._id),
-                      },
-                    ]}
-                  />
-                </div>
-              ) : (
-                <Tooltip
-                  id={`tooltip-lock-${data._id}`}
-                  tooltipContent="Access restricted"
-                >
-                  <span className="inline-flex items-center text-gray-400 cursor-default">
-                    <FiLock size={18} />
-                  </span>
-                </Tooltip>
-              )}
-            </TableCell>
-          </TableRow>
+      <FilterBar
+        subtitle={t(
+          "systemUsers.filterSubtitle",
+          "Narrow by name, status, or role.",
         )}
+        searchPlaceholder={t("systemUsers.searchText")}
+        searchValue={FilterName}
+        onSearchChange={(value) => {
+          setFilterText(value);
+          setCurrentPage(1);
+        }}
+        values={portalFilterValues}
+        onChange={handlePortalFilterChange}
+        onReset={handleResetField}
+        filters={portalFilters}
       />
+
+      <Card>
+        <CardHeader
+          title={t("systemUsers.title")}
+          subtitle={
+            loading ? "Loading…" : `${totalRecords} total users`
+          }
+        />
+        <PortalDataTable
+          columns={columns}
+          rows={loading ? [] : data}
+          rowKey="_id"
+          emptyMessage={
+            loading
+              ? "Loading users…"
+              : t("systemUsers.noUsersFound", "No system users found.")
+          }
+        />
+        {!loading && totalRecords > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={rowsPerPage}
+            total={totalRecords}
+            itemLabel="users"
+            onPageChange={(page) => setCurrentPage(page)}
+            onPageSizeChange={(perPage) => {
+              setRowsPerPage(perPage);
+              setCurrentPage(1);
+            }}
+          />
+        ) : null}
+      </Card>
+
       <MainDrawer>
         <>
           <div className="w-full relative p-6 border-b border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -1103,7 +1119,7 @@ const SystemUsers = () => {
             )}
           </div>
           <Scrollbars className="w-full md:w-7/12 lg:w-8/12 xl:w-8/12 relative dark:bg-gray-700 dark:text-gray-200">
-            <Card className="overflow-y-scroll flex-grow scrollbar-hide w-full max-h-full">
+            <WindmillCard className="overflow-y-scroll flex-grow scrollbar-hide w-full max-h-full">
               <CardBody>
                 <form onSubmit={SystemUsersSubmit}>
                   <div className="px-6 pt-8 flex-grow scrollbar-hide w-full max-h-full pb-40">
@@ -1507,7 +1523,7 @@ const SystemUsers = () => {
                   )}
                 </form>
               </CardBody>
-            </Card>
+            </WindmillCard>
           </Scrollbars>
         </>
       </MainDrawer>
@@ -1561,7 +1577,7 @@ const SystemUsers = () => {
           </div>
         </ModalFooter>
       </Modal>
-    </div>
+    </EpcPage>
   );
 
   return (

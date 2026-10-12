@@ -1,80 +1,20 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, ChevronDown, X, Edit, Trash2, Eye } from 'lucide-react';
-import Header from "@/components/header/Header";
-import AppLayout from "../app-layout";
-import axios from 'axios';
-import { useLocation } from 'react-router-dom';
+import { X } from "lucide-react";
+import axios from "axios";
+import { useLocation } from "react-router-dom";
 import { AdminContext } from "@/context/AdminContext";
 import ToggleSwitch from "@/components/toggle/ToggleSwitch";
-import {
-  FiPlus,
-  FiEdit,
-  FiTrash2,
-  FiUploadCloud,
-  FiXCircle,
-  FiEye,
-} from "react-icons/fi";
+import { ActionButtons, Loader } from "@/page-layouts";
+import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import { useSettingsCrudPermissions } from "@/hooks/useSettingsCrudPermissions";
+import useSingleBusinessMode from "@/hooks/useSingleBusinessMode";
+import { getSoleAssignedBusinessId } from "@/utils/sessionAssignedBusinesses";
+import EpcListPage from "@/components/Epc/EpcListPage";
+import Button from "@/customer/components/ui/Button";
+import { PlusIcon } from "@/customer/components/ui/icons";
 
 const BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
-;
-
-const ItemTable = ({ items, onEdit, onDelete, onToggleStatus, onView, canUpdate, canDelete }) => {
-  const { t } = useTranslation();
-  const thr = (key, fallback, options) =>
-    t(`settingsPage.hr.${key}`, { defaultValue: fallback, ...options });
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {thr("positions.positionName", "Position Name")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {thr("positions.positionCode", "Position Code")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {thr("status", "Status")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {thr("actions", "Actions")}
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {items.map((item) => (
-            <tr key={item._id}>
-              <td className="px-6 py-4 whitespace-nowrap">{item.name}</td>
-              <td className="px-6 py-4 whitespace-nowrap">{item.code}</td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <ToggleSwitch
-                  isOn={item.status === "Active"}
-                  handleToggle={() => onToggleStatus(item)}
-                  disabled={!canUpdate}
-                />
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                {canUpdate && (
-                  <button onClick={() => onEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
-                    <FiEdit className="w-5 h-5" />
-                  </button>
-                )}
-                {canDelete && (
-                  <button onClick={() => onDelete(item._id)} className="text-red-600 hover:text-red-900 mr-2">
-                    <FiTrash2 className="w-5 h-5" />
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
 
 const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, canSubmit }) => {
   const { t } = useTranslation();
@@ -82,22 +22,22 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, canSubmit }) => {
     t(`settingsPage.hr.${key}`, { defaultValue: fallback, ...options });
 
   const [formData, setFormData] = useState({
-    _id: '',
-    name: '',
-    code: '',
-    status: 'Active',
+    _id: "",
+    name: "",
+    code: "",
+    status: "Active",
   });
 
   useEffect(() => {
     if (item) {
       setFormData({
-        _id: item._id || '',
-        name: item.name || '',
-        code: item.code || '',
-        status: item.status || 'Active',
+        _id: item._id || "",
+        name: item.name || "",
+        code: item.code || "",
+        status: item.status || "Active",
       });
     } else {
-      setFormData({ _id: '', name: '', code: '', status: 'Active' });
+      setFormData({ _id: "", name: "", code: "", status: "Active" });
     }
   }, [item, isOpen]);
 
@@ -223,7 +163,6 @@ const EstimatesPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [locations, setLocation] = useState("All");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState(null);
 
@@ -231,20 +170,47 @@ const EstimatesPage = () => {
   const [isOrgLoaded, setIsOrgLoaded] = useState(false);
   const location = useLocation();
   const { canAdd, canUpdate, canDelete } = useSettingsCrudPermissions();
+  const { singleBusinessId } = useSingleBusinessMode();
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(() => {
+    try {
+      const c = localStorage.getItem("configurations");
+      if (c) {
+        const parsed = JSON.parse(c);
+        const p = parsed && parsed.table_entries_per_page;
+        if (Number.isFinite(p) && p > 0) return Number(p);
+      }
+    } catch (_) {}
+    return 10;
+  });
+
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    const selectedOrg = searchParams.get("selectedOrg");
+    const selectedOrg =
+      searchParams.get("selectedOrg") ||
+      sessionStorage.getItem("settingsSelectedOrg") ||
+      singleBusinessId ||
+      getSoleAssignedBusinessId() ||
+      "";
 
     if (selectedOrg) {
       setOrganization(selectedOrg);
+      sessionStorage.setItem("settingsSelectedOrg", selectedOrg);
+      setIsOrgLoaded(true);
+      return;
     }
 
-    setIsOrgLoaded(true);
-  }, [location]);
+    setIsOrgLoaded(false);
+  }, [location, singleBusinessId]);
 
   useEffect(() => {
     if (isOrgLoaded && organization) {
       fetchItems(activeTab, organization);
+    } else if (isOrgLoaded) {
+      setLoading(false);
     }
   }, [activeTab, organization, isOrgLoaded]);
 
@@ -252,8 +218,6 @@ const EstimatesPage = () => {
     "Content-Type": "application/json",
     authorization: `Bearer ${adminInfo.token}`,
   };
-
-  const tabs = ["Positions & Positions", "Positions"];
 
   const handleAddNew = () => {
     if (!canAdd) return;
@@ -266,9 +230,7 @@ const EstimatesPage = () => {
     setEditItem(item);
     setModalOpen(true);
   };
-  // app.use("/api/Positions/", PositionsRoutes);
-  // app.use("/api/Positions/", PositionsRoutes);
-  
+
   const handleSubmit = async (item) => {
     if ((editItem && !canUpdate) || (!editItem && !canAdd)) return;
     try {
@@ -279,7 +241,11 @@ const EstimatesPage = () => {
           status: item.status,
           business_id: organization,
         };
-        const response = await axios.put(`${BASE_URL}/Positions/update/${editItem._id}`, payload, { headers });
+        await axios.put(
+          `${BASE_URL}/Positions/update/${editItem._id}`,
+          payload,
+          { headers }
+        );
         fetchItems(activeTab, organization);
       } else {
         let payload = {
@@ -288,13 +254,13 @@ const EstimatesPage = () => {
           status: item.status,
           business_id: organization,
         };
-        const response = await axios.post(`${BASE_URL}/Positions/add`, payload, { headers });
+        await axios.post(`${BASE_URL}/Positions/add`, payload, { headers });
         fetchItems(activeTab, organization);
       }
       setModalOpen(false);
       setActiveTab((prevTab) => prevTab);
     } catch (err) {
-      console.error('Failed to save item', err);
+      console.error("Failed to save item", err);
     }
   };
 
@@ -304,10 +270,14 @@ const EstimatesPage = () => {
     try {
       let payload = {
         business_id: selectedOrg,
-        FilterStatus: '',
-        FilterName: '',
+        FilterStatus: "",
+        FilterName: "",
       };
-      let response = await axios.post(`${BASE_URL}/Positions/get_all`, payload, { headers });
+      let response = await axios.post(
+        `${BASE_URL}/Positions/get_all`,
+        payload,
+        { headers }
+      );
       setItems(response.data.data);
       setError(null);
     } catch (err) {
@@ -328,7 +298,9 @@ const EstimatesPage = () => {
     if (!canDelete) return;
 
     try {
-      await axios.delete(`${BASE_URL}/Positions/delete/${deleteItemId}`, { headers });
+      await axios.delete(`${BASE_URL}/Positions/delete/${deleteItemId}`, {
+        headers,
+      });
       fetchItems(activeTab, organization);
     } catch (err) {
       setError(thr("deleteFailed", "Failed to delete item"));
@@ -344,70 +316,163 @@ const EstimatesPage = () => {
       let payload = {
         name: item.name,
         code: item.code,
-        status: item.status === 'Active' ? 'Inactive' : 'Active',
+        status: item.status === "Active" ? "Inactive" : "Active",
         business_id: organization,
       };
-      const response = await axios.put(`${BASE_URL}/Positions/update/${item._id}`, payload, { headers });
+      await axios.put(
+        `${BASE_URL}/Positions/update/${item._id}`,
+        payload,
+        { headers }
+      );
       fetchItems(activeTab, organization);
     } catch (err) {
       setError(thr("statusUpdateFailed", "Failed to update item status"));
     }
   };
 
-  const handleView = (item) => {
-    console.log('View', item);
-  };
+  const filteredItems = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return (items || []).filter((item) => {
+      if (statusFilter && item.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        String(item.name || "").toLowerCase().includes(q) ||
+        String(item.code || "").toLowerCase().includes(q)
+      );
+    });
+  }, [items, searchTerm, statusFilter]);
+
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage
+  );
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: thr("positions.positionName", "Position Name"),
+        render: (item) => (
+          <span className="epc-cell__primary">{item.name}</span>
+        ),
+      },
+      {
+        key: "code",
+        header: thr("positions.positionCode", "Position Code"),
+        render: (item) => item.code || "—",
+      },
+      {
+        key: "status",
+        header: thr("status", "Status"),
+        render: (item) => (
+          <ToggleSwitch
+            isOn={item.status === "Active"}
+            handleToggle={() => handleToggleStatus(item)}
+            disabled={!canUpdate}
+          />
+        ),
+      },
+      {
+        key: "actions",
+        header: thr("actions", "Actions"),
+        align: "right",
+        render: (item) => (
+          <ActionButtons
+            rbac={{ canUpdate, canDelete }}
+            items={[
+              {
+                tooltip: thr("edit", "Edit"),
+                action: ACTION_BUTTON_TYPES.EDIT,
+                onClick: () => handleEdit(item),
+              },
+              {
+                tooltip: thr("delete", "Delete"),
+                action: ACTION_BUTTON_TYPES.DELETE,
+                onClick: () => handleDelete(item._id),
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, canUpdate, canDelete]
+  );
+
+  if (!isOrgLoaded || !organization) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <Loader fullContainer={true} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>{thr("errorPrefix", "Error: {{error}}", { error })}</div>;
+  }
 
   return (
-    <>
-      {!isOrgLoaded && !organization ?
-        <div className="fixed inset-0 flex items-center justify-center bg-white">
-          <p className="text-gray-600">
-            {thr("loadingOrganization", "Loading organization...")}
-          </p>
-        </div>
-        : loading ? <div>{thr("loading", "Loading...")}</div>
-          : error ? <div>{thr("errorPrefix", "Error: {{error}}", { error })}</div>
-            :
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="flex justify-end items-end w-full mb-6 space-x-4">
-                {canAdd && (
-                  <button
-                    onClick={handleAddNew}
-                    className="flex items-center px-4 py-2 bg-[#A6C437] text-white rounded-lg hover:bg-opacity-90 transition-colors"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    {thr("addNew", "Add New")}
-                  </button>
-                )}
-                <div className="relative">
-                  <select
-                    value={locations}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="appearance-none bg-white border border-gray-300 rounded-lg py-2 pl-4 pr-10 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
-                  >
-                    <option value="All">{thr("all", "All")}</option>
-                    <option value=""></option>
-                    <option value=""></option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-
-
-              <div className="bg-white rounded-lg shadow-sm">
-                <ItemTable
-                  items={items}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onToggleStatus={handleToggleStatus}
-                  onView={handleView}
-                  canUpdate={canUpdate}
-                  canDelete={canDelete}
-                />
-              </div>
-            </div>
+    <EpcListPage
+      flush
+      title={thr("departmentsPositions.positions", "Positions")}
+      action={
+        canAdd ? (
+          <Button size="sm" onClick={handleAddNew}>
+            <PlusIcon size={15} />
+            {thr("addNew", "Add New")}
+          </Button>
+        ) : null
       }
+      searchValue={searchTerm}
+      searchPlaceholder={thr(
+        "positions.searchPlaceholder",
+        "Search positions..."
+      )}
+      onSearchChange={(value) => {
+        setSearchTerm(value || "");
+        setCurrentPage(1);
+      }}
+      filterSubtitle={thr(
+        "positions.filterSubtitle",
+        "Filter by status or search by name."
+      )}
+      filters={[
+        {
+          key: "status",
+          placeholder: thr("selectStatus", "Select Status"),
+          options: [
+            { value: "Active", label: thr("active", "Active") },
+            { value: "Inactive", label: thr("inactive", "Inactive") },
+          ],
+        },
+      ]}
+      filterValues={{ status: statusFilter }}
+      onFilterChange={(key, value) => {
+        if (key === "status") {
+          setStatusFilter(value || "");
+          setCurrentPage(1);
+        }
+      }}
+      onFilterReset={() => {
+        setSearchTerm("");
+        setStatusFilter("");
+        setCurrentPage(1);
+      }}
+      tableTitle={thr("departmentsPositions.positions", "Positions")}
+      columns={columns}
+      rows={paginatedItems}
+      loading={loading}
+      emptyMessage={thr("noData", "No data available")}
+      page={currentPage}
+      pageSize={recordsPerPage}
+      total={filteredItems.length}
+      itemLabel="positions"
+      onPageChange={setCurrentPage}
+      onPageSizeChange={(perPage) => {
+        setRecordsPerPage(perPage);
+        setCurrentPage(1);
+      }}
+    >
       <AddEditModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -422,7 +487,7 @@ const EstimatesPage = () => {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDeleteClick}
       />
-    </>
+    </EpcListPage>
   );
 };
 

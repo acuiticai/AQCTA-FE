@@ -1,21 +1,22 @@
-import React, { useState, useContext, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useHistory } from "react-router-dom";
-import BusinessDropdown from "@/components/BusinessDropdown";
-import { AdminContext } from "@/context/AdminContext";
 import axios from "axios";
-const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 import { formatDate, formatAmount } from "@/components/formatAmount";
-import CustomPagination from "@/components/CustomPagination";
-import { Select } from "@windmill/react-ui";
-import actionButton from "../../assets/img/icons/document-text.png";
-import { notifySuccess } from "@/utils/toast";
-import { PageHeader, DataTable } from "@/page-layouts/index";
+import { ActionButtons } from "@/page-layouts";
+import EpcListPage from "@/components/Epc/EpcListPage";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { ACTION_BUTTON_TYPES } from "@/utils/constants";
+import {
+  isSingleAssignedBusiness,
+  syncAssignedBusinessesFromApi,
+} from "@/utils/sessionAssignedBusinesses";
+
+const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
 const Receivables = () => {
   const history = useHistory();
-  const { state } = useContext(AdminContext);
-  const { adminInfo } = state;
-  const [selectedBusiness, setSelectedBusiness] = useState();
+  const [selectedBusiness, setSelectedBusiness] = useState("");
+  const [businesses, setBusinesses] = useState([]);
   const [receivables, setReceivables] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
@@ -24,6 +25,7 @@ const Receivables = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const fetchReceivables = async (
     businessId = "",
@@ -40,17 +42,32 @@ const Receivables = () => {
       status: "Collection Scheduled", // We only want receivables with this status
     };
     try {
+      setLoading(true);
       const response = await axios.get(`${Base_URL}/auth-requests`, { params });
       console.log("receivables!", response.data.data);
       setReceivables(response.data.data);
       setTotalResults(response.data.count);
     } catch (err) {
       console.log(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchReceivables();
+    let cancelled = false;
+    (async () => {
+      const list = await syncAssignedBusinessesFromApi(Base_URL);
+      if (cancelled) return;
+      setBusinesses(list);
+      const preselected = list.length === 1 ? list[0]._id : "";
+      setSelectedBusiness(preselected);
+      fetchReceivables(preselected, 1, recordsPerPage, "", "");
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePageChange = (page) => {
@@ -68,23 +85,26 @@ const Receivables = () => {
   const onChange = async (value) => {
     console.log("value", value);
     setSelectedBusiness(value);
+    setCurrentPage(1);
+    currentPageRef.current = 1;
     fetchReceivables(value, 1, recordsPerPage, searchTerm, statusFilter);
   };
 
-  const handleSearch = (e) => {
-    const value = e.target.value;
+  const handleSearch = (value) => {
     setSearchTerm(value);
+    setCurrentPage(1);
+    currentPageRef.current = 1;
     fetchReceivables(selectedBusiness, 1, recordsPerPage, value, statusFilter);
   };
 
-  const handleStatusChange = (e) => {
-    const value = e.target.value;
+  const handleStatusChange = (value) => {
     setStatusFilter(value);
+    setCurrentPage(1);
+    currentPageRef.current = 1;
     fetchReceivables(selectedBusiness, 1, recordsPerPage, searchTerm, value);
   };
 
-  const handleCategoryChange = (e) => {
-    const value = e.target.value;
+  const handleCategoryChange = (value) => {
     setCategoryFilter(value);
     // Add category filtering logic when backend support is available
   };
@@ -100,104 +120,149 @@ const Receivables = () => {
     });
   };
 
-  return (
-    <div className="p-6">
-      <PageHeader title="Receivables" />
+  const clearAllFilters = () => {
+    const preselected = businesses.length === 1 ? businesses[0]._id : "";
+    setSelectedBusiness(preselected);
+    setStatusFilter("");
+    setCategoryFilter("");
+    setSearchTerm("");
+    setCurrentPage(1);
+    currentPageRef.current = 1;
+    fetchReceivables(preselected, 1, recordsPerPage, "", "");
+  };
 
-      <div className="bg-gray-50 rounded-lg">
-        <DataTable
-          headers={[
-            "Invoice No",
-            "Sales Contract No",
-            "Customer",
-            "Amount",
-            "Due Date",
-            "Status",
-            "Action",
-          ]}
-          data={receivables}
-          loading={false}
-          currentPage={currentPage}
-          totalPages={Math.ceil(totalResults / recordsPerPage)}
-          recordsPerPage={recordsPerPage}
-          onPageChange={handlePageChange}
-          onRecordsPerPageChange={(value) => {
-            setRecordsPerPage(value);
-            currentPageRef.current = 1;
-            setCurrentPage(1);
-            fetchReceivables(
-              selectedBusiness,
-              1,
-              value,
-              searchTerm,
-              statusFilter
-            );
-          }}
-          renderRow={(receivable) => (
-            <tr className="border-b border-gray-200">
-              <td className="py-4">{receivable.invoice_number}</td>
-              <td className="py-4">{receivable.contract_id.contractNo}</td>
-              <td className="py-4">{receivable.customer_name}</td>
-              <td className="py-4">{formatAmount(receivable.subTotal)}</td>
-              <td className="py-4">{formatDate(receivable.due_date)}</td>
-              <td className="py-4">
-                <span className="text-red-500 font-medium">
-                  {receivable.status}
-                </span>
-              </td>
-              <td className="py-4">
-                <div className="flex space-x-2">
-                  <button
-                    className="text-gray-500 hover:text-[var(--p-blue)] transition-colors duration-200"
-                    onClick={() => handleRecordPayment(receivable)}
-                    title="Record Payment"
-                  >
-                    <img src={actionButton} alt="Record Payment" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          )}
-          emptyMessage="No receivables found"
-          filters={[
+  const columns = [
+    {
+      key: "invoice",
+      header: "Invoice No",
+      render: (row) => (
+        <span className="epc-cell__primary">{row.invoice_number || "—"}</span>
+      ),
+    },
+    {
+      key: "contract",
+      header: "Sales Contract No",
+      render: (row) => (
+        <span className="epc-cell__secondary">
+          {row.contract_id?.contractNo || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "customer",
+      header: "Customer",
+      render: (row) => (
+        <span className="epc-cell__primary">{row.customer_name || "—"}</span>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      render: (row) => formatAmount(row.subTotal),
+    },
+    {
+      key: "dueDate",
+      header: "Due Date",
+      render: (row) => formatDate(row.due_date),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => <StatusPill status={row.status || "—"} />,
+    },
+    {
+      key: "actions",
+      header: "Action",
+      align: "right",
+      render: (row) => (
+        <ActionButtons
+          maxVisibleActions={2}
+          items={[
             {
-              label: "Transaction Type",
-              value: statusFilter,
-              onChange: (value) => handleStatusChange({ target: { value } }),
-              options: [
-                { label: "All", value: "" },
-                {
-                  label: "Collection Scheduled",
-                  value: "Collection Scheduled",
-                },
-                { label: "Paid", value: "Paid" },
-              ],
-            },
-            {
-              label: "Category",
-              value: categoryFilter,
-              onChange: (value) => handleCategoryChange({ target: { value } }),
-              options: [
-                { label: "All", value: "" },
-                { label: "Invoice", value: "invoice" },
-                { label: "Contract", value: "contract" },
-              ],
-            },
-            {
-              isBusinessDropdown: true,
-              businessDropdownProps: {
-                adminId: adminInfo.id,
-                selectedBusiness: selectedBusiness,
-                onChange: onChange,
-              },
+              action: ACTION_BUTTON_TYPES.VIEW,
+              title: "Record Payment",
+              onClick: () => handleRecordPayment(row),
             },
           ]}
-          searchValue={searchTerm}
-          onSearch={handleSearch}
-          searchPlaceholder="Search receivables"
         />
-      </div>
-    </div>
+      ),
+    },
+  ];
+
+  const portalFilters = [
+    {
+      key: "status",
+      placeholder: "Transaction Type",
+      options: [
+        { value: "", label: "All" },
+        { value: "Collection Scheduled", label: "Collection Scheduled" },
+        { value: "Paid", label: "Paid" },
+      ],
+    },
+    {
+      key: "category",
+      placeholder: "Category",
+      options: [
+        { value: "", label: "All" },
+        { value: "invoice", label: "Invoice" },
+        { value: "contract", label: "Contract" },
+      ],
+    },
+    ...(!isSingleAssignedBusiness()
+      ? [
+          {
+            key: "business",
+            placeholder: "All Businesses",
+            options: [
+              { value: "", label: "All Businesses" },
+              ...businesses.map((b) => ({ value: b._id, label: b.name })),
+            ],
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <EpcListPage
+      title="Receivables"
+      subtitle="Track collection-scheduled invoices and record payments."
+      searchValue={searchTerm}
+      searchPlaceholder="Search receivables"
+      onSearchChange={handleSearch}
+      filterSubtitle="Narrow by transaction type, category or business."
+      filters={portalFilters}
+      filterValues={{
+        status: statusFilter,
+        category: categoryFilter,
+        business: selectedBusiness || "",
+      }}
+      onFilterChange={(key, value) => {
+        if (key === "status") handleStatusChange(value || "");
+        else if (key === "category") handleCategoryChange(value || "");
+        else if (key === "business") onChange(value || "");
+      }}
+      onFilterReset={clearAllFilters}
+      tableTitle="Receivables"
+      tableSubtitle={
+        loading ? "Loading…" : `${totalResults} total receivables`
+      }
+      columns={columns}
+      rows={receivables}
+      rowKey="_id"
+      loading={loading}
+      emptyMessage="No receivables found"
+      page={currentPage}
+      pageSize={recordsPerPage}
+      total={totalResults}
+      itemLabel="receivables"
+      onPageChange={handlePageChange}
+      onPageSizeChange={(value) => {
+        setRecordsPerPage(value);
+        currentPageRef.current = 1;
+        setCurrentPage(1);
+        fetchReceivables(selectedBusiness, 1, value, searchTerm, statusFilter);
+      }}
+    />
   );
 };
 

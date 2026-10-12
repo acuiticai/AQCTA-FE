@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useContext, useMemo } from "react";
+import React, { useState, useEffect, useContext, useMemo, useCallback } from "react";
 import { useHistory } from "react-router-dom";
-import { Building, FileText, Inbox } from "lucide-react";
-import {
-  DataTable,
-  ActionButtons,
-  SummaryCards,
-  CustomModal,
-  DropdownBasic,
-} from "@/page-layouts";
+import { ActionButtons, CustomModal, DropdownBasic } from "@/page-layouts";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import useCheckTokenExpired from "@/hooks/useCheckTokenExpired";
@@ -31,18 +32,8 @@ import {
 } from "@/utils/applicationProfileSeed";
 import { typeFromEnquiringFor } from "@/customer/config/applicationTypes";
 import axios from "axios";
-import SummarySvg from "@/assets/img/summary.svg";
-import CompletedSvg from "@/assets/img/completed.svg";
-import InProgressSvg from "@/assets/img/in-progress.svg";
 
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
-
-const STATUS_STYLES = {
-  Open: "bg-blue-100 text-blue-800",
-  Converted: "bg-green-100 text-green-800",
-  Closed: "bg-gray-100 text-gray-800",
-  Spam: "bg-red-100 text-red-800",
-};
 
 const Enquiries = () => {
   const checkTokenExpired = useCheckTokenExpired();
@@ -60,7 +51,7 @@ const Enquiries = () => {
       "Content-Type": "application/json",
       authorization: `Bearer ${adminInfo?.token}`,
     }),
-    [adminInfo?.token]
+    [adminInfo?.token],
   );
 
   const [enquiries, setEnquiries] = useState([]);
@@ -71,7 +62,6 @@ const Enquiries = () => {
   const [channelFilter, setChannelFilter] = useState("all");
   const [businessFilter, setBusinessFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [businesses, setBusinesses] = useState([]);
@@ -94,19 +84,6 @@ const Enquiries = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [enquiryToDelete, setEnquiryToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-
-  const headers = [
-    "Enquiry #",
-    "Name",
-    "Company",
-    "Email",
-    "Phone",
-    "Enquiring For",
-    "Channel",
-    "Status",
-    "Submitted",
-    "Actions",
-  ];
 
   useEffect(() => {
     let cancelled = false;
@@ -158,7 +135,6 @@ const Enquiries = () => {
       if (response.data?.status) {
         setEnquiries(response.data.data || []);
         setTotal(response.data.total || 0);
-        setTotalPages(response.data.totalPages || 1);
         if (response.data.stats) {
           setStats((prev) => ({ ...prev, ...response.data.stats }));
         }
@@ -168,7 +144,7 @@ const Enquiries = () => {
     } catch (error) {
       console.error("Error fetching enquiries:", error);
       notifyError(
-        error?.response?.data?.message || "Failed to load enquiries"
+        error?.response?.data?.message || "Failed to load enquiries",
       );
     } finally {
       setLoading(false);
@@ -231,7 +207,7 @@ const Enquiries = () => {
       }
     } catch (error) {
       notifyError(
-        error?.response?.data?.message || "Failed to delete enquiry"
+        error?.response?.data?.message || "Failed to delete enquiry",
       );
     } finally {
       setDeleteLoading(false);
@@ -277,7 +253,7 @@ const Enquiries = () => {
       }
     } catch (error) {
       notifyError(
-        error?.response?.data?.message || "Failed to update status"
+        error?.response?.data?.message || "Failed to update status",
       );
     } finally {
       setStatusUpdatingId(null);
@@ -327,14 +303,14 @@ const Enquiries = () => {
         {
           headers: authHeaders,
           withCredentials: true,
-        }
+        },
       );
       if (checkTokenExpired(response)) return;
       if (response.data?.status) {
         const customerId = response.data?.data?.customerId;
         notifySuccess(
           response.data?.message ||
-            "Customer created. Portal password emailed to the customer."
+            "Customer created. Portal password emailed to the customer.",
         );
         setCreateCustomerModalOpen(false);
         setEnquiryToConvert(null);
@@ -344,13 +320,13 @@ const Enquiries = () => {
         }
       } else {
         notifyError(
-          response.data?.message || "Failed to create customer from enquiry"
+          response.data?.message || "Failed to create customer from enquiry",
         );
       }
     } catch (error) {
       notifyError(
         error?.response?.data?.message ||
-          "Failed to create customer from enquiry"
+          "Failed to create customer from enquiry",
       );
     } finally {
       setCreatingCustomerId(null);
@@ -361,7 +337,7 @@ const Enquiries = () => {
     if (!row?._id) return;
     if (row.status === "Spam" || row.status === "Closed") {
       notifyError(
-        "Spam or Closed enquiries cannot be converted to an application."
+        "Spam or Closed enquiries cannot be converted to an application.",
       );
       return;
     }
@@ -386,21 +362,20 @@ const Enquiries = () => {
         {
           headers: authHeaders,
           withCredentials: true,
-        }
+        },
       );
       if (checkTokenExpired(ensureRes)) return;
       if (!ensureRes.data?.status) {
         notifyError(
           ensureRes.data?.message ||
-            "Failed to prepare customer for application"
+            "Failed to prepare customer for application",
         );
         return;
       }
 
       const customerId = ensureRes.data?.data?.customerId;
       const businessId =
-        ensureRes.data?.data?.businessId ||
-        enquiryToApplication.business_id;
+        ensureRes.data?.data?.businessId || enquiryToApplication.business_id;
       if (!customerId || !businessId) {
         notifyError("Customer or business missing for this enquiry.");
         return;
@@ -410,7 +385,7 @@ const Enquiries = () => {
       try {
         const enquiryRes = await EnquiryServices.getEnquiryById(
           enquiryToApplication._id,
-          { headers: authHeaders, withCredentials: true }
+          { headers: authHeaders, withCredentials: true },
         );
         if (enquiryRes.data?.status && enquiryRes.data?.data) {
           enquiryFull = enquiryRes.data.data;
@@ -431,12 +406,12 @@ const Enquiries = () => {
       const type = typeFromEnquiringFor(enquiryFull.enquiringFor);
       const seed = mergeApplicationSeeds(
         profileSeed(nCustomerToProfile(customer), {}),
-        enquiryToApplicationFormSeed(enquiryFull)
+        enquiryToApplicationFormSeed(enquiryFull),
       );
 
       if (ensureRes.data?.data?.customerCreated) {
         notifySuccess(
-          "Customer created. Opening application form with enquiry details."
+          "Customer created. Opening application form with enquiry details.",
         );
       } else {
         notifySuccess("Opening application form with enquiry details.");
@@ -457,7 +432,7 @@ const Enquiries = () => {
     } catch (error) {
       notifyError(
         error?.response?.data?.message ||
-          "Failed to convert enquiry to application"
+          "Failed to convert enquiry to application",
       );
     } finally {
       setConvertingToAppId(null);
@@ -465,23 +440,13 @@ const Enquiries = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("en-US", {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleDateString("en-GB", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
   };
-
-  const getStatusBadge = (status) => (
-    <span
-      className={`px-2 py-1 rounded-full text-xs font-medium ${
-        STATUS_STYLES[status] || "bg-gray-100 text-gray-800"
-      }`}
-    >
-      {status || "-"}
-    </span>
-  );
 
   const clearAllFilters = () => {
     setSearchTerm("");
@@ -492,448 +457,457 @@ const Enquiries = () => {
     setCurrentPage(1);
   };
 
-  const filters = [
-    {
-      isClearButton: true,
-      buttonProps: { onClick: clearAllFilters },
-    },
+  const portalFilterValues = {
+    status: statusFilter === "all" ? "" : statusFilter,
+    enquiringFor: enquiringForFilter === "all" ? "" : enquiringForFilter,
+    channel: channelFilter === "all" ? "" : channelFilter,
+    business: businessFilter || "",
+  };
+
+  const portalFilters = [
     ...(!isSingleAssignedBusiness()
       ? [
           {
-            label: "Business",
-            value: businessFilter,
-            onChange: (value) => {
-              setBusinessFilter(value);
-              setCurrentPage(1);
-            },
+            key: "business",
+            placeholder: "All Businesses",
             options: [
-              ...(businesses.length > 1
-                ? [{ value: "", label: "All Businesses" }]
-                : []),
+              { value: "", label: "All Businesses" },
               ...businesses.map((b) => ({ value: b._id, label: b.name })),
             ],
-            placeholder:
-              businesses.length > 1 ? "All Businesses" : "Select Business",
-            icon: Building,
           },
         ]
       : []),
     {
-      label: "Status",
-      value: statusFilter,
-      onChange: (value) => {
-        setStatusFilter(value);
-        setCurrentPage(1);
-      },
-      options: [
-        { value: "all", label: "All Status" },
-        ...ENQUIRY_STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
-      ],
-      placeholder: "Select Status",
-      icon: FileText,
+      key: "status",
+      placeholder: "All Statuses",
+      options: ENQUIRY_STATUS_OPTIONS,
     },
     {
-      label: "Enquiring For",
-      value: enquiringForFilter,
-      onChange: (value) => {
-        setEnquiringForFilter(value);
-        setCurrentPage(1);
-      },
-      options: [
-        { value: "all", label: "All Types" },
-        ...ENQUIRING_FOR_OPTIONS.map((s) => ({ value: s, label: s })),
-      ],
-      placeholder: "Select Type",
-      icon: Inbox,
+      key: "enquiringFor",
+      placeholder: "All Types",
+      options: ENQUIRING_FOR_OPTIONS,
     },
     {
-      label: "Channel",
-      value: channelFilter,
-      onChange: (value) => {
-        setChannelFilter(value);
-        setCurrentPage(1);
-      },
-      options: [
-        { value: "all", label: "All Channels" },
-        ...ENQUIRY_CHANNEL_OPTIONS.map((s) => ({ value: s, label: s })),
-      ],
-      placeholder: "Select Channel",
-      icon: FileText,
+      key: "channel",
+      placeholder: "All Channels",
+      options: ENQUIRY_CHANNEL_OPTIONS,
     },
   ];
 
-  const summaryCardsData = [
-    {
-      title: "Total Enquiries",
-      value: stats.total || 0,
-      backgroundColor: "summary-light",
-      iconColor: "summary-dark",
-      Icon: SummarySvg,
-    },
-    {
-      title: "Open",
-      value: stats.Open || 0,
-      backgroundColor: "processing-light",
-      iconColor: "processing-dark",
-      Icon: InProgressSvg,
-    },
-    {
-      title: "Converted",
-      value: stats.Converted || 0,
-      backgroundColor: "completed-light",
-      iconColor: "completed-dark",
-      Icon: CompletedSvg,
-    },
-    {
-      title: "Closed",
-      value: stats.Closed || 0,
-      backgroundColor: "summary-light",
-      iconColor: "summary-dark",
-      Icon: SummarySvg,
-    },
-  ];
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "status") {
+      setStatusFilter(value || "all");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "enquiringFor") {
+      setEnquiringForFilter(value || "all");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "channel") {
+      setChannelFilter(value || "all");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "business") {
+      setBusinessFilter(value || "");
+      setCurrentPage(1);
+    }
+  };
+
+  const buildActionItems = useCallback(
+    (row) => [
+      ...(routePerms.canUpdate
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.EDIT,
+              title: "Edit",
+              onClick: () => history.push(`/enquiries/edit/${row._id}`),
+            },
+            {
+              action: ACTION_BUTTON_TYPES.CHANGE_STATUS,
+              title: "Change Status",
+              loading: statusUpdatingId === row._id,
+              disabled: statusUpdatingId === row._id,
+              onClick: () => openStatusChangeModal(row),
+            },
+          ]
+        : []),
+      ...(routePerms.canUpdate && row.status === "Open" && !row.customerId
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.CREATE_CUSTOMER,
+              title: "Create Customer",
+              loading: creatingCustomerId === row._id,
+              disabled: creatingCustomerId === row._id,
+              onClick: () => openCreateCustomerModal(row),
+            },
+          ]
+        : []),
+      ...(routePerms.canUpdate &&
+      row.status !== "Spam" &&
+      row.status !== "Closed"
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.CONVERT_TO_APPLICATION,
+              title: "Convert to Application",
+              loading: convertingToAppId === row._id,
+              disabled:
+                convertingToAppId === row._id || creatingCustomerId === row._id,
+              onClick: () => openConvertToApplicationModal(row),
+            },
+          ]
+        : []),
+      ...(routePerms.canDelete
+        ? [
+            {
+              action: ACTION_BUTTON_TYPES.DELETE,
+              title: "Delete",
+              onClick: () => openDeleteModal(row),
+            },
+          ]
+        : []),
+    ],
+    [
+      history,
+      routePerms.canUpdate,
+      routePerms.canDelete,
+      statusUpdatingId,
+      creatingCustomerId,
+      convertingToAppId,
+    ],
+  );
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "enquiryNumber",
+        header: "Enquiry #",
+        render: (row) =>
+          routePerms.canViewDetails && row._id ? (
+            <button
+              type="button"
+              className="epc-cell__link"
+              onClick={() => history.push(`/enquiries/view/${row._id}`)}
+            >
+              {row.enquiryNumber || "—"}
+            </button>
+          ) : (
+            row.enquiryNumber || "—"
+          ),
+      },
+      {
+        key: "name",
+        header: "Name",
+        render: (row) => row.name || "—",
+      },
+      {
+        key: "company",
+        header: "Company",
+        render: (row) => row.companyName || "—",
+      },
+      {
+        key: "email",
+        header: "Email",
+        render: (row) => row.email || "—",
+      },
+      {
+        key: "phone",
+        header: "Phone",
+        render: (row) => row.phone || "—",
+      },
+      {
+        key: "enquiringFor",
+        header: "Enquiring For",
+        render: (row) => row.enquiringFor || "—",
+      },
+      {
+        key: "channel",
+        header: "Channel",
+        render: (row) => row.enquiryChannel || "—",
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (row) => <StatusPill status={row.status || "—"} />,
+      },
+      {
+        key: "submitted",
+        header: "Submitted",
+        render: (row) => formatDate(row.createdAt),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        align: "right",
+        render: (row) => (
+          <ActionButtons maxVisibleActions={2} items={buildActionItems(row)} />
+        ),
+      },
+    ],
+    [buildActionItems, history, routePerms.canViewDetails],
+  );
 
   return (
-    <div className="bg-gray-50 min-h-screen w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-full mx-auto px-6 py-8 min-w-0 overflow-x-hidden">
-          <div className="mb-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Enquiry</h1>
-                <p className="text-gray-600 mt-2">
-                  Manage customer and admin enquiries for Inspection and
-                  Certification.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 lg:gap-4">
-                {routePerms.canAdd && (
-                  <button
-                    className="flex items-center gap-2 px-6 py-3 bg-[var(--p-blue)] text-white rounded-lg hover:bg-[var(--p-blue-dark)] transition-colors shadow-sm"
-                    onClick={() => history.push("/enquiries/create")}
-                  >
-                    Add Enquiry
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+    <EpcPage
+      flush
+      title="Enquiry"
+      subtitle="Manage customer and admin enquiries for Inspection and Certification."
+      action={
+        routePerms.canAdd ? (
+          <Button onClick={() => history.push("/enquiries/create")}>
+            <PlusIcon size={15} />
+            Add Enquiry
+          </Button>
+        ) : null
+      }
+    >
+      <FilterBar
+        subtitle="Narrow by business, status, type or channel."
+        searchPlaceholder="Search by name, email, company, enquiry #…"
+        searchValue={searchTerm}
+        onSearchChange={(value) => {
+          setSearchTerm(value);
+          setCurrentPage(1);
+        }}
+        values={portalFilterValues}
+        onChange={handlePortalFilterChange}
+        onReset={clearAllFilters}
+        filters={portalFilters}
+      />
 
-          <SummaryCards cards={summaryCardsData} columnsCount={4} />
+      <Card>
+        <CardHeader
+          title="Enquiries"
+          subtitle={loading ? "Loading…" : `${total} total enquiries`}
+          action={
+            <span className="epc-chip">
+              {stats.Open || 0} open · {stats.Converted || 0} converted
+            </span>
+          }
+        />
 
-          <DataTable
-            onSearch={(value) => {
-              setSearchTerm(value);
-              setCurrentPage(1);
-            }}
-            searchValue={searchTerm}
-            searchPlaceholder="Search by name, email, company, enquiry #..."
-            filters={filters}
-            headers={headers}
-            headersToHide={[]}
-            data={enquiries}
-            totalRecords={total}
-            loading={loading}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            recordsPerPage={recordsPerPage}
+        <PortalDataTable
+          columns={columns}
+          rows={loading ? [] : enquiries}
+          rowKey="_id"
+          emptyMessage={
+            loading
+              ? "Loading enquiries…"
+              : "No enquiries match these filters."
+          }
+        />
+        {!loading && total > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={recordsPerPage}
+            total={total}
+            itemLabel="enquiries"
             onPageChange={setCurrentPage}
-            onRecordsPerPageChange={(perPage) => {
+            onPageSizeChange={(perPage) => {
               setRecordsPerPage(perPage);
               setCurrentPage(1);
             }}
-            renderRow={(row) => (
-              <tr key={row._id} className="border-b">
-                <td className="py-2 px-4 whitespace-nowrap">
-                  {routePerms.canViewDetails && row._id ? (
-                    <button
-                      type="button"
-                      className="text-[var(--p-blue)] hover:underline font-medium text-left"
-                      onClick={() =>
-                        history.push(`/enquiries/view/${row._id}`)
-                      }
-                    >
-                      {row.enquiryNumber || "-"}
-                    </button>
-                  ) : (
-                    row.enquiryNumber || "-"
-                  )}
-                </td>
-                <td className="py-2 px-4">{row.name || "-"}</td>
-                <td className="py-2 px-4">{row.companyName || "-"}</td>
-                <td className="py-2 px-4">{row.email || "-"}</td>
-                <td className="py-2 px-4 whitespace-nowrap">{row.phone || "-"}</td>
-                <td className="py-2 px-4">{row.enquiringFor || "-"}</td>
-                <td className="py-2 px-4">{row.enquiryChannel || "-"}</td>
-                <td className="py-2 px-4 whitespace-nowrap">
-                  {getStatusBadge(row.status)}
-                </td>
-                <td className="py-2 px-4 whitespace-nowrap">
-                  {formatDate(row.createdAt)}
-                </td>
-                <td className="py-2 px-4" style={{ width: "fit-content" }}>
-                  <ActionButtons
-                    maxVisibleActions={2}
-                    items={[
-                      ...(routePerms.canUpdate
-                        ? [
-                            {
-                              action: ACTION_BUTTON_TYPES.EDIT,
-                              title: "Edit",
-                              onClick: () =>
-                                history.push(`/enquiries/edit/${row._id}`),
-                            },
-                            {
-                              action: ACTION_BUTTON_TYPES.CHANGE_STATUS,
-                              title: "Change Status",
-                              loading: statusUpdatingId === row._id,
-                              disabled: statusUpdatingId === row._id,
-                              onClick: () => openStatusChangeModal(row),
-                            },
-                          ]
-                        : []),
-                      ...(routePerms.canUpdate &&
-                      row.status === "Open" &&
-                      !row.customerId
-                        ? [
-                            {
-                              action: ACTION_BUTTON_TYPES.CREATE_CUSTOMER,
-                              title: "Create Customer",
-                              loading: creatingCustomerId === row._id,
-                              disabled: creatingCustomerId === row._id,
-                              onClick: () => openCreateCustomerModal(row),
-                            },
-                          ]
-                        : []),
-                      ...(routePerms.canUpdate &&
-                      row.status !== "Spam" &&
-                      row.status !== "Closed"
-                        ? [
-                            {
-                              action: ACTION_BUTTON_TYPES.CONVERT_TO_APPLICATION,
-                              title: "Convert to Application",
-                              loading: convertingToAppId === row._id,
-                              disabled:
-                                convertingToAppId === row._id ||
-                                creatingCustomerId === row._id,
-                              onClick: () =>
-                                openConvertToApplicationModal(row),
-                            },
-                          ]
-                        : []),
-                      ...(routePerms.canDelete
-                        ? [
-                            {
-                              action: ACTION_BUTTON_TYPES.DELETE,
-                              title: "Delete",
-                              onClick: () => openDeleteModal(row),
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </td>
-              </tr>
-            )}
           />
+        ) : null}
+      </Card>
 
-          <CustomModal
-            open={Boolean(statusChangeRow)}
-            onClose={closeStatusChangeModal}
-            title="Change Status"
-            width="440px"
-            showActions
-            actions={[
-              {
-                label: "Cancel",
-                secondary: true,
-                onClick: closeStatusChangeModal,
-                disabled: Boolean(statusUpdatingId),
-              },
-              {
-                label: statusUpdatingId ? "Updating..." : "Update Status",
-                disabled:
-                  Boolean(statusUpdatingId) ||
-                  !statusChangeValue ||
-                  statusChangeValue === (statusChangeRow?.status || "Open"),
-                onClick: confirmStatusChange,
-              },
-            ]}
-          >
-            {statusChangeRow ? (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-700">
-                  Update status for{" "}
-                  <span className="font-semibold">
-                    {statusChangeRow.enquiryNumber || "this enquiry"}
-                  </span>
-                  .
-                </p>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Current status
-                  </label>
-                  <div>{getStatusBadge(statusChangeRow.status)}</div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    New status
-                  </label>
-                  <DropdownBasic
-                    options={getStatusOptionsForRow(statusChangeRow).map(
-                      (s) => ({
-                        value: s,
-                        label: s,
-                      })
-                    )}
-                    value={statusChangeValue}
-                    onChange={setStatusChangeValue}
-                    placeholder="Select status"
-                    className="w-full"
-                    isDisabled={Boolean(statusUpdatingId)}
-                    isClearable={false}
-                    sortOptions={false}
-                  />
-                </div>
+      <CustomModal
+        open={Boolean(statusChangeRow)}
+        onClose={closeStatusChangeModal}
+        title="Change Status"
+        width="440px"
+        showActions
+        actions={[
+          {
+            label: "Cancel",
+            secondary: true,
+            onClick: closeStatusChangeModal,
+            disabled: Boolean(statusUpdatingId),
+          },
+          {
+            label: statusUpdatingId ? "Updating..." : "Update Status",
+            disabled:
+              Boolean(statusUpdatingId) ||
+              !statusChangeValue ||
+              statusChangeValue === (statusChangeRow?.status || "Open"),
+            onClick: confirmStatusChange,
+          },
+        ]}
+      >
+        {statusChangeRow ? (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700">
+              Update status for{" "}
+              <span className="font-semibold">
+                {statusChangeRow.enquiryNumber || "this enquiry"}
+              </span>
+              .
+            </p>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Current status
+              </label>
+              <div>
+                <StatusPill status={statusChangeRow.status || "—"} />
               </div>
-            ) : null}
-          </CustomModal>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                New status
+              </label>
+              <DropdownBasic
+                options={getStatusOptionsForRow(statusChangeRow).map((s) => ({
+                  value: s,
+                  label: s,
+                }))}
+                value={statusChangeValue}
+                onChange={setStatusChangeValue}
+                placeholder="Select status"
+                className="w-full"
+                isDisabled={Boolean(statusUpdatingId)}
+                isClearable={false}
+                sortOptions={false}
+              />
+            </div>
+          </div>
+        ) : null}
+      </CustomModal>
 
-          <CustomModal
-            open={createCustomerModalOpen}
-            onClose={closeCreateCustomerModal}
-            title="Create Customer"
-            width="480px"
-            showActions
-            actions={[
-              {
-                label: "Cancel",
-                secondary: true,
-                onClick: closeCreateCustomerModal,
-                disabled: !!creatingCustomerId,
-              },
-              {
-                label: creatingCustomerId
-                  ? "Creating..."
-                  : "Create Customer",
-                primary: true,
-                onClick: confirmCreateCustomer,
-                disabled: !!creatingCustomerId,
-              },
-            ]}
-          >
-            {enquiryToConvert && (
-              <div className="space-y-3 text-sm text-gray-700">
-                <p>
-                  Create a customer from enquiry{" "}
-                  <span className="font-semibold">
-                    {enquiryToConvert.enquiryNumber || "-"}
-                  </span>
-                  ?
-                </p>
-                <p>
-                  Available enquiry details will be copied. A portal password
-                  will be emailed to{" "}
-                  <span className="font-semibold">
-                    {enquiryToConvert.email || "the customer"}
-                  </span>
-                  .
-                </p>
-              </div>
-            )}
-          </CustomModal>
+      <CustomModal
+        open={createCustomerModalOpen}
+        onClose={closeCreateCustomerModal}
+        title="Create Customer"
+        width="480px"
+        showActions
+        actions={[
+          {
+            label: "Cancel",
+            secondary: true,
+            onClick: closeCreateCustomerModal,
+            disabled: !!creatingCustomerId,
+          },
+          {
+            label: creatingCustomerId ? "Creating..." : "Create Customer",
+            primary: true,
+            onClick: confirmCreateCustomer,
+            disabled: !!creatingCustomerId,
+          },
+        ]}
+      >
+        {enquiryToConvert && (
+          <div className="space-y-3 text-sm text-gray-700">
+            <p>
+              Create a customer from enquiry{" "}
+              <span className="font-semibold">
+                {enquiryToConvert.enquiryNumber || "-"}
+              </span>
+              ?
+            </p>
+            <p>
+              Available enquiry details will be copied. A portal password will
+              be emailed to{" "}
+              <span className="font-semibold">
+                {enquiryToConvert.email || "the customer"}
+              </span>
+              .
+            </p>
+          </div>
+        )}
+      </CustomModal>
 
-          <CustomModal
-            open={convertAppModalOpen}
-            onClose={closeConvertToApplicationModal}
-            title="Convert to Application"
-            width="520px"
-            showActions
-            actions={[
-              {
-                label: "Cancel",
-                secondary: true,
-                onClick: closeConvertToApplicationModal,
-                disabled: !!convertingToAppId,
-              },
-              {
-                label: convertingToAppId
-                  ? "Preparing..."
-                  : "Continue to Application",
-                primary: true,
-                onClick: confirmConvertToApplication,
-                disabled: !!convertingToAppId,
-              },
-            ]}
-          >
-            {enquiryToApplication && (
-              <div className="space-y-3 text-sm text-gray-700">
-                <p>
-                  Convert enquiry{" "}
-                  <span className="font-semibold">
-                    {enquiryToApplication.enquiryNumber || "-"}
-                  </span>{" "}
-                  into a{" "}
-                  <span className="font-semibold">
-                    {enquiryToApplication.enquiringFor || "service"}
-                  </span>{" "}
-                  application?
-                </p>
-                <p>
-                  Enquiry details (name, email, company, notes
-                  {enquiryToApplication.enquiringFor === "Inspection"
-                    ? ", inspection services"
-                    : ""}
-                  ) will prefill the form. You can complete the remaining
-                  fields on the application page.
-                </p>
-                {!enquiryToApplication.customerId ? (
-                  <p>
-                    If no customer exists for{" "}
-                    <span className="font-semibold">
-                      {enquiryToApplication.email || "this email"}
-                    </span>
-                    , one will be created first (portal password emailed).
-                  </p>
-                ) : (
-                  <p>This enquiry is already linked to a customer.</p>
-                )}
-              </div>
-            )}
-          </CustomModal>
-
-          <CustomModal
-            open={deleteModalOpen}
-            onClose={closeDeleteModal}
-            title="Delete Enquiry"
-            width="440px"
-            showActions
-            actions={[
-              {
-                label: "Cancel",
-                secondary: true,
-                onClick: closeDeleteModal,
-                disabled: deleteLoading,
-              },
-              {
-                label: deleteLoading ? "Deleting..." : "Delete",
-                failure: true,
-                disabled: deleteLoading,
-                onClick: confirmDeleteEnquiry,
-              },
-            ]}
-          >
-            {enquiryToDelete && (
-              <p className="text-sm text-gray-700">
-                Are you sure you want to delete enquiry{" "}
+      <CustomModal
+        open={convertAppModalOpen}
+        onClose={closeConvertToApplicationModal}
+        title="Convert to Application"
+        width="520px"
+        showActions
+        actions={[
+          {
+            label: "Cancel",
+            secondary: true,
+            onClick: closeConvertToApplicationModal,
+            disabled: !!convertingToAppId,
+          },
+          {
+            label: convertingToAppId
+              ? "Preparing..."
+              : "Continue to Application",
+            primary: true,
+            onClick: confirmConvertToApplication,
+            disabled: !!convertingToAppId,
+          },
+        ]}
+      >
+        {enquiryToApplication && (
+          <div className="space-y-3 text-sm text-gray-700">
+            <p>
+              Convert enquiry{" "}
+              <span className="font-semibold">
+                {enquiryToApplication.enquiryNumber || "-"}
+              </span>{" "}
+              into a{" "}
+              <span className="font-semibold">
+                {enquiryToApplication.enquiringFor || "service"}
+              </span>{" "}
+              application?
+            </p>
+            <p>
+              Enquiry details (name, email, company, notes
+              {enquiryToApplication.enquiringFor === "Inspection"
+                ? ", inspection services"
+                : ""}
+              ) will prefill the form. You can complete the remaining fields on
+              the application page.
+            </p>
+            {!enquiryToApplication.customerId ? (
+              <p>
+                If no customer exists for{" "}
                 <span className="font-semibold">
-                  {enquiryToDelete.enquiryNumber || "-"}
+                  {enquiryToApplication.email || "this email"}
                 </span>
-                ? This action cannot be undone.
+                , one will be created first (portal password emailed).
               </p>
+            ) : (
+              <p>This enquiry is already linked to a customer.</p>
             )}
-          </CustomModal>
-        </div>
-      </div>
+          </div>
+        )}
+      </CustomModal>
+
+      <CustomModal
+        open={deleteModalOpen}
+        onClose={closeDeleteModal}
+        title="Delete Enquiry"
+        width="440px"
+        showActions
+        actions={[
+          {
+            label: "Cancel",
+            secondary: true,
+            onClick: closeDeleteModal,
+            disabled: deleteLoading,
+          },
+          {
+            label: deleteLoading ? "Deleting..." : "Delete",
+            failure: true,
+            disabled: deleteLoading,
+            onClick: confirmDeleteEnquiry,
+          },
+        ]}
+      >
+        {enquiryToDelete && (
+          <p className="text-sm text-gray-700">
+            Are you sure you want to delete enquiry{" "}
+            <span className="font-semibold">
+              {enquiryToDelete.enquiryNumber || "-"}
+            </span>
+            ? This action cannot be undone.
+          </p>
+        )}
+      </CustomModal>
+    </EpcPage>
   );
 };
 

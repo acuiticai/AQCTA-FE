@@ -7,7 +7,7 @@ import TabClassCategories from "@/pages/Configuration/TabClassCategories";
 const ClassCategoriesPage = () => (
   <AppLayout>
     <Header />
-    <div className="w-full max-w-full mx-auto py-6 px-6 max-h-[90vh] overflow-y-auto pb-[120px] min-w-0 bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 min-h-screen">
+    <div className="w-full max-w-full mx-auto max-h-[90vh] overflow-y-auto pb-[80px] min-w-0">
       <SettingsOrgBanner />
       <TabClassCategories />
     </div>

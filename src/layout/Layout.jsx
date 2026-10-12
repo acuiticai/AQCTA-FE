@@ -141,7 +141,7 @@ const Layout = () => {
         </div>
       )}
       <div
-        className={`flex h-screen bg-gray-50 dark:bg-gray-900 ${
+        className={`admin-shell flex h-screen ${
           isSidebarOpen && "overflow-hidden"
         }`}
       >

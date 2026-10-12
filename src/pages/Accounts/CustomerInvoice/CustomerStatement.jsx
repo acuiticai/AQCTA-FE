@@ -6,37 +6,30 @@ import {
   FileText,
   Calendar,
   User,
-  Search,
-  Filter,
   Eye,
   RefreshCw,
   TrendingUp,
-  DollarSign,
   FileSpreadsheet,
   Printer,
   Share2,
   Info,
-  AlertCircle,
-  CheckCircle,
-  Clock,
   X,
-  ChevronDown,
-  ChevronRight,
   History,
   BookOpen,
-  CreditCard,
-  Receipt,
 } from "lucide-react";
 import axios from "axios";
 import { useHistory, useLocation } from "react-router-dom";
 import {
   formatDate,
-  formatAmount,
   formatDateToYMD,
   formatCurrencyAmount,
 } from "@/components/formatAmount";
 import { notifyError, notifySuccess } from "@/utils/toast";
-import { DataTable } from "@/page-layouts";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Button from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
 import CustomDatePicker from "@/components/CustomDatePicker";
 import SearchableDropdown from "@/components/SearchableDropdown";
 import { useRouteModulePermissions } from "@/utils/permissionUtils";
@@ -555,89 +548,144 @@ export default function CustomerStatement() {
     (c) => c._id === selectedCustomer,
   );
 
+  const previewColumns = [
+    {
+      key: "date",
+      header: ciText("Date"),
+      width: "14%",
+      render: (transaction) => (
+        <span className="epc-cell__primary">
+          {formatDate(transaction.date)}
+        </span>
+      ),
+    },
+    {
+      key: "type",
+      header: ciText("Transaction"),
+      width: "16%",
+      render: (transaction) => (
+        <StatusPill
+          status={transaction.type}
+          tone={
+            transaction.type === "Payment Received" ? "success" : "info"
+          }
+        />
+      ),
+    },
+    {
+      key: "details",
+      header: ciText("Details"),
+      width: "28%",
+      render: (transaction) => (
+        <span className="epc-cell__primary">{transaction.details}</span>
+      ),
+    },
+    {
+      key: "amount",
+      header: ciText("Amount"),
+      width: "14%",
+      align: "right",
+      render: (transaction) =>
+        transaction.amount > 0
+          ? formatCurrencyAmount(
+              previewData?.summary?.currency,
+              transaction.amount,
+            )
+          : "",
+    },
+    {
+      key: "payments",
+      header: ciText("Payments"),
+      width: "14%",
+      align: "right",
+      render: (transaction) =>
+        transaction.payments > 0
+          ? formatCurrencyAmount(
+              previewData?.summary?.currency,
+              transaction.payments,
+            )
+          : "",
+    },
+    {
+      key: "balance",
+      header: ciText("Balance"),
+      width: "14%",
+      align: "right",
+      render: (transaction) => (
+        <span className="epc-cell__primary">
+          {formatCurrencyAmount(
+            previewData?.summary?.currency,
+            transaction.balance,
+          )}
+        </span>
+      ),
+    },
+  ];
+
   return (
-    <div className="bg-gray-50 min-h-screen w-full max-w-full overflow-x-hidden">
-      <div className="w-full max-w-full mx-auto px-4 sm:px-6 py-8 min-w-0 overflow-x-hidden max-h-[90vh] overflow-y-auto pb-[120px]">
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-                {ciText("Customer Statements")}
-              </h1>
-              <p className="text-gray-600 mt-2">
-                {ciText(
-                  "Generate, preview, and download customer account statements",
+    <EpcPage
+      title={ciText("Customer Statements")}
+      subtitle={ciText(
+        "Generate, preview, and download customer account statements",
+      )}
+    >
+      {showHistory && statementHistory.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader
+            title={ciText("Statement History")}
+            subtitle={`${statementHistory.length} recent`}
+            action={<History size={18} className="text-[var(--p-blue)]" />}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 pt-0">
+            {statementHistory.slice(0, 6).map((statement) => (
+              <div
+                key={statement.id}
+                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen size={16} className="text-blue-600" />
+                  <span className="epc-cell__primary text-sm">
+                    {statement.customerName}
+                  </span>
+                </div>
+                <p className="epc-cell__secondary mb-2">
+                  {statement.businessName}
+                </p>
+                <p className="epc-cell__secondary">
+                  Generated: {formatDate(statement.generatedAt)}
+                </p>
+                {statement.dateFrom && statement.dateTo && (
+                  <p className="epc-cell__secondary">
+                    Period: {formatDate(statement.dateFrom)} -{" "}
+                    {formatDate(statement.dateTo)}
+                  </p>
                 )}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Statement History */}
-        {showHistory && statementHistory.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <History size={20} className="text-blue-600" />
-              <h2 className="text-xl font-semibold text-gray-900">
-                {ciText("Statement History")}
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {statementHistory.slice(0, 6).map((statement) => (
-                <div
-                  key={statement.id}
-                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <BookOpen size={16} className="text-blue-600" />
-                    <span className="font-medium text-sm text-gray-900">
-                      {statement.customerName}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 mb-2">
-                    {statement.businessName}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Generated: {formatDate(statement.generatedAt)}
-                  </p>
-                  {statement.dateFrom && statement.dateTo && (
-                    <p className="text-xs text-gray-500">
-                      Period: {formatDate(statement.dateFrom)} -{" "}
-                      {formatDate(statement.dateTo)}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {statementHistory.length > 6 && (
-              <p className="text-sm text-gray-500 mt-4 text-center">
-                Showing last 6 statements. Total: {statementHistory.length}
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Statement Generator */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <FileText size={20} className="text-blue-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {ciText("Generate Statement")}
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    {ciText("Select criteria and generate customer statements")}
-                  </p>
-                </div>
               </div>
+            ))}
+          </div>
+          {statementHistory.length > 6 && (
+            <p className="text-sm text-gray-500 pb-4 text-center">
+              Showing last 6 statements. Total: {statementHistory.length}
+            </p>
+          )}
+        </Card>
+      )}
 
-              <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader
+              title={ciText("Generate Statement")}
+              subtitle={ciText(
+                "Select criteria and generate customer statements",
+              )}
+              action={
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FileText size={18} className="text-blue-600" />
+                </div>
+              }
+            />
+            <div className="space-y-6 px-4 pb-4">
                 {/* Business Selection */}
                 <SingleBusinessField
                   selectedValue={selectedBusiness}
@@ -813,11 +861,10 @@ export default function CustomerStatement() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex flex-wrap gap-3 pt-4">
                   {canGenerateStatement && (
                     <>
-                      <button
+                      <Button
                         onClick={handleGeneratePreview}
                         disabled={
                           !selectedBusiness ||
@@ -825,19 +872,20 @@ export default function CustomerStatement() {
                           !hasValidDateRange ||
                           previewLoading
                         }
-                        className="flex items-center gap-2 px-6 py-3 bg-[var(--p-blue)] text-white font-medium rounded-lg hover:bg-[#9CBA33] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        loading={previewLoading}
                       >
                         {previewLoading ? (
-                          <RefreshCw size={18} className="animate-spin" />
+                          <RefreshCw size={15} className="animate-spin" />
                         ) : (
-                          <Eye size={18} />
+                          <Eye size={15} />
                         )}
                         {previewLoading
                           ? ciText("Generating...")
                           : ciText("Generate Preview")}
-                      </button>
+                      </Button>
 
-                      <button
+                      <Button
+                        variant="secondary"
                         onClick={handleDownloadPDF}
                         disabled={
                           !selectedBusiness ||
@@ -845,17 +893,17 @@ export default function CustomerStatement() {
                           !hasValidDateRange ||
                           loading
                         }
-                        className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {loading ? (
-                          <RefreshCw size={18} className="animate-spin" />
+                          <RefreshCw size={15} className="animate-spin" />
                         ) : (
-                          <Download size={18} />
+                          <Download size={15} />
                         )}
                         {loading ? ciText("Downloading...") : "Download PDF"}
-                      </button>
+                      </Button>
 
-                      <button
+                      <Button
+                        variant="secondary"
                         onClick={handleDownloadCSV}
                         disabled={
                           !selectedBusiness ||
@@ -863,58 +911,52 @@ export default function CustomerStatement() {
                           !hasValidDateRange ||
                           loading
                         }
-                        className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <FileSpreadsheet size={18} />
+                        <FileSpreadsheet size={15} />
                         {loading ? "..." : "Export CSV"}
-                      </button>
+                      </Button>
                     </>
                   )}
 
-                  <button
-                    onClick={handleClear}
-                    className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    <X size={18} />
+                  <Button variant="ghost" onClick={handleClear}>
+                    <X size={15} />
                     {ciText("Clear")}
-                  </button>
+                  </Button>
                 </div>
               </div>
-            </div>
+          </Card>
 
-            {/* Statement Preview Table */}
-            {showPreviewTable && previewData && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      {ciText("Statement Preview")}
-                    </h2>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      Generated {formatDate(new Date())}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
+          {showPreviewTable && previewData && (
+            <Card>
+              <CardHeader
+                title={ciText("Statement Preview")}
+                subtitle={`Generated ${formatDate(new Date())}`}
+                action={
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
                       onClick={handleRegenerate}
-                      className="flex items-center gap-2 px-3 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                     >
-                      <RefreshCw size={16} />
+                      <RefreshCw size={14} />
                       {ciText("Regenerate")}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       onClick={handlePrint}
                       disabled={loading}
-                      className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? (
-                        <RefreshCw size={16} className="animate-spin" />
+                        <RefreshCw size={14} className="animate-spin" />
                       ) : (
-                        <Printer size={16} />
+                        <Printer size={14} />
                       )}
                       {loading ? ciText("Opening...") : "Print"}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       onClick={handleShare}
                       disabled={
                         !selectedBusiness ||
@@ -922,292 +964,210 @@ export default function CustomerStatement() {
                         !hasValidDateRange ||
                         loading
                       }
-                      className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? (
-                        <RefreshCw size={16} className="animate-spin" />
+                        <RefreshCw size={14} className="animate-spin" />
                       ) : (
-                        <Share2 size={16} />
+                        <Share2 size={14} />
                       )}
                       {loading ? ciText("Preparing...") : ciText("Share")}
-                    </button>
+                    </Button>
                     <button
+                      type="button"
                       onClick={() => setShowPreviewTable(false)}
                       className="text-gray-500 hover:text-gray-700 p-2"
                     >
-                      <X size={20} />
+                      <X size={18} />
                     </button>
                   </div>
-                </div>
+                }
+              />
 
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="text-sm text-blue-600 font-medium">
-                      {ciText("Total Invoiced")}
-                    </div>
-                    <div className="text-2xl font-bold text-blue-800">
-                      {formatCurrencyAmount(
-                        previewData.summary.currency,
-                        previewData.summary.totalInvoiced,
-                      )}
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 px-4 mb-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-blue-600 font-medium">
+                    {ciText("Total Invoiced")}
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="text-sm text-green-600 font-medium">
-                      {ciText("Total Paid")}
-                    </div>
-                    <div className="text-2xl font-bold text-green-800">
-                      {formatCurrencyAmount(
-                        previewData.summary.currency,
-                        previewData.summary.totalPaid,
-                      )}
-                    </div>
-                  </div>
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <div className="text-sm text-orange-600 font-medium">
-                      {ciText("Balance Due")}
-                    </div>
-                    <div className="text-2xl font-bold text-orange-800">
-                      {formatCurrencyAmount(
-                        previewData.summary.currency,
-                        previewData.summary.balanceDue,
-                      )}
-                    </div>
-                  </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <div className="text-sm text-purple-600 font-medium">
-                      {ciText("Transactions")}
-                    </div>
-                    <div className="text-2xl font-bold text-purple-800">
-                      {previewData.transactions.length}
-                    </div>
+                  <div className="text-2xl font-bold text-blue-800">
+                    {formatCurrencyAmount(
+                      previewData.summary.currency,
+                      previewData.summary.totalInvoiced,
+                    )}
                   </div>
                 </div>
-
-                {/* Transaction Table */}
-                <div className="w-full overflow-x-hidden">
-                  <table className="w-full border-collapse table-fixed">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                          {ciText("Date")}
-                        </th>
-                        <th className="border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                          {ciText("Transaction")}
-                        </th>
-                        <th className="border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                          {ciText("Details")}
-                        </th>
-                        <th className="border border-gray-200 px-4 py-3 text-right text-sm font-medium text-gray-700">
-                          {ciText("Amount")}
-                        </th>
-                        <th className="border border-gray-200 px-4 py-3 text-right text-sm font-medium text-gray-700">
-                          {ciText("Payments")}
-                        </th>
-                        <th className="border border-gray-200 px-4 py-3 text-right text-sm font-medium text-gray-700">
-                          {ciText("Balance")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewData.transactions.map((transaction, index) => (
-                        <tr
-                          key={index}
-                          className={`${
-                            transaction.type === "Payment Received"
-                              ? "bg-green-50"
-                              : index % 2 === 1
-                                ? "bg-gray-50"
-                                : "bg-white"
-                          }`}
-                        >
-                          <td className="border border-gray-200 px-4 py-3 text-sm text-gray-900">
-                            {formatDate(transaction.date)}
-                          </td>
-                          <td className="border border-gray-200 px-4 py-3 text-sm text-gray-900">
-                            {transaction.type}
-                          </td>
-                          <td className="border border-gray-200 px-4 py-3 text-sm text-gray-900">
-                            {transaction.details}
-                          </td>
-                          <td className="border border-gray-200 px-4 py-3 text-sm text-gray-900 text-right">
-                            {transaction.amount > 0
-                              ? formatCurrencyAmount(
-                                  previewData.summary.currency,
-                                  transaction.amount,
-                                )
-                              : ""}
-                          </td>
-                          <td className="border border-gray-200 px-4 py-3 text-sm text-gray-900 text-right">
-                            {transaction.payments > 0
-                              ? formatCurrencyAmount(
-                                  previewData.summary.currency,
-                                  transaction.payments,
-                                )
-                              : ""}
-                          </td>
-                          <td className="border border-gray-200 px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                            {formatCurrencyAmount(
-                              previewData.summary.currency,
-                              transaction.balance,
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-sm text-green-600 font-medium">
+                    {ciText("Total Paid")}
+                  </div>
+                  <div className="text-2xl font-bold text-green-800">
+                    {formatCurrencyAmount(
+                      previewData.summary.currency,
+                      previewData.summary.totalPaid,
+                    )}
+                  </div>
                 </div>
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <div className="text-sm text-orange-600 font-medium">
+                    {ciText("Balance Due")}
+                  </div>
+                  <div className="text-2xl font-bold text-orange-800">
+                    {formatCurrencyAmount(
+                      previewData.summary.currency,
+                      previewData.summary.balanceDue,
+                    )}
+                  </div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-sm text-purple-600 font-medium">
+                    {ciText("Transactions")}
+                  </div>
+                  <div className="text-2xl font-bold text-purple-800">
+                    {previewData.transactions.length}
+                  </div>
+                </div>
+              </div>
 
-                {/* PDF Preview Section */}
-                {previewUrl && (
-                  <div className="mt-6">
-                    {/* PDF Preview */}
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">
-                            {ciText("PDF Preview")}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">
-                              {previewData.summary.currency} Currency
-                            </span>
-                          </div>
-                        </div>
+              <div className="px-4 pb-4">
+                <PortalDataTable
+                  columns={previewColumns}
+                  rows={previewData.transactions}
+                  rowKey={(row, index) =>
+                    `${row.date || ""}-${row.type || ""}-${index}`
+                  }
+                  emptyMessage={ciText("No transactions found.")}
+                />
+              </div>
+
+              {previewUrl && (
+                <div className="px-4 pb-4">
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          {ciText("PDF Preview")}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {previewData.summary.currency} Currency
+                        </span>
                       </div>
-                      <iframe
-                        src={previewUrl}
-                        className="w-full h-96"
-                        title={ciText("Customer Statement Preview")}
-                      />
                     </div>
+                    <iframe
+                      src={previewUrl}
+                      className="w-full h-96"
+                      title={ciText("Customer Statement Preview")}
+                    />
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
 
-          {/* Right Column - Information & Actions */}
-          <div className="space-y-6">
-            {/* Selected Customer Info */}
-            {selectedCustomerData && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center gap-3 mb-4">
+        <div className="space-y-6">
+          {selectedCustomerData && (
+            <Card>
+              <CardHeader
+                title={ciText("Customer Details")}
+                action={
                   <div className="p-2 bg-green-100 rounded-lg">
-                    <User size={20} className="text-green-600" />
+                    <User size={18} className="text-green-600" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {ciText("Customer Details")}
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">
-                      {ciText("Name")}
-                    </p>
-                    <p className="text-gray-900">
-                      {selectedCustomerData?.basicInformation
-                        ?.customerDisplayName || selectedCustomerData?.name}
-                    </p>
-                  </div>
-
-                  {selectedCustomerData.basicInformation?.companyName && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">
-                        {ciText("Company")}
-                      </p>
-                      <p className="text-gray-900">
-                        {selectedCustomerData?.basicInformation?.companyName}
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedCustomerData?.basicInformation?.customerEmail && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">
-                        {ciText("Email")}
-                      </p>
-                      <p className="text-gray-900">
-                        {selectedCustomerData?.basicInformation?.customerEmail}
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedCustomerData.companyInfo?.billingAddress && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">
-                        {ciText("Billing Address")}
-                      </p>
-                      <p className="text-gray-900 text-sm">
-                        {selectedCustomerData.companyInfo.billingAddress}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <TrendingUp size={20} className="text-purple-600" />
-                </div>
+                }
+              />
+              <div className="space-y-3 px-4 pb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {ciText("Quick Actions")}
-                  </h3>
+                  <p className="epc-cell__secondary">{ciText("Name")}</p>
+                  <p className="epc-cell__primary">
+                    {selectedCustomerData?.basicInformation
+                      ?.customerDisplayName || selectedCustomerData?.name}
+                  </p>
                 </div>
-              </div>
 
-              <div className="space-y-3">
-                {canAdd && (
-                  <button
-                    onClick={() => history.push("/create-customer-invoice")}
-                    className="w-full flex items-center gap-3 p-3 text-left text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <FileText size={16} className="text-blue-600" />
-                    <span>{ciText("Create New Invoice")}</span>
-                  </button>
+                {selectedCustomerData.basicInformation?.companyName && (
+                  <div>
+                    <p className="epc-cell__secondary">{ciText("Company")}</p>
+                    <p className="epc-cell__primary">
+                      {selectedCustomerData?.basicInformation?.companyName}
+                    </p>
+                  </div>
                 )}
 
-                {canViewStatement && (
-                  <button
-                    onClick={() => history.push("/customer-invoices")}
-                    className="w-full flex items-center gap-3 p-3 text-left text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <Eye size={16} className="text-green-600" />
-                    <span>{ciText("View All Invoices")}</span>
-                  </button>
+                {selectedCustomerData?.basicInformation?.customerEmail && (
+                  <div>
+                    <p className="epc-cell__secondary">{ciText("Email")}</p>
+                    <p className="epc-cell__primary">
+                      {selectedCustomerData?.basicInformation?.customerEmail}
+                    </p>
+                  </div>
+                )}
+
+                {selectedCustomerData.companyInfo?.billingAddress && (
+                  <div>
+                    <p className="epc-cell__secondary">
+                      {ciText("Billing Address")}
+                    </p>
+                    <p className="epc-cell__primary text-sm">
+                      {selectedCustomerData.companyInfo.billingAddress}
+                    </p>
+                  </div>
                 )}
               </div>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader
+              title={ciText("Quick Actions")}
+              action={
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <TrendingUp size={18} className="text-purple-600" />
+                </div>
+              }
+            />
+            <div className="space-y-3 px-4 pb-4">
+              {canAdd && (
+                <Button
+                  variant="secondary"
+                  block
+                  onClick={() => history.push("/create-customer-invoice")}
+                >
+                  <FileText size={15} />
+                  {ciText("Create New Invoice")}
+                </Button>
+              )}
+
+              {canViewStatement && (
+                <Button
+                  variant="secondary"
+                  block
+                  onClick={() => history.push("/customer-invoices")}
+                >
+                  <Eye size={15} />
+                  {ciText("View All Invoices")}
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <Info size={20} className="text-blue-600" />
+              <h3 className="text-lg font-semibold text-blue-900">
+                {ciText("Tips & Information")}
+              </h3>
             </div>
 
-            {/* Help & Tips */}
-            <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <Info size={20} className="text-blue-600" />
-                <h3 className="text-lg font-semibold text-blue-900">
-                  {ciText("Tips & Information")}
-                </h3>
-              </div>
-
-              <div className="space-y-2 text-sm text-blue-800">
-                <p>• Select customer to generate statements</p>
-                <p>• Use date range to filter specific periods</p>
-                <p>• Preview before downloading for accuracy</p>
-                <p>• CSV export includes detailed transaction data</p>
-                <p>• PDF statements are professional and print-ready</p>
-                <p>• Statements are automatically saved to history</p>
-              </div>
+            <div className="space-y-2 text-sm text-blue-800">
+              <p>• Select customer to generate statements</p>
+              <p>• Use date range to filter specific periods</p>
+              <p>• Preview before downloading for accuracy</p>
+              <p>• CSV export includes detailed transaction data</p>
+              <p>• PDF statements are professional and print-ready</p>
+              <p>• Statements are automatically saved to history</p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </EpcPage>
   );
 }

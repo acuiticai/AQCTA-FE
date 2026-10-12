@@ -1,16 +1,19 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { AdminContext } from "@/context/AdminContext";
 import ToggleSwitch from "@/components/toggle/ToggleSwitch";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { useSettingsCrudPermissions } from "@/hooks/useSettingsCrudPermissions";
-import { DataTable, ActionButtons, Loader } from "@/page-layouts";
+import { ActionButtons, Loader } from "@/page-layouts";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
+import EpcListPage from "@/components/Epc/EpcListPage";
+import Button from "@/customer/components/ui/Button";
+import { PlusIcon } from "@/customer/components/ui/icons";
 
 const BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
@@ -611,143 +614,184 @@ const PaymentMethodsSettings = () => {
     }
   };
 
-  const filters = [
-    {
-      value: statusFilter || "",
-      onChange: (value) => {
-        setStatusFilter(value || "");
-        setCurrentPage(1);
-      },
-      placeholder: t("accountsSettings.paymentMethods.selectStatus", "Select Status"),
-      options: [
-        { value: "", label: t("accountsSettings.paymentMethods.allStatuses", "All Statuses") },
-        { value: "Active", label: t("common.active") },
-        { value: "Inactive", label: t("common.inactive") },
-      ],
-    },
-  ];
-
   const paginatedItems = items.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage
   );
 
-  return (
-    <>
-      {!isOrgLoaded && !organization ? (
-        <div className="fixed inset-0 flex items-center justify-center bg-white">
-          <Loader fullContainer={true} />
-        </div>
-      ) : error ? (
-        <div>Error: {error}</div>
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-6">
-          <div className="flex justify-between items-center w-full mb-6">
-            <div className="text-lg font-semibold text-gray-700 flex items-center">
-              {t("accountsSettings.paymentMethods.activeTitle", "Active payment methods")}
-            </div>
-            <div className="flex space-x-4">
-              {canAdd && (
-                <button
-                  onClick={handleSeedMalaysianMethods}
-                  disabled={seeding}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                >
-                  {seeding ? t("accountsSettings.paymentMethods.seeding", "Seeding...") : t("accountsSettings.paymentMethods.seedMalaysian", "Seed Malaysian Methods")}
-                </button>
-              )}
-              {canAdd && (
-                <button
-                  onClick={handleAddNew}
-                  className="flex items-center px-4 py-2 bg-[#A6C437] text-white rounded-lg hover:bg-opacity-90 transition-colors text-sm font-medium"
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  {t("accountsSettings.paymentMethods.addNew", "Add New")}
-                </button>
-              )}
-            </div>
-          </div>
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: t("common.name"),
+        render: (item) => (
+          <span className="epc-cell__primary">{item.name}</span>
+        ),
+      },
+      {
+        key: "code",
+        header: t("common.code"),
+        render: (item) => item.code || "—",
+      },
+      {
+        key: "type",
+        header: t("accountsSettings.paymentMethods.type"),
+        render: (item) => (
+          <span
+            className={`text-xs px-2 py-1 rounded font-medium ${
+              item.type === "Cash"
+                ? "bg-green-100 text-green-800"
+                : "bg-blue-100 text-blue-800"
+            }`}
+          >
+            {(item.type || "Cash") === "Cash"
+              ? t("accountsSettings.paymentMethods.typeCash", "Cash")
+              : t("accountsSettings.channels.typeOnlineShort", "Online")}
+          </span>
+        ),
+      },
+      {
+        key: "description",
+        header: t("common.description"),
+        render: (item) => item.description || "—",
+      },
+      {
+        key: "status",
+        header: t("common.status"),
+        render: (item) => (
+          <ToggleSwitch
+            isOn={item.status === "Active"}
+            handleToggle={() => handleToggleStatus(item)}
+            disabled={!canUpdate}
+          />
+        ),
+      },
+      {
+        key: "actions",
+        header: t("common.actions"),
+        align: "right",
+        render: (item) => (
+          <ActionButtons
+            rbac={{ canUpdate, canDelete }}
+            items={[
+              {
+                tooltip: t("common.edit"),
+                action: ACTION_BUTTON_TYPES.EDIT,
+                onClick: () => handleEdit(item),
+              },
+              {
+                tooltip: t("common.delete"),
+                action: ACTION_BUTTON_TYPES.DELETE,
+                onClick: () => handleDelete(item._id),
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, canUpdate, canDelete]
+  );
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-w-0 max-w-full overflow-hidden">
-            <DataTable
-              loading={loading}
-              searchValue={searchTerm}
-              onSearch={(value) => {
-                setSearchTerm(value ? value.trim() : "");
-                setCurrentPage(1);
-              }}
-              searchPlaceholder={t("accountsSettings.paymentMethods.searchPlaceholder", "Search payment methods...")}
-              filters={filters}
-              totalRecords={items.length}
-              recordsPerPage={recordsPerPage}
-              onRecordsPerPageChange={(perPage) => {
-                setRecordsPerPage(perPage);
-                setCurrentPage(1);
-              }}
-              totalPages={Math.ceil(items.length / recordsPerPage)}
-              currentPage={currentPage}
-              onPageChange={(page) => setCurrentPage(page)}
-              emptyMessage={t("No data available")}
-              headers={[
-                t("common.name"),
-                t("common.code"),
-                t("accountsSettings.paymentMethods.type"),
-                t("common.description"),
-                t("common.status"),
-                t("common.actions"),
-              ]}
-              data={paginatedItems}
-              renderRow={(item) => (
-                <tr key={item._id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2 text-sm">{item.name}</td>
-                  <td className="px-4 py-2 text-sm">{item.code}</td>
-                  <td className="px-4 py-2 text-sm">
-                    <span className={`text-xs px-2 py-1 rounded font-medium ${
-                      item.type === "Cash" 
-                        ? "bg-green-100 text-green-800" 
-                        : "bg-blue-100 text-blue-800"
-                    }`}>
-                      {(item.type || "Cash") === "Cash"
-                        ? t("accountsSettings.paymentMethods.typeCash", "Cash")
-                        : t("accountsSettings.channels.typeOnlineShort", "Online")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-sm">{item.description || "-"}</td>
-                  <td className="px-4 py-2 text-sm">
-                    <ToggleSwitch
-                      isOn={item.status === "Active"}
-                      handleToggle={() => handleToggleStatus(item)}
-                      disabled={!canUpdate}
-                    />
-                  </td>
-                  <td className="px-4 py-2 text-sm font-medium">
-                    <div className="flex space-x-2 items-center">
-                      <ActionButtons
-                        rbac={{
-                          canUpdate,
-                          canDelete,
-                        }}
-                        items={[
-                          {
-                            tooltip: t("common.edit"),
-                            action: ACTION_BUTTON_TYPES.EDIT,
-                            onClick: () => handleEdit(item),
-                          },
-                          {
-                            tooltip: t("common.delete"),
-                            action: ACTION_BUTTON_TYPES.DELETE,
-                            onClick: () => handleDelete(item._id),
-                          },
-                        ]}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              )}
-            />
-          </div>
-        </div>
+  if (!isOrgLoaded && !organization) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <Loader fullContainer={true} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  return (
+    <EpcListPage
+      flush
+      title={t(
+        "accountsSettings.paymentMethods.activeTitle",
+        "Active payment methods"
       )}
+      action={
+        canAdd ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleSeedMalaysianMethods}
+              disabled={seeding}
+              loading={seeding}
+            >
+              {seeding
+                ? t("accountsSettings.paymentMethods.seeding", "Seeding...")
+                : t(
+                    "accountsSettings.paymentMethods.seedMalaysian",
+                    "Seed Malaysian Methods"
+                  )}
+            </Button>
+            <Button size="sm" onClick={handleAddNew}>
+              <PlusIcon size={15} />
+              {t("accountsSettings.paymentMethods.addNew", "Add New")}
+            </Button>
+          </div>
+        ) : null
+      }
+      searchValue={searchTerm}
+      searchPlaceholder={t(
+        "accountsSettings.paymentMethods.searchPlaceholder",
+        "Search payment methods..."
+      )}
+      onSearchChange={(value) => {
+        setSearchTerm(value ? value.trim() : "");
+        setCurrentPage(1);
+      }}
+      filterSubtitle={t(
+        "accountsSettings.paymentMethods.filterSubtitle",
+        "Filter by status or search by name."
+      )}
+      filters={[
+        {
+          key: "status",
+          placeholder: t(
+            "accountsSettings.paymentMethods.selectStatus",
+            "Select Status"
+          ),
+          options: [
+            { value: "Active", label: t("common.active") },
+            { value: "Inactive", label: t("common.inactive") },
+          ],
+        },
+      ]}
+      filterValues={{ status: statusFilter }}
+      onFilterChange={(key, value) => {
+        if (key === "status") {
+          setStatusFilter(value || "");
+          setCurrentPage(1);
+        }
+      }}
+      onFilterReset={() => {
+        setSearchTerm("");
+        setStatusFilter("");
+        setCurrentPage(1);
+      }}
+      tableTitle={t(
+        "accountsSettings.paymentMethods.activeTitle",
+        "Active payment methods"
+      )}
+      columns={columns}
+      rows={paginatedItems}
+      loading={loading}
+      emptyMessage={t("No data available")}
+      page={currentPage}
+      pageSize={recordsPerPage}
+      total={items.length}
+      itemLabel="payment methods"
+      onPageChange={setCurrentPage}
+      onPageSizeChange={(perPage) => {
+        setRecordsPerPage(perPage);
+        setCurrentPage(1);
+      }}
+    >
       <AddEditModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -762,7 +806,7 @@ const PaymentMethodsSettings = () => {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDeleteClick}
       />
-    </>
+    </EpcListPage>
   );
 };
 

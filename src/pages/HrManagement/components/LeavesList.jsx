@@ -3,10 +3,16 @@ import { useTranslation } from "react-i18next";
 import axios from "axios";
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 import { notifyError, notifySuccess } from "@/utils/toast";
-import { DataTable, CustomModal, ActionButtons } from "@/page-layouts/index";
+import { CustomModal, ActionButtons } from "@/page-layouts/index";
 import { formatDate } from "@/components/formatAmount";
 import { AdminContext } from "@/context/AdminContext";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import StatusPill from "@/customer/components/ui/StatusPill";
 
 const LeavesList = ({
   leaves,
@@ -14,6 +20,7 @@ const LeavesList = ({
   currentPage,
   recordsPerPage,
   totalPages,
+  totalResults = 0,
   onPageChange,
   onRecordsPerPageChange,
   loading,
@@ -196,22 +203,6 @@ const LeavesList = ({
       const timeUntilDeadline = sixHoursBefore - now;
       const timeStr = formatTimeRemaining(timeUntilDeadline);
       return `⏰ Approval/rejection must be done at least 6 hours before the leave start date. ${timeStr} remaining.`;
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Approved":
-        return "text-green-500 bg-green-50";
-      case "Rejected":
-        return "text-red-500 bg-red-50";
-      case "Cancelled":
-        return "text-gray-500 bg-gray-50";
-      case "Applied":
-      case "Pending":
-        return "text-yellow-500 bg-yellow-50";
-      default:
-        return "text-yellow-500 bg-yellow-50";
     }
   };
 
@@ -1096,529 +1087,462 @@ const LeavesList = ({
     );
   };
 
-  const leaveTableFilters = useMemo(() => {
-    const filters = [
-      {
-        isClearButton: true,
-        buttonProps: {
-          onClick: onClearLeaveFilters,
-        },
-      },
-    ];
+  const portalFilters = useMemo(() => {
+    const filters = [];
 
     if (!isStaff) {
       filters.push(
         {
-          isTextInput: true,
-          name: "name",
-          value: searchParams.name || "",
-          onChange: (v) =>
-            setSearchParams((prev) => ({ ...prev, name: v })),
-          placeholder: t("leaveManagement.searchByNameIc"),
-        },
-        {
+          key: "department",
+          placeholder: t("leaveManagement.searchByDepartment"),
           options: [
-            {
-              value: "",
-              label: t("leaveManagement.searchByDepartment"),
-            },
+            { value: "", label: t("leaveManagement.searchByDepartment") },
             ...(departments?.map((dept) => ({
               value: dept._id,
               label: dept.name,
             })) || []),
           ],
-          value: searchParams.department || "",
-          onChange: (val) =>
-            setSearchParams((prev) => ({ ...prev, department: val })),
-          placeholder: t("leaveManagement.searchByDepartment"),
-          isClearable: true,
         },
         {
+          key: "position",
+          placeholder: t("leaveManagement.searchByPosition"),
           options: [
-            {
-              value: "",
-              label: t("leaveManagement.searchByPosition"),
-            },
+            { value: "", label: t("leaveManagement.searchByPosition") },
             ...(positions?.map((pos) => ({
               value: pos._id,
               label: pos.name,
             })) || []),
           ],
-          value: searchParams.position || "",
-          onChange: (val) =>
-            setSearchParams((prev) => ({ ...prev, position: val })),
-          placeholder: t("leaveManagement.searchByPosition"),
-          isClearable: true,
         }
       );
     }
 
-    filters.push(
-      {
-        options: [
-          { value: "", label: t("leaveManagement.searchByStatus") },
-          { value: "Applied", label: "Applied" },
-          { value: "Approved", label: "Approved" },
-          { value: "Rejected", label: "Rejected" },
-          { value: "Cancelled", label: "Cancelled" },
-        ],
-        value: searchParams.status || "",
-        onChange: (val) =>
-          setSearchParams((prev) => ({ ...prev, status: val })),
-        placeholder: t("leaveManagement.searchByStatus"),
-        isClearable: true,
-      },
-      {
-        isDatePicker: true,
-        value: searchParams.startDate || "",
-        onChange: (date) =>
-          setSearchParams((prev) => ({ ...prev, startDate: date })),
-        clearable: true,
-      },
-      {
-        isDatePicker: true,
-        value: searchParams.endDate || "",
-        onChange: (date) =>
-          setSearchParams((prev) => ({ ...prev, endDate: date })),
-        clearable: true,
-      }
-    );
+    filters.push({
+      key: "status",
+      placeholder: t("leaveManagement.searchByStatus"),
+      options: [
+        { value: "", label: t("leaveManagement.searchByStatus") },
+        { value: "Applied", label: "Applied" },
+        { value: "Approved", label: "Approved" },
+        { value: "Rejected", label: "Rejected" },
+        { value: "Cancelled", label: "Cancelled" },
+      ],
+    });
 
     return filters;
-  }, [
-    departments,
-    positions,
-    isStaff,
-    onClearLeaveFilters,
-    searchParams.department,
-    searchParams.endDate,
-    searchParams.name,
-    searchParams.position,
-    searchParams.startDate,
-    searchParams.status,
-    setSearchParams,
-    t,
-  ]);
+  }, [departments, positions, isStaff, t]);
+
+  const portalFilterValues = {
+    department: searchParams.department || "",
+    position: searchParams.position || "",
+    status: searchParams.status || "",
+  };
+
+  const handlePortalFilterChange = (key, value) => {
+    setSearchParams((prev) => ({ ...prev, [key]: value || "" }));
+  };
 
   const filteredLeaves = leaves.filter(
     (leave) =>
       leave.employee?.displayName
-        .toLowerCase()
+        ?.toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
-      leave.leaveType?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      leave.leaveType?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       leave.status?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const leaveTableColWidths = useMemo(() => {
-    const widths = {
-      [t("leaveManagement.leaveType")]: "95px",
-      [t("leaveManagement.startDate")]: "118px",
-      [t("leaveManagement.endDate")]: "118px",
-      [t("leaveManagement.supportingDocuments")]: "135px",
-      [t("leaveManagement.status")]: "145px",
-      [t("leaveManagement.remarks")]: "75px",
-      [t("leaveManagement.action")]: "250px",
-    };
-    if (!isStaff) {
-      widths[t("leaveManagement.name")] = "165px";
-    }
-    return widths;
-  }, [t, isStaff]);
+  const renderLeaveStatusCell = (leave) => {
+    const leaveApprovalLevels = getLeaveApprovalChainForRow(leave);
+    const approvals = leave.approvals || [];
 
-  const leaveActionHeader = t("leaveManagement.action");
+    if (leaveApprovalLevels.length === 0) {
+      const displayStatus =
+        leave.status === "Cancelled" ? "Cancelled" : leave.status;
+      return <StatusPill status={displayStatus || "—"} />;
+    }
+
+    if (
+      leave.status === "Cancelled" ||
+      leave.cancellationRequest?.status === "Approved"
+    ) {
+      return <StatusPill status="Cancelled" />;
+    }
+
+    if (leave.status === "Approved") {
+      return (
+        <div className="flex flex-col gap-1.5 w-fit max-w-[200px]">
+          <StatusPill status="Approved" />
+          <div
+            className="relative group cursor-pointer w-full"
+            title="This leave has been fully approved"
+          >
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div className="bg-green-500 h-2 w-full rounded-full" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (leave.status === "Rejected") {
+      return (
+        <div className="flex flex-col gap-1.5 w-fit max-w-[200px]">
+          <StatusPill status="Rejected" />
+          <div
+            className="relative group cursor-pointer w-full"
+            title="This leave has been rejected"
+          >
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div className="bg-red-500 h-2 w-full rounded-full" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const allLevels = leaveApprovalLevels
+      .map((l) => ({
+        level: typeof l.level === "number" ? l.level : parseInt(l.level),
+        config: l,
+      }))
+      .sort((a, b) => a.level - b.level);
+
+    const approvedLevels = approvals
+      .filter((a) => a.status === "Approved")
+      .map((a) => a.level);
+    const rejectedLevels = approvals
+      .filter((a) => a.status === "Rejected")
+      .map((a) => a.level);
+
+    const allApproved = allLevels.every((l) =>
+      approvedLevels.includes(l.level)
+    );
+    const anyRejected = rejectedLevels.length > 0;
+    const pendingCount = allLevels.length - approvedLevels.length;
+
+    const tooltipText = allApproved
+      ? `All ${allLevels.length} level(s) approved`
+      : anyRejected
+        ? `Rejected at level(s): ${rejectedLevels.join(", ")}`
+        : `${approvedLevels.length} of ${allLevels.length} level(s) approved. ${pendingCount} remaining.`;
+
+    const overallStatus = allApproved
+      ? "Approved"
+      : anyRejected
+        ? "Rejected"
+        : "Pending";
+
+    return (
+      <div className="flex flex-col gap-1.5 w-fit max-w-[200px]">
+        <StatusPill status={overallStatus} />
+        <div
+          className="relative group cursor-pointer w-full"
+          title={tooltipText}
+        >
+          <div className="w-full bg-gray-200 rounded-full h-2 flex overflow-hidden">
+            {allLevels.map((levelInfo, index) => {
+              const isApproved = approvedLevels.includes(levelInfo.level);
+              const isRejected = rejectedLevels.includes(levelInfo.level);
+              let bgColor = "bg-gray-300";
+              if (isApproved) bgColor = "bg-green-500";
+              if (isRejected) bgColor = "bg-red-500";
+
+              return (
+                <div
+                  key={levelInfo.level}
+                  className={`${bgColor} flex-1 ${
+                    index < allLevels.length - 1 ? "border-r border-white" : ""
+                  } transition-colors duration-200`}
+                  style={{ width: `${100 / allLevels.length}%` }}
+                  title={`Level ${levelInfo.level}: ${
+                    isApproved
+                      ? "Approved"
+                      : isRejected
+                        ? "Rejected"
+                        : "Pending"
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderStaffActions = (leave) => {
+    const hasCancellationRequest =
+      leave.cancellationRequest?.requested &&
+      leave.cancellationRequest?.status === "Pending";
+    const cancellationApproved =
+      leave.cancellationRequest?.status === "Approved";
+    const canCancel =
+      canRequestCancellation(leave) &&
+      leave.status !== "Cancelled" &&
+      !hasCancellationRequest;
+
+    if (leave.status === "Cancelled" || cancellationApproved) {
+      return (
+        <span className="text-gray-400 text-sm font-medium flex flex-col items-center gap-1">
+          <span>N/A</span>
+        </span>
+      );
+    }
+
+    if (hasCancellationRequest) {
+      return (
+        <div className="flex items-center justify-center gap-1">
+          <span className="text-orange-600 text-sm font-medium text-center flex flex-col items-center justify-center gap-1">
+            <span>Cancellation</span> <span>Requested</span>
+          </span>
+          <div className="relative group">
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 max-w-xs whitespace-normal text-left">
+              {getCancellationTimeMessage(leave, false)}
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                <div className="border-4 border-transparent border-t-gray-800"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (canCancel) {
+      return (
+        <div className="flex items-center justify-center gap-1">
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={() => handleCancellationRequest(leave._id)}
+              className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-1.5 rounded transition-colors"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                ></path>
+              </svg>
+              <span>Cancel</span>
+            </button>
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 max-w-xs whitespace-normal text-left">
+              {getCancellationTimeMessage(leave, true)}
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                <div className="border-4 border-transparent border-t-gray-800"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-gray-400 text-sm font-medium flex flex-col items-center gap-1">
+          <span>N/A</span>
+        </span>
+        <div className="relative group">
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 max-w-xs">
+            {getCancellationTimeMessage(leave, true)}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+              <div className="border-4 border-transparent border-t-gray-800"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const columns = useMemo(
+    () => [
+      ...(!isStaff
+        ? [
+            {
+              key: "name",
+              header: t("leaveManagement.name"),
+              render: (leave) => (
+                <div className="flex items-center gap-2">
+                  {leave.employee?.image ? (
+                    <img
+                      src={`${leave.employee?.image}`}
+                      alt={leave.employee.displayName}
+                      className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                      {leave.employee?.displayName?.charAt(0) || "?"}
+                    </div>
+                  )}
+                  <span className="epc-cell__primary">
+                    {leave.employee?.displayName || "—"}
+                  </span>
+                </div>
+              ),
+            },
+          ]
+        : []),
+      {
+        key: "leaveType",
+        header: t("leaveManagement.leaveType"),
+        render: (leave) => (
+          <span className="epc-cell__primary">
+            {leave.leaveType?.name || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "startDate",
+        header: t("leaveManagement.startDate"),
+        render: (leave) => formatDate(leave.startDate),
+      },
+      {
+        key: "endDate",
+        header: t("leaveManagement.endDate"),
+        render: (leave) => formatDate(leave.endDate),
+      },
+      {
+        key: "documents",
+        header: t("leaveManagement.supportingDocuments"),
+        render: (leave) =>
+          leave.supportingDocuments ? (
+            <button
+              type="button"
+              onClick={() =>
+                HandleOpenFile(leave.supportingDocuments.fileId)
+              }
+              className="epc-cell__link"
+            >
+              {leave.supportingDocuments.name}
+            </button>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        key: "status",
+        header: t("leaveManagement.status"),
+        render: (leave) => renderLeaveStatusCell(leave),
+      },
+      {
+        key: "remarks",
+        header: t("leaveManagement.remarks"),
+        render: (leave) => (
+          <span className="epc-cell__secondary">{leave.remarks || "—"}</span>
+        ),
+      },
+      {
+        key: "actions",
+        header: t("leaveManagement.action"),
+        align: "right",
+        render: (leave) =>
+          isStaff ? renderStaffActions(leave) : getActionButtons(leave),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, isStaff]
+  );
+
+  const tableRows = filteredLeaves.filter((leave) => leave?.employee);
 
   return (
-    <div>
-      <div className="overflow-x-auto">
-        <DataTable
-          wideTable
-          skipDynamicColumnWidths
-          actionColumnHeaderLabel={leaveActionHeader}
-          headersWithoutCellTooltip={[leaveActionHeader]}
-          filters={leaveTableFilters}
-          searchValue={searchQuery}
-          onSearch={(value) => setSearchQuery(value)}
-          searchPlaceholder={t("leaveManagement.search")}
-          headers={[
-            ...(!isStaff ? [t("leaveManagement.name")] : []),
-            t("leaveManagement.leaveType"),
-            t("leaveManagement.startDate"),
-            t("leaveManagement.endDate"),
-            t("leaveManagement.supportingDocuments"),
-            t("leaveManagement.status"),
-            t("leaveManagement.remarks"),
-            leaveActionHeader,
-          ]}
-          data={filteredLeaves}
-          colWidths={leaveTableColWidths}
-          totalPages={totalPages}
-          currentPage={currentPage}
-          onPageChange={onPageChange}
-          recordsPerPage={recordsPerPage}
-          onRecordsPerPageChange={onRecordsPerPageChange}
-          loading={loading}
-          renderRow={(leave) => {
-            return (
-              leave?.employee && (
-                <tr key={leave._id} className="border-b border-gray-100">
-                  {!isStaff && (
-                    <td className="py-4 px-4">
-                      <div className="flex items-center">
-                        {leave.employee?.image ? (
-                          <img
-                            src={`${leave.employee?.image}`}
-                            alt={leave.employee.displayName}
-                            className="w-16 h-16 rounded-xl mr-3 object-cover"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 flex items-center justify-center">
-                            {leave.employee.displayName.charAt(0)}
-                          </div>
-                        )}
-                        <span>{leave.employee.displayName}</span>
-                      </div>
-                    </td>
-                  )}
-                  <td className="py-4 px-4">{leave.leaveType.name}</td>
-                  <td className="py-4 px-4">{formatDate(leave.startDate)}</td>
-                  <td className="py-4 px-4">{formatDate(leave.endDate)}</td>
-                  <td className="py-4 px-4">
-                    {leave.supportingDocuments ? (
-                      <button
-                        onClick={() =>
-                          HandleOpenFile(leave.supportingDocuments.fileId)
-                        }
-                        className="hover:underline"
-                      >
-                        {leave.supportingDocuments.name}
-                      </button>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td className="py-4 px-4">
-                    {(() => {
-                      const leaveApprovalLevels =
-                        getLeaveApprovalChainForRow(leave);
-                      const approvals = leave.approvals || [];
+    <EpcPage flush>
+      <div className="epc-stack">
+      <FilterBar
+        subtitle={t("leaveManagement.search")}
+        searchPlaceholder={
+          isStaff
+            ? t("leaveManagement.search")
+            : t("leaveManagement.searchByNameIc")
+        }
+        searchValue={isStaff ? searchQuery : searchParams.name || searchQuery}
+        onSearchChange={(value) => {
+          setSearchQuery(value);
+          if (!isStaff) {
+            setSearchParams((prev) => ({ ...prev, name: value }));
+          }
+        }}
+        filters={portalFilters}
+        values={portalFilterValues}
+        onChange={handlePortalFilterChange}
+        onReset={() => {
+          setSearchQuery("");
+          onClearLeaveFilters();
+        }}
+      />
 
-                      if (leaveApprovalLevels.length === 0) {
-                        // No approval levels configured, show regular status
-                        const displayStatus =
-                          leave.status === "Cancelled"
-                            ? "Cancelled"
-                            : leave.status;
-                        return (
-                          <span
-                            className={`px-3 py-1 rounded-full ${getStatusColor(
-                              displayStatus
-                            )}`}
-                          >
-                            {displayStatus}
-                          </span>
-                        );
-                      }
+      <div className="flex flex-wrap gap-3 items-center">
+        <label className="text-sm text-gray-600 flex items-center gap-2">
+          <span>From</span>
+          <input
+            type="date"
+            value={searchParams.startDate || ""}
+            onChange={(e) =>
+              setSearchParams((prev) => ({
+                ...prev,
+                startDate: e.target.value,
+              }))
+            }
+            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm text-gray-600 flex items-center gap-2">
+          <span>To</span>
+          <input
+            type="date"
+            value={searchParams.endDate || ""}
+            onChange={(e) =>
+              setSearchParams((prev) => ({
+                ...prev,
+                endDate: e.target.value,
+              }))
+            }
+            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+          />
+        </label>
+      </div>
 
-                      // If leave is cancelled, show cancelled status
-                      if (
-                        leave.status === "Cancelled" ||
-                        leave.cancellationRequest?.status === "Approved"
-                      ) {
-                        return (
-                          <div className="flex flex-col gap-1.5 w-fit max-w-[200px]">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium w-fit ${getStatusColor(
-                                "Cancelled"
-                              )}`}
-                            >
-                              Cancelled
-                            </span>
-                          </div>
-                        );
-                      }
-
-                      // Finalized leave: trust API status, not current employee level config
-                      // (approval level count can increase after the leave was approved).
-                      if (leave.status === "Approved") {
-                        return (
-                          <div className="flex flex-col gap-1.5 w-fit max-w-[200px]">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium w-fit ${getStatusColor(
-                                "Approved"
-                              )}`}
-                            >
-                              Approved
-                            </span>
-                            <div
-                              className="relative group cursor-pointer w-full"
-                              title="This leave has been fully approved"
-                            >
-                              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                <div className="bg-green-500 h-2 w-full rounded-full" />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      if (leave.status === "Rejected") {
-                        return (
-                          <div className="flex flex-col gap-1.5 w-fit max-w-[200px]">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium w-fit ${getStatusColor(
-                                "Rejected"
-                              )}`}
-                            >
-                              Rejected
-                            </span>
-                            <div
-                              className="relative group cursor-pointer w-full"
-                              title="This leave has been rejected"
-                            >
-                              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                <div className="bg-red-500 h-2 w-full rounded-full" />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      // Get all levels and their approval status
-                      const allLevels = leaveApprovalLevels
-                        .map((l) => ({
-                          level:
-                            typeof l.level === "number"
-                              ? l.level
-                              : parseInt(l.level),
-                          config: l,
-                        }))
-                        .sort((a, b) => a.level - b.level);
-
-                      const approvedLevels = approvals
-                        .filter((a) => a.status === "Approved")
-                        .map((a) => a.level);
-                      const rejectedLevels = approvals
-                        .filter((a) => a.status === "Rejected")
-                        .map((a) => a.level);
-
-                      // Check if all levels are approved
-                      const allApproved = allLevels.every((l) =>
-                        approvedLevels.includes(l.level)
-                      );
-                      const anyRejected = rejectedLevels.length > 0;
-                      const pendingCount =
-                        allLevels.length - approvedLevels.length;
-
-                      // Build tooltip text
-                      const tooltipText = allApproved
-                        ? `All ${allLevels.length} level(s) approved`
-                        : anyRejected
-                        ? `Rejected at level(s): ${rejectedLevels.join(", ")}`
-                        : `${approvedLevels.length} of ${allLevels.length} level(s) approved. ${pendingCount} remaining.`;
-
-                      // Calculate percentage for progress bar
-                      const progressPercentage =
-                        (approvedLevels.length / allLevels.length) * 100;
-
-                      // Determine the overall status
-                      const overallStatus = allApproved
-                        ? "Approved"
-                        : anyRejected
-                        ? "Rejected"
-                        : "Pending";
-
-                      return (
-                        <div className="flex flex-col gap-1.5 w-fit max-w-[200px]">
-                          {/* Status text */}
-                          <span
-                            className={`px-3 py-1 rounded-full text-sm font-medium w-fit ${getStatusColor(
-                              overallStatus
-                            )}`}
-                          >
-                            {overallStatus}
-                          </span>
-                          {/* Progress bar */}
-                          <div
-                            className="relative group cursor-pointer w-full"
-                            title={tooltipText}
-                          >
-                            <div className="w-full bg-gray-200 rounded-full h-2 flex overflow-hidden">
-                              {allLevels.map((levelInfo, index) => {
-                                const isApproved = approvedLevels.includes(
-                                  levelInfo.level
-                                );
-                                const isRejected = rejectedLevels.includes(
-                                  levelInfo.level
-                                );
-                                const isPending = !isApproved && !isRejected;
-
-                                let bgColor = "bg-gray-300"; // Pending
-                                if (isApproved) bgColor = "bg-green-500";
-                                if (isRejected) bgColor = "bg-red-500";
-
-                                return (
-                                  <div
-                                    key={levelInfo.level}
-                                    className={`${bgColor} flex-1 ${
-                                      index < allLevels.length - 1
-                                        ? "border-r border-white"
-                                        : ""
-                                    } transition-colors duration-200`}
-                                    style={{
-                                      width: `${100 / allLevels.length}%`,
-                                    }}
-                                    title={`Level ${levelInfo.level}: ${
-                                      isApproved
-                                        ? "Approved"
-                                        : isRejected
-                                        ? "Rejected"
-                                        : "Pending"
-                                    }`}
-                                  />
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </td>
-                  <td className="py-4 px-4">{leave.remarks || "-"}</td>
-                  {!isStaff && (
-                    <td className="py-4 px-4 align-top overflow-visible whitespace-normal">
-                      {getActionButtons(leave)}
-                    </td>
-                  )}
-                  {isStaff && (
-                    <td className="py-4 px-4">
-                      {(() => {
-                        const hasCancellationRequest =
-                          leave.cancellationRequest?.requested &&
-                          leave.cancellationRequest?.status === "Pending";
-                        const cancellationApproved =
-                          leave.cancellationRequest?.status === "Approved";
-                        const canCancel =
-                          canRequestCancellation(leave) &&
-                          leave.status !== "Cancelled" &&
-                          !hasCancellationRequest;
-
-                        if (
-                          leave.status === "Cancelled" ||
-                          cancellationApproved
-                        ) {
-                          return (
-                            <span className="text-gray-400 text-sm font-medium flex flex-col items-center gap-1">
-                              <span>N/A</span>
-                            </span>
-                          );
-                        }
-
-                        if (hasCancellationRequest) {
-                          return (
-                            <div className="flex items-center justify-center gap-1">
-                              <span className="text-orange-600 text-sm font-medium text-center flex flex-col items-center justify-center gap-1">
-                                <span>Cancellation</span> <span>Requested</span>
-                              </span>
-                              <div className="relative group">
-                                {/* <svg
-                                  className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                  ></path>
-                                </svg> */}
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 max-w-xs whitespace-normal text-left">
-                                  {getCancellationTimeMessage(leave, false)}
-                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                                    <div className="border-4 border-transparent border-t-gray-800"></div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        if (canCancel) {
-                          return (
-                            <div className="flex items-center justify-center gap-1">
-                              <div className="relative group">
-                                <button
-                                  onClick={() =>
-                                    handleCancellationRequest(leave._id)
-                                  }
-                                  className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-1.5 rounded transition-colors"
-                                >
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                    ></path>
-                                  </svg>
-                                  <span>Cancel</span>
-                                </button>
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 max-w-xs whitespace-normal text-left">
-                                  {getCancellationTimeMessage(leave, true)}
-                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                                    <div className="border-4 border-transparent border-t-gray-800"></div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div className="flex flex-col items-center gap-1">
-                            <span className="text-gray-400 text-sm font-medium flex flex-col items-center gap-1">
-                              <span>N/A</span>
-                            </span>
-                            <div className="relative group">
-                              {/* <svg
-                                className="w-4 h-4 text-red-400 hover:text-red-600 cursor-help"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                ></path>
-                              </svg> */}
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 max-w-xs">
-                                {getCancellationTimeMessage(leave, true)}
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                                  <div className="border-4 border-transparent border-t-gray-800"></div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </td>
-                  )}
-                </tr>
-              )
-            );
-          }}
+      <Card>
+        <CardHeader
+          title={t("leaveManagement.leave") || "Leaves"}
+          subtitle={
+            loading
+              ? "Loading…"
+              : `${tableRows.length} ${
+                  tableRows.length === 1 ? "leave" : "leaves"
+                }`
+          }
         />
+
+        <PortalDataTable
+          columns={columns}
+          rows={loading ? [] : tableRows}
+          rowKey="_id"
+          emptyMessage={
+            loading ? "Loading…" : t("No data available") || "No leaves found."
+          }
+        />
+
+        {!loading && (totalResults > 0 || totalPages > 0) ? (
+          <Pagination
+            page={currentPage}
+            pageSize={recordsPerPage}
+            total={
+              totalResults ||
+              (totalPages > 0 ? totalPages * recordsPerPage : tableRows.length)
+            }
+            itemLabel="leaves"
+            onPageChange={onPageChange}
+            onPageSizeChange={onRecordsPerPageChange}
+          />
+        ) : null}
+      </Card>
       </div>
 
       {/* Approval Modal */}
@@ -1966,7 +1890,7 @@ const LeavesList = ({
           </>
         )}
       </CustomModal>
-    </div>
+    </EpcPage>
   );
 };
 

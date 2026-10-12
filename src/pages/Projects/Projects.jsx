@@ -1,13 +1,17 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
-import { FileText } from "lucide-react";
 import {
-  DataTable,
   ActionButtons,
-  SummaryCards,
   CustomModal,
   DropdownBasic,
+  SummaryCards,
 } from "@/page-layouts";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import StatusPill from "@/customer/components/ui/StatusPill";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import useCheckTokenExpired from "@/hooks/useCheckTokenExpired";
@@ -21,14 +25,6 @@ import ProjectHistoryModal from "./ProjectHistoryModal";
 import SummarySvg from "@/assets/img/summary.svg";
 import CompletedSvg from "@/assets/img/completed.svg";
 import InProgressSvg from "@/assets/img/in-progress.svg";
-
-const STATUS_STYLES = {
-  Open: "bg-blue-100 text-blue-800",
-  "In Progress": "bg-indigo-100 text-indigo-800",
-  "On Hold": "bg-amber-100 text-amber-800",
-  Completed: "bg-emerald-100 text-emerald-800",
-  Cancelled: "bg-rose-100 text-rose-800",
-};
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -69,9 +65,8 @@ const Projects = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [scopedToMe, setScopedToMe] = useState(false);
   const [statusChangeRow, setStatusChangeRow] = useState(null);
@@ -86,28 +81,6 @@ const Projects = () => {
     }),
     [adminInfo?.token],
   );
-
-  const headers = [
-    "Project",
-    "Customer / Product",
-    "Type",
-    "Value",
-    "Status",
-    "Invoice",
-    "Accepted",
-    "Actions",
-  ];
-
-  const colWidths = {
-    Project: "180px",
-    "Customer / Product": "220px",
-    Type: "160px",
-    Value: "130px",
-    Status: "130px",
-    Invoice: "140px",
-    Accepted: "140px",
-    Actions: "160px",
-  };
 
   const fetchProjects = async () => {
     if (!adminInfo?.token) {
@@ -124,7 +97,7 @@ const Projects = () => {
           page: currentPage,
           limit: recordsPerPage,
           search: searchTerm || undefined,
-          status: statusFilter !== "all" ? statusFilter : undefined,
+          status: statusFilter || undefined,
         },
         {
           headers: authHeaders,
@@ -134,17 +107,12 @@ const Projects = () => {
       if (checkTokenExpired(response)) return;
 
       setRows(Array.isArray(response.data?.data) ? response.data.data : []);
-      const metaTotal = response.data?.meta?.total || 0;
-      setTotal(metaTotal);
-      setTotalPages(
-        Math.max(1, Math.ceil(metaTotal / (Number(recordsPerPage) || 10))),
-      );
+      setTotal(response.data?.meta?.total || 0);
       setScopedToMe(Boolean(response.data?.meta?.scopedToMe));
     } catch (error) {
       notifyError(error?.response?.data?.message || "Failed to load projects");
       setRows([]);
       setTotal(0);
-      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -165,16 +133,6 @@ const Projects = () => {
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
-
-  const getStatusBadge = (status) => (
-    <span
-      className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
-        STATUS_STYLES[status] || "bg-gray-100 text-gray-800"
-      }`}
-    >
-      {status || "—"}
-    </span>
-  );
 
   const openStatusChangeModal = (row) => {
     setStatusChangeRow(row);
@@ -224,33 +182,6 @@ const Projects = () => {
     }
   };
 
-  const clearAllFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setCurrentPage(1);
-  };
-
-  const filters = [
-    {
-      isClearButton: true,
-      buttonProps: { onClick: clearAllFilters },
-    },
-    {
-      label: "Status",
-      value: statusFilter,
-      onChange: (value) => {
-        setStatusFilter(value);
-        setCurrentPage(1);
-      },
-      options: [
-        { value: "all", label: "All Statuses" },
-        ...PROJECT_STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
-      ],
-      placeholder: "Select Status",
-      icon: FileText,
-    },
-  ];
-
   const countOf = (status) => rows.filter((r) => r.status === status).length;
 
   const summaryCardsData = [
@@ -284,157 +215,225 @@ const Projects = () => {
     },
   ];
 
-  return (
-    <div className="bg-gray-50 min-h-screen w-full max-w-full overflow-x-hidden">
-      <div className="w-full max-w-full mx-auto px-6 py-8 min-w-0 overflow-x-hidden">
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-              <p className="text-gray-600 mt-2">
-                {scopedToMe
-                  ? "The certification jobs assigned to you. Open one to run its audit."
-                  : "Certification work in progress. A project opens when a customer accepts their quotation, and its audit is run from here."}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <SummaryCards cards={summaryCardsData} columnsCount={4} />
-
-        <DataTable
-          onSearch={(value) => {
-            setSearchTerm(value);
-            setCurrentPage(1);
-          }}
-          searchValue={searchTerm}
-          searchPlaceholder="Search by project, job, certificate, report, application, customer or product…"
-          filters={filters}
-          headers={headers}
-          headersToHide={[]}
-          colWidths={colWidths}
-          wideTable
-          skipDynamicColumnWidths
-          data={rows}
-          totalRecords={total}
-          loading={loading}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          recordsPerPage={recordsPerPage}
-          onPageChange={setCurrentPage}
-          onRecordsPerPageChange={(perPage) => {
-            setRecordsPerPage(perPage);
-            setCurrentPage(1);
-          }}
-          renderRow={(row) => (
-            <tr key={row._id} className="border-b">
-              <td className="py-2 px-4 whitespace-nowrap">
-                {row._id ? (
-                  <button
-                    type="button"
-                    className="text-[var(--p-blue)] hover:underline font-medium text-left whitespace-nowrap"
-                    title={row.projectNumber || ""}
-                    onClick={() => history.push(`/projects/${row._id}`)}
-                  >
-                    {row.projectNumber || "—"}
-                  </button>
-                ) : (
-                  <span className="whitespace-nowrap">
-                    {row.projectNumber || "—"}
-                  </span>
-                )}
-                <div className="text-xs text-gray-500">
-                  {row.applicationNumber || "—"}
-                  {row.jobNo ? ` · ${row.jobNo}` : ""}
-                  {row.quotationRef ? ` · ${row.quotationRef}` : ""}
-                </div>
-              </td>
-              <td className="py-2 px-4">
-                <div className="font-medium text-gray-900">
-                  {row.companyName || "—"}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {row.productName || ""}
-                </div>
-              </td>
-              <td className="py-2 px-4 text-sm" title={row.service || ""}>
-                <div className="font-medium text-gray-900">
-                  {row.service || "—"}
-                </div>
-                {row.certificationType ? (
-                  <div className="text-xs text-gray-500">
-                    {row.certificationType}
-                  </div>
-                ) : null}
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap text-sm">
-                {money(row.contractValue, row.currency)}
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap">
-                {getStatusBadge(row.status)}
-              </td>
-              <td className="py-2 px-4">
-                {getStatusBadge(row.invoiceStatus)}
-                {row.invoiceNumber ? (
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {row.invoiceNumber}
-                  </div>
-                ) : null}
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap">
-                <div className="text-sm">
-                  {formatDate(row.quotationAcceptedAt)}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {row.quotationAcceptedBy || "—"}
-                </div>
-              </td>
-              <td className="py-2 px-4">
-                <ActionButtons
-                  maxVisibleActions={2}
-                  items={[
-                    {
-                      action: ACTION_BUTTON_TYPES.VIEW,
-                      title: "Open audit",
-                      onClick: () => history.push(`/projects/${row._id}`),
-                    },
-                    {
-                      action: ACTION_BUTTON_TYPES.HISTORY,
-                      title: "Activity log",
-                      onClick: () => setHistoryRow(row),
-                    },
-                    ...(routePerms.canUpdate
-                      ? [
-                          {
-                            action: ACTION_BUTTON_TYPES.CHANGE_STATUS,
-                            title: "Change Status",
-                            onClick: () => openStatusChangeModal(row),
-                          },
-                        ]
-                      : []),
-                    /* List menu: only the next unfinished audit stage.
-                       Completed / approved ones stay off this overflow —
-                       the project detail page shows the full workflow. */
-                    ...[currentWorkflowStage(row.workflow)]
-                      .filter(Boolean)
-                      .map((stage) => ({
-                        action: ACTION_BUTTON_TYPES.WORKFLOW,
-                        title: stage.title,
-                        description: [stage.documentCode, stage.status]
-                          .filter(Boolean)
-                          .join(" · "),
-                        onClick: () =>
-                          history.push(
-                            `/projects/${row._id}?stage=${stage.key}`,
-                          ),
-                      })),
-                  ]}
-                />
-              </td>
-            </tr>
+  const columns = [
+    {
+      key: "project",
+      header: "Project",
+      width: "16%",
+      render: (row) => (
+        <>
+          {row._id ? (
+            <button
+              type="button"
+              className="epc-cell__link"
+              title={row.projectNumber || ""}
+              onClick={() => history.push(`/projects/${row._id}`)}
+            >
+              {row.projectNumber || "—"}
+            </button>
+          ) : (
+            <span className="epc-cell__primary">
+              {row.projectNumber || "—"}
+            </span>
           )}
+          <div className="epc-cell__secondary">
+            {row.applicationNumber || "—"}
+            {row.jobNo ? ` · ${row.jobNo}` : ""}
+            {row.quotationRef ? ` · ${row.quotationRef}` : ""}
+          </div>
+        </>
+      ),
+    },
+    {
+      key: "customer",
+      header: "Customer / Product",
+      width: "16%",
+      render: (row) => (
+        <>
+          <div className="epc-cell__primary">{row.companyName || "—"}</div>
+          {row.productName ? (
+            <div className="epc-cell__secondary">{row.productName}</div>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      width: "12%",
+      render: (row) => (
+        <>
+          <div className="epc-cell__primary">{row.service || "—"}</div>
+          {row.certificationType ? (
+            <div className="epc-cell__secondary">{row.certificationType}</div>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      key: "value",
+      header: "Value",
+      width: "10%",
+      render: (row) => money(row.contractValue, row.currency),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "10%",
+      render: (row) => <StatusPill status={row.status || "—"} />,
+    },
+    {
+      key: "invoice",
+      header: "Invoice",
+      width: "12%",
+      render: (row) => (
+        <>
+          <StatusPill status={row.invoiceStatus || "—"} />
+          {row.invoiceNumber ? (
+            <div className="epc-cell__secondary">{row.invoiceNumber}</div>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      key: "accepted",
+      header: "Accepted",
+      width: "12%",
+      render: (row) => (
+        <>
+          <div className="epc-cell__primary">
+            {formatDate(row.quotationAcceptedAt)}
+          </div>
+          <div className="epc-cell__secondary">
+            {row.quotationAcceptedBy || "—"}
+          </div>
+        </>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      width: "10%",
+      align: "right",
+      render: (row) => (
+        <ActionButtons
+          maxVisibleActions={2}
+          items={[
+            {
+              action: ACTION_BUTTON_TYPES.VIEW,
+              title: "Open audit",
+              onClick: () => history.push(`/projects/${row._id}`),
+            },
+            {
+              action: ACTION_BUTTON_TYPES.HISTORY,
+              title: "Activity log",
+              onClick: () => setHistoryRow(row),
+            },
+            ...(routePerms.canUpdate
+              ? [
+                  {
+                    action: ACTION_BUTTON_TYPES.CHANGE_STATUS,
+                    title: "Change Status",
+                    onClick: () => openStatusChangeModal(row),
+                  },
+                ]
+              : []),
+            ...[currentWorkflowStage(row.workflow)]
+              .filter(Boolean)
+              .map((stage) => ({
+                action: ACTION_BUTTON_TYPES.WORKFLOW,
+                title: stage.title,
+                description: [stage.documentCode, stage.status]
+                  .filter(Boolean)
+                  .join(" · "),
+                onClick: () =>
+                  history.push(`/projects/${row._id}?stage=${stage.key}`),
+              })),
+          ]}
         />
-      </div>
+      ),
+    },
+  ];
+
+  return (
+    <EpcPage
+      title="Projects"
+      subtitle={
+        scopedToMe
+          ? "The certification jobs assigned to you. Open one to run its audit."
+          : "Certification work in progress. A project opens when a customer accepts their quotation, and its audit is run from here."
+      }
+    >
+      <SummaryCards
+        cards={summaryCardsData}
+        columnsCount={4}
+        loading={loading && rows.length === 0}
+      />
+
+      <FilterBar
+        subtitle="Narrow by status or search reference."
+        searchPlaceholder="Search by project, job, certificate, report, application, customer or product…"
+        searchValue={searchTerm}
+        onSearchChange={(value) => {
+          setSearchTerm(value);
+          setCurrentPage(1);
+        }}
+        values={{ status: statusFilter }}
+        onChange={(key, value) => {
+          if (key === "status") {
+            setStatusFilter(value || "");
+            setCurrentPage(1);
+          }
+        }}
+        onReset={() => {
+          setSearchTerm("");
+          setStatusFilter("");
+          setCurrentPage(1);
+        }}
+        filters={[
+          {
+            key: "status",
+            placeholder: "All Statuses",
+            options: PROJECT_STATUS_OPTIONS,
+          },
+        ]}
+      />
+
+      <Card>
+        <CardHeader
+          title="Projects"
+          subtitle={loading ? "Loading…" : `${total} total projects`}
+          action={
+            <span className="epc-chip">
+              {countOf("Open") + countOf("In Progress")} in progress ·{" "}
+              {countOf("Completed")} completed
+            </span>
+          }
+        />
+        <PortalDataTable
+          columns={columns}
+          rows={loading ? [] : rows}
+          rowKey="_id"
+          emptyMessage={
+            loading
+              ? "Loading projects…"
+              : "No projects match these filters."
+          }
+        />
+        {!loading && total > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={recordsPerPage}
+            total={total}
+            itemLabel="projects"
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(perPage) => {
+              setRecordsPerPage(perPage);
+              setCurrentPage(1);
+            }}
+          />
+        ) : null}
+      </Card>
 
       <ProjectHistoryModal
         open={Boolean(historyRow)}
@@ -478,7 +477,9 @@ const Projects = () => {
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Current status
               </label>
-              <div>{getStatusBadge(statusChangeRow.status)}</div>
+              <div>
+                <StatusPill status={statusChangeRow.status || "—"} />
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -501,7 +502,7 @@ const Projects = () => {
           </div>
         ) : null}
       </CustomModal>
-    </div>
+    </EpcPage>
   );
 };
 

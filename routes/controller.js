@@ -1,4 +1,5 @@
 const CalendarEvent = require("../models/CalendarEvent"); // Adjust import path as needed
+//add middleware to check if the user is authenticated
 
 // Create a new calendar event
 const createCalendarEvent = async (req, res) => {
