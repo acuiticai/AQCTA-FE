@@ -7,7 +7,7 @@ const DesktopSidebar = () => {
 
   return (
     <aside
-      className={`admin-shell__aside z-20 hidden h-full flex-shrink-0 transition-all duration-300 lg:block ${
+      className={`admin-shell__aside admin-shell__aside--desktop z-20 hidden h-full flex-shrink-0 transition-all duration-300 lg:block ${
         isSidebarCollapsed ? "admin-shell__aside--collapsed" : ""
       }`}
       style={isSidebarCollapsed ? { width: 72 } : undefined}
