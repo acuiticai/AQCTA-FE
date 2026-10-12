@@ -713,12 +713,18 @@
 .epc-root .epc-cell__primary {
   font-weight: var(--epc-weight-bold);
   color: var(--epc-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .epc-root .epc-cell__secondary {
   margin-top: 2px;
   font-size: 12px;
   color: var(--epc-text-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .epc-root .epc-cell__link {
@@ -955,19 +961,46 @@
   }
 }
 
-/* Tables: a right-aligned action column should not stretch, and long
-   references should not force a horizontal scroll on their own. */
+/* Tables: fit the card width — truncate long cells, keep actions in one row. */
+
+.epc-root.epc-admin-surface .epc-table-wrap {
+  overflow-x: hidden;
+}
+
+.epc-root.epc-admin-surface .epc-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.epc-root.epc-admin-surface .epc-table th,
+.epc-root.epc-admin-surface .epc-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
 
 .epc-root .epc-table td:last-child,
 .epc-root .epc-table th:last-child {
   white-space: nowrap;
+  width: 1%;
+  overflow: visible;
 }
 
-.epc-root .epc-table td .action-buttons-container {
+.epc-root .epc-table td .action-buttons-container,
+.epc-root .epc-table td .epc-rowactions {
   display: inline-flex;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.epc-root.epc-admin-surface .epc-table td .epc-rowaction {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
 }
 
 /* Cards holding a table read better without doubled padding under the head. */

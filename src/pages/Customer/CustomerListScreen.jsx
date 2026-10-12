@@ -527,74 +527,66 @@ const CustomerListScreen = () => {
       return text || "—";
     };
 
+    const locationLabel = (customer) => {
+      const bi = customer.basicInformation || {};
+      const addr = Array.isArray(customer.addresses)
+        ? customer.addresses[0] || {}
+        : {};
+      return (
+        [bi.city || addr.city, bi.stateProvince || addr.state, bi.country || addr.country]
+          .map((part) => (part != null ? String(part).trim() : ""))
+          .filter(Boolean)
+          .join(", ") || "—"
+      );
+    };
+
     const cols = [
       {
         key: "companyName",
         header: t("customer.companyName"),
-        width: "14%",
+        width: "22%",
         render: (customer) => {
           const bi = customer.basicInformation || {};
+          const name = cell(bi.companyName || bi.customerDisplayName);
+          const reg = bi.companyRegistrationNumber;
           return (
-            <span className="epc-cell__primary">
-              {cell(bi.companyName || bi.customerDisplayName)}
-            </span>
+            <>
+              <div className="epc-cell__primary" title={name}>
+                {name}
+              </div>
+              {reg ? (
+                <div className="epc-cell__secondary" title={String(reg)}>
+                  {reg}
+                </div>
+              ) : null}
+            </>
           );
         },
       },
       {
-        key: "regNo",
-        header: t("customer.companyRegistrationNumber"),
-        width: "12%",
-        render: (customer) =>
-          cell(customer.basicInformation?.companyRegistrationNumber),
-      },
-      {
         key: "email",
         header: t("customer.email"),
-        width: "14%",
-        render: (customer) =>
-          cell(customer.basicInformation?.customerEmail),
+        width: "20%",
+        render: (customer) => {
+          const email = customer.basicInformation?.customerEmail;
+          return (
+            <span title={email || ""}>{cell(email)}</span>
+          );
+        },
       },
       {
-        key: "country",
+        key: "location",
         header: t("customer.country"),
-        width: "10%",
+        width: "18%",
         render: (customer) => {
-          const bi = customer.basicInformation || {};
-          const addr = Array.isArray(customer.addresses)
-            ? customer.addresses[0] || {}
-            : {};
-          return cell(bi.country || addr.country);
-        },
-      },
-      {
-        key: "state",
-        header: t("customer.stateProvince"),
-        width: "10%",
-        render: (customer) => {
-          const bi = customer.basicInformation || {};
-          const addr = Array.isArray(customer.addresses)
-            ? customer.addresses[0] || {}
-            : {};
-          return cell(bi.stateProvince || addr.state);
-        },
-      },
-      {
-        key: "city",
-        header: t("customer.city"),
-        width: "10%",
-        render: (customer) => {
-          const bi = customer.basicInformation || {};
-          const addr = Array.isArray(customer.addresses)
-            ? customer.addresses[0] || {}
-            : {};
-          return cell(bi.city || addr.city);
+          const label = locationLabel(customer);
+          return <span title={label}>{label}</span>;
         },
       },
       {
         key: "website",
         header: t("customer.website"),
-        width: "10%",
+        width: "16%",
         render: (customer) => {
           const website = customer.basicInformation?.website;
           return (
@@ -618,22 +610,27 @@ const CustomerListScreen = () => {
                   (b._id || b.id)?.toString() === String(selectedBusiness)
               )?.name
             : null;
+          let label = "—";
           if (selectedBusiness)
-            return filterBusinessName || customer?.business?.name || "—";
-          if (customer.businessesDisplay) return customer.businessesDisplay;
-          const names = new Set();
-          const primary = customer?.business?.name;
-          if (primary) names.add(primary);
-          if (Array.isArray(customer.businesses)) {
-            customer.businesses.forEach((b) => {
-              const id = (b?._id || b)?.toString();
-              const found = businesses.find(
-                (x) => (x._id || x.id)?.toString() === id
-              );
-              if (found?.name) names.add(found.name);
-            });
+            label = filterBusinessName || customer?.business?.name || "—";
+          else if (customer.businessesDisplay)
+            label = customer.businessesDisplay;
+          else {
+            const names = new Set();
+            const primary = customer?.business?.name;
+            if (primary) names.add(primary);
+            if (Array.isArray(customer.businesses)) {
+              customer.businesses.forEach((b) => {
+                const id = (b?._id || b)?.toString();
+                const found = businesses.find(
+                  (x) => (x._id || x.id)?.toString() === id
+                );
+                if (found?.name) names.add(found.name);
+              });
+            }
+            label = Array.from(names).filter(Boolean).join(", ") || "—";
           }
-          return Array.from(names).filter(Boolean).join(", ") || "—";
+          return <span title={label}>{label}</span>;
         },
       });
     }
@@ -663,16 +660,17 @@ const CustomerListScreen = () => {
       {
         key: "actions",
         header: t("common.action"),
-        width: "10%",
+        width: "118px",
         align: "right",
         render: (customer) => (
-          <div className="flex items-center gap-1 flex-wrap justify-end">
+          <div className="epc-rowactions">
             {(canView || canViewDetails || canUpdate) && (
               <button
                 type="button"
-                className="p-1.5 text-gray-500 hover:text-[var(--p-blue)] hover:bg-[var(--p-blue)]/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="epc-rowaction"
                 onClick={() => handleViewCustomer(customer._id)}
                 title={t("common.view") || "View"}
+                aria-label={t("common.view") || "View"}
               >
                 <FiEye size={14} />
               </button>
@@ -680,9 +678,10 @@ const CustomerListScreen = () => {
             {canUpdate && (
               <button
                 type="button"
-                className="p-1.5 text-gray-500 hover:text-[var(--p-blue)] hover:bg-[var(--p-blue)]/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="epc-rowaction"
                 onClick={() => openResetPassword(customer)}
                 title={t("customer.resetPassword") || "Reset password"}
+                aria-label={t("customer.resetPassword") || "Reset password"}
                 disabled={resetPasswordLoading}
               >
                 <FiKey size={14} />
@@ -691,9 +690,10 @@ const CustomerListScreen = () => {
             {canDelete && (
               <button
                 type="button"
-                className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="epc-rowaction epc-rowaction--danger"
                 onClick={() => openDeleteCustomer(customer)}
                 title={t("common.delete") || "Delete"}
+                aria-label={t("common.delete") || "Delete"}
               >
                 <FiTrash2 size={14} />
               </button>

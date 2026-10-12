@@ -1,99 +1,20 @@
-import { useState, useEffect, useContext, useCallback } from "react";
+import { useState, useEffect, useContext, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, ChevronDown, X, Edit, Trash2, Eye } from "lucide-react";
-import Header from "@/components/header/Header";
-import AppLayout from "../app-layout";
+import { X } from "lucide-react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { AdminContext } from "@/context/AdminContext";
 import ToggleSwitch from "@/components/toggle/ToggleSwitch";
 import ReactSelect from "react-select";
 import reactSelectConfig from "@/utils/react-select-style-config";
-import {
-  FiPlus,
-  FiEdit,
-  FiTrash2,
-  FiUploadCloud,
-  FiXCircle,
-  FiEye,
-} from "react-icons/fi";
-import { EmptyCellContainer } from "@/page-layouts/index";
-import { useTableSorting, SortIcon } from "@/utils/tableSorting.jsx";
+import { ActionButtons, Loader } from "@/page-layouts";
+import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import { useSettingsCrudPermissions } from "@/hooks/useSettingsCrudPermissions";
+import EpcListPage from "@/components/Epc/EpcListPage";
+import Button from "@/customer/components/ui/Button";
+import { PlusIcon } from "@/customer/components/ui/icons";
 
 const BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
-
-const ItemTable = ({ items, onEdit, onDelete, onToggleStatus, onView, canUpdate, canDelete }) => {
-  const { t } = useTranslation();
-  const thr = (key, fallback, options) =>
-    t(`settingsPage.hr.${key}`, { defaultValue: fallback, ...options });
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {thr("departments.departmentName", "Department Name")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {thr("departments.departmentCode", "Department Code")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {thr("departments.directManagerSupervisor", "Direct Manager / Supervisor")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {thr("status", "Status")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {thr("actions", "Actions")}
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {items.map((item) => (
-            <tr key={item._id}>
-              <td className="px-6 py-4 whitespace-nowrap">{item.name}</td>
-              <td className="px-6 py-4 whitespace-nowrap">{item.code}</td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {item.manager?.displayName ? (
-                  item.manager.displayName
-                ) : (
-                  <EmptyCellContainer />
-                )}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <ToggleSwitch
-                  isOn={item.status === "Active"}
-                  handleToggle={() => onToggleStatus(item)}
-                  disabled={!canUpdate}
-                />
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                {canUpdate && (
-                  <button
-                    onClick={() => onEdit(item)}
-                    className="text-blue-600 hover:text-blue-900 mr-2"
-                  >
-                    <FiEdit className="w-5 h-5" />
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    onClick={() => onDelete(item._id)}
-                    className="text-red-600 hover:text-red-900 mr-2"
-                  >
-                    <FiTrash2 className="w-5 h-5" />
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
 
 const AddEditModal = ({ isOpen, onClose, type, item, staffList, onSubmit, canSubmit }) => {
   const { t } = useTranslation();
@@ -304,7 +225,6 @@ const EstimatesPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [locations, setLocation] = useState("All");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState(null);
 
@@ -313,6 +233,22 @@ const EstimatesPage = () => {
   const [staffOptions, setStaffOptions] = useState([]);
   const location = useLocation();
   const { canAdd, canUpdate, canDelete } = useSettingsCrudPermissions();
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(() => {
+    try {
+      const c = localStorage.getItem("configurations");
+      if (c) {
+        const parsed = JSON.parse(c);
+        const p = parsed && parsed.table_entries_per_page;
+        if (Number.isFinite(p) && p > 0) return Number(p);
+      }
+    } catch (_) {}
+    return 10;
+  });
+
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const selectedOrg = searchParams.get("selectedOrg");
@@ -335,8 +271,6 @@ const EstimatesPage = () => {
     authorization: `Bearer ${adminInfo.token}`,
   };
 
-  const tabs = ["Departments", "Departments"];
-
   const handleAddNew = () => {
     if (!canAdd) return;
     setEditItem(null);
@@ -348,8 +282,6 @@ const EstimatesPage = () => {
     setEditItem(item);
     setModalOpen(true);
   };
-  // app.use("/api/Departments/", DepartmentsRoutes);
-  // app.use("/api/Departments/", DepartmentsRoutes);
 
   const handleSubmit = async (item) => {
     if ((editItem && !canUpdate) || (!editItem && !canAdd)) return;
@@ -363,7 +295,7 @@ const EstimatesPage = () => {
           business_id: organization,
         };
 
-        const response = await axios.put(
+        await axios.put(
           `${BASE_URL}/Departments/update/${editItem._id}`,
           payload,
           { headers }
@@ -377,11 +309,7 @@ const EstimatesPage = () => {
           status: item.status,
           business_id: organization,
         };
-        console.log(
-          "🚀 ~ file: DepartmentsSettings.jsx:163 ~ handleSubmit ~ payload:",
-          payload
-        );
-        const response = await axios.post(
+        await axios.post(
           `${BASE_URL}/Departments/add`,
           payload,
           { headers }
@@ -450,7 +378,7 @@ const EstimatesPage = () => {
         status: item.status === "Active" ? "Inactive" : "Active",
         business_id: organization,
       };
-      const response = await axios.put(
+      await axios.put(
         `${BASE_URL}/Departments/update/${item._id}`,
         payload,
         { headers }
@@ -478,7 +406,6 @@ const EstimatesPage = () => {
           }
         );
 
-        console.log("🎯 Staff by fields response:", response.data);
         return response.data.staff || [];
       } catch (error) {
         console.error("Error fetching staff by selected fields:", error);
@@ -500,61 +427,163 @@ const EstimatesPage = () => {
     loadStaffNames();
   }, [fetchStaffByFields, organization]);
 
-  const handleView = (item) => {
-    console.log("View", item);
-  };
+  const filteredItems = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return (items || []).filter((item) => {
+      if (statusFilter && item.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        String(item.name || "").toLowerCase().includes(q) ||
+        String(item.code || "").toLowerCase().includes(q) ||
+        String(item.manager?.displayName || "").toLowerCase().includes(q)
+      );
+    });
+  }, [items, searchTerm, statusFilter]);
+
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage
+  );
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: thr("departments.departmentName", "Department Name"),
+        render: (item) => (
+          <span className="epc-cell__primary">{item.name}</span>
+        ),
+      },
+      {
+        key: "code",
+        header: thr("departments.departmentCode", "Department Code"),
+        render: (item) => item.code || "—",
+      },
+      {
+        key: "manager",
+        header: thr(
+          "departments.directManagerSupervisor",
+          "Direct Manager / Supervisor"
+        ),
+        render: (item) =>
+          item.manager?.displayName ? (
+            item.manager.displayName
+          ) : (
+            <span className="epc-cell__secondary">—</span>
+          ),
+      },
+      {
+        key: "status",
+        header: thr("status", "Status"),
+        render: (item) => (
+          <ToggleSwitch
+            isOn={item.status === "Active"}
+            handleToggle={() => handleToggleStatus(item)}
+            disabled={!canUpdate}
+          />
+        ),
+      },
+      {
+        key: "actions",
+        header: thr("actions", "Actions"),
+        align: "right",
+        render: (item) => (
+          <ActionButtons
+            rbac={{ canUpdate, canDelete }}
+            items={[
+              {
+                tooltip: thr("edit", "Edit"),
+                action: ACTION_BUTTON_TYPES.EDIT,
+                onClick: () => handleEdit(item),
+              },
+              {
+                tooltip: thr("delete", "Delete"),
+                action: ACTION_BUTTON_TYPES.DELETE,
+                onClick: () => handleDelete(item._id),
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, canUpdate, canDelete]
+  );
+
+  if (!isOrgLoaded && !organization) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <Loader fullContainer={true} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>{thr("errorPrefix", "Error: {{error}}", { error })}</div>;
+  }
 
   return (
-    <>
-      {!isOrgLoaded && !organization ? (
-        <div className="fixed inset-0 flex items-center justify-center bg-white">
-          <p className="text-gray-600">
-            {thr("loadingOrganization", "Loading organization...")}
-          </p>
-        </div>
-      ) : loading ? (
-        <div>{thr("loading", "Loading...")}</div>
-      ) : error ? (
-        <div>{thr("errorPrefix", "Error: {{error}}", { error })}</div>
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-6">
-          <div className="flex justify-end items-end w-full mb-6 space-x-4">
-            {canAdd && (
-              <button
-                onClick={handleAddNew}
-                className="flex items-center px-4 py-2 bg-[#A6C437] text-white rounded-lg hover:bg-opacity-90 transition-colors"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                {thr("addNew", "Add New")}
-              </button>
-            )}
-            <div className="relative">
-              <select
-                value={locations}
-                onChange={(e) => setLocation(e.target.value)}
-                className="appearance-none bg-white border border-gray-300 rounded-lg py-2 pl-4 pr-10 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
-              >
-                <option value="All">{thr("all", "All")}</option>
-                <option value=""></option>
-                <option value=""></option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm">
-            <ItemTable
-              items={items}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onToggleStatus={handleToggleStatus}
-              onView={handleView}
-              canUpdate={canUpdate}
-              canDelete={canDelete}
-            />
-          </div>
-        </div>
+    <EpcListPage
+      flush
+      title={thr("departmentsPositions.departments", "Departments")}
+      action={
+        canAdd ? (
+          <Button size="sm" onClick={handleAddNew}>
+            <PlusIcon size={15} />
+            {thr("addNew", "Add New")}
+          </Button>
+        ) : null
+      }
+      searchValue={searchTerm}
+      searchPlaceholder={thr(
+        "departments.searchPlaceholder",
+        "Search departments..."
       )}
+      onSearchChange={(value) => {
+        setSearchTerm(value || "");
+        setCurrentPage(1);
+      }}
+      filterSubtitle={thr(
+        "departments.filterSubtitle",
+        "Filter by status or search by name."
+      )}
+      filters={[
+        {
+          key: "status",
+          placeholder: thr("selectStatus", "Select Status"),
+          options: [
+            { value: "Active", label: thr("active", "Active") },
+            { value: "Inactive", label: thr("inactive", "Inactive") },
+          ],
+        },
+      ]}
+      filterValues={{ status: statusFilter }}
+      onFilterChange={(key, value) => {
+        if (key === "status") {
+          setStatusFilter(value || "");
+          setCurrentPage(1);
+        }
+      }}
+      onFilterReset={() => {
+        setSearchTerm("");
+        setStatusFilter("");
+        setCurrentPage(1);
+      }}
+      tableTitle={thr("departmentsPositions.departments", "Departments")}
+      columns={columns}
+      rows={paginatedItems}
+      loading={loading}
+      emptyMessage={thr("noData", "No data available")}
+      page={currentPage}
+      pageSize={recordsPerPage}
+      total={filteredItems.length}
+      itemLabel="departments"
+      onPageChange={setCurrentPage}
+      onPageSizeChange={(perPage) => {
+        setRecordsPerPage(perPage);
+        setCurrentPage(1);
+      }}
+    >
       <AddEditModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -570,7 +599,7 @@ const EstimatesPage = () => {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDeleteClick}
       />
-    </>
+    </EpcListPage>
   );
 };
 

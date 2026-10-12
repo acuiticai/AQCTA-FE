@@ -107,12 +107,10 @@ export default function TabClassCategories() {
       const totalCount = res.data?.total ?? categories.length;
       setRows(categories);
       setTotal(totalCount);
-      setTotalPages(Math.max(1, Math.ceil(totalCount / recordsPerPage)));
     } catch (err) {
       notifyError(err?.response?.data?.message || "Failed to load class/categories");
       setRows([]);
       setTotal(0);
-      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -439,11 +437,12 @@ export default function TabClassCategories() {
 
   return (
     <EpcPage
+      flush
       title="Class / Category"
       subtitle="Manage application class/categories and their product fields shown on the Product Details step in certification and inspection applications (admin and customer portal)."
       action={
         canAdd ? (
-          <Button onClick={openCreate}>
+          <Button size="sm" onClick={openCreate}>
             <PlusIcon size={15} />
             Add Class / Category
           </Button>

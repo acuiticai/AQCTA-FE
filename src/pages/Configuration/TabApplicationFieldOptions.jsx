@@ -2,18 +2,21 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   Award,
-  Building,
   ClipboardList,
-  FileText,
   Layers,
   Search,
 } from "lucide-react";
 import {
-  DataTable,
   ActionButtons,
   CustomModal,
   ToggleSwitch,
 } from "@/page-layouts";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Button from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import {
@@ -271,37 +274,85 @@ export default function TabApplicationFieldOptions() {
     setStatusFilter("all");
   };
 
-  const filters = useMemo(
+  const portalFilters = useMemo(
     () => [
-      ...(!isSingleAssignedBusiness()
-        ? [
-            {
-              label: "Business",
-              value: businessId,
-              onChange: setBusinessId,
-              options: businesses.map((b) => ({
-                value: String(b._id || b.id || ""),
-                label: b.name || b.businessName || "Business",
-              })),
-              placeholder: "Select Business",
-              icon: Building,
-            },
-          ]
-        : []),
       {
-        label: "Status",
-        value: statusFilter,
-        onChange: setStatusFilter,
-        options: [
-          { value: "all", label: "All Status" },
-          { value: "Active", label: "Active" },
-          { value: "Inactive", label: "Inactive" },
-        ],
-        placeholder: "Select Status",
-        icon: FileText,
+        key: "status",
+        placeholder: "All Statuses",
+        options: ["Active", "Inactive"],
       },
     ],
-    [businessId, businesses, statusFilter]
+    [],
+  );
+
+  const optionColumns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: "Name",
+        render: (row) => (
+          <>
+            <div className="epc-cell__primary">{row.name || "—"}</div>
+            {row.description ? (
+              <div className="epc-cell__secondary">{row.description}</div>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        key: "order",
+        header: "Order",
+        render: (row) => row.sortOrder ?? 0,
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (row) =>
+          canUpdate ? (
+            <div className="flex items-center gap-2">
+              <ToggleSwitch
+                isOn={row.status === "Active"}
+                handleToggle={() => handleToggleStatus(row)}
+                disabled={loading}
+              />
+              <StatusPill status={row.status || "—"} />
+            </div>
+          ) : (
+            <StatusPill status={row.status || "—"} />
+          ),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        align: "right",
+        render: (row) => (
+          <ActionButtons
+            items={[
+              ...(canUpdate
+                ? [
+                    {
+                      action: ACTION_BUTTON_TYPES.EDIT,
+                      title: "Edit",
+                      onClick: () => openEdit(row),
+                    },
+                  ]
+                : []),
+              ...(canDelete
+                ? [
+                    {
+                      action: ACTION_BUTTON_TYPES.DELETE,
+                      title: "Delete",
+                      onClick: () => openDeleteModal(row),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canUpdate, canDelete, loading],
   );
 
   const modalTitle = editing
@@ -439,96 +490,54 @@ export default function TabApplicationFieldOptions() {
                 </div>
               </div>
               {canAdd ? (
-                <button
-                  type="button"
-                  onClick={openCreate}
-                  className="shrink-0 flex items-center gap-2 px-5 py-2.5 text-white rounded-lg hover:opacity-90 transition-opacity shadow-sm text-sm font-medium"
-                  style={{ backgroundColor: buttonColor }}
-                >
+                <Button onClick={openCreate}>
+                  <PlusIcon size={15} />
                   Add {activeMeta.label}
-                </button>
+                </Button>
               ) : null}
             </div>
           </div>
 
-          <div className="p-4 sm:p-6">
-            <DataTable
-              onSearch={setSearchTerm}
-              searchValue={searchTerm}
+          <div className="p-4 sm:p-6 space-y-4">
+            <FilterBar
+              subtitle={`Filter ${activeMeta.label?.toLowerCase() || "options"}`}
               searchPlaceholder={`Search ${activeMeta.label?.toLowerCase() || "options"}…`}
-              filters={filters}
-              headers={["Name", "Order", "Status", "Actions"]}
-              headersToHide={[]}
-              data={filteredRows}
-              totalRecords={filteredRows.length}
-              loading={loading}
-              currentPage={1}
-              totalPages={1}
-              recordsPerPage={filteredRows.length || 10}
-              onPageChange={() => {}}
-              onRecordsPerPageChange={() => {}}
-              emptyMessage={`No ${activeMeta.label?.toLowerCase() || "options"} configured yet`}
-              isCollapsible={false}
-              renderRow={(row) => (
-                <tr key={row._id} className="border-b">
-                  <td className="py-2 px-4">
-                    <div className="font-medium text-gray-900">
-                      {row.name || "-"}
-                    </div>
-                    {row.description ? (
-                      <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                        {row.description}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td className="py-2 px-4 whitespace-nowrap">
-                    {row.sortOrder ?? 0}
-                  </td>
-                  <td className="py-2 px-4 whitespace-nowrap">
-                    {canUpdate ? (
-                      <div className="flex items-center gap-2">
-                        <ToggleSwitch
-                          isOn={row.status === "Active"}
-                          handleToggle={() => handleToggleStatus(row)}
-                          disabled={loading}
-                        />
-                        <span className="text-sm text-gray-600">
-                          {row.status || "-"}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-600">
-                        {row.status || "-"}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2 px-4" style={{ width: "fit-content" }}>
-                    <ActionButtons
-                      items={[
-                        ...(canUpdate
-                          ? [
-                              {
-                                action: ACTION_BUTTON_TYPES.EDIT,
-                                title: "Edit",
-                                onClick: () => openEdit(row),
-                              },
-                            ]
-                          : []),
-                        ...(canDelete
-                          ? [
-                              {
-                                action: ACTION_BUTTON_TYPES.DELETE,
-                                title: "Delete",
-                                onClick: () => openDeleteModal(row),
-                              },
-                            ]
-                          : []),
-                      ]}
-                    />
-                  </td>
-                </tr>
-              )}
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              values={{
+                status: statusFilter === "all" ? "" : statusFilter,
+              }}
+              onChange={(key, value) => {
+                if (key === "status") setStatusFilter(value || "all");
+              }}
+              onReset={() => {
+                setSearchTerm("");
+                setStatusFilter("all");
+              }}
+              filters={portalFilters}
             />
+            <Card>
+              <CardHeader
+                title={activeMeta.label}
+                subtitle={
+                  loading
+                    ? "Loading…"
+                    : `${filteredRows.length} ${
+                        filteredRows.length === 1 ? "option" : "options"
+                      }`
+                }
+              />
+              <PortalDataTable
+                columns={optionColumns}
+                rows={loading ? [] : filteredRows}
+                rowKey="_id"
+                emptyMessage={
+                  loading
+                    ? "Loading…"
+                    : `No ${activeMeta.label?.toLowerCase() || "options"} configured yet`
+                }
+              />
+            </Card>
           </div>
         </section>
       </div>

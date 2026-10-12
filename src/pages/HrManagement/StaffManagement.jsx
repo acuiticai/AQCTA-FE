@@ -10,7 +10,6 @@ import React, {
 import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
-  Eye,
   Calendar,
   Search,
   RefreshCw,
@@ -36,7 +35,6 @@ import "jspdf-autotable";
 import autoTable from "jspdf-autotable";
 import { AdminContext } from "@/context/AdminContext";
 import useSingleBusinessMode from "@/hooks/useSingleBusinessMode";
-import userIcon from "../../assets/img/icons/profile-add.png";
 import csv from "../../assets/img/icons/csv.png";
 import pdfIcon from "../../assets/img/icons/pdf.png";
 import personPlaceholder from "../../assets/img/person-placeholder.png";
@@ -48,10 +46,18 @@ import { formatDate } from "@/components/formatAmount";
 const libraries = ["places"];
 import { refreshSeatUsage } from "@/hooks/useUserLimit";
 import { notifyError, notifySuccess } from "@/utils/toast";
+import { ACTION_BUTTON_TYPES } from "@/utils/constants";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import PortalButton from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 
 // Assuming Base_URL is defined somewhere else in your application
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL; // Replace with your actual API endpoint
-import CustomPagination from "@/components/CustomPagination";
 const STAFF_FORM_TAB_CONFIG = [
   {
     label: "Personal Info",
@@ -86,8 +92,8 @@ import BranchLocationSelectWithAdd from "@/components/hr/BranchLocationSelectWit
 import PositionSelectWithAdd from "@/components/hr/PositionSelectWithAdd";
 import DepartmentSelectWithAdd from "@/components/hr/DepartmentSelectWithAdd";
 import {
+  ActionButtons,
   Button,
-  DataTable,
   DropdownBasic,
   InputField,
   PageHeader,
@@ -98,11 +104,8 @@ import { bloods, genders, martialStatuses, religions } from "./util";
 import nationalities from "@dropdowns/nationalities";
 import RoutePermissionGate from "@/components/RoutePermissionGate";
 import {
-  HR_HEADER_BTN_EXCEL,
-  HR_HEADER_BTN_PDF,
   HR_PAGE_INNER,
   HR_PAGE_SHELL,
-  HR_TABLE_CARD,
 } from "./components/hrPageHeaderStyles";
 import { useRouteModulePermissions } from "@/utils/permissionUtils";
 import useGoogleMapsApiKey from "@/hooks/useGoogleMapsApiKey";
@@ -985,21 +988,6 @@ function StaffManagement() {
     }
   }, [canAddStaff, formData, selectedTab, selectedBusiness, fetchStaff, addAsSystemUser, systemUserForm, validateSystemUserForm, existingSystemUserForEmail]);
 
-  const getStatusClass = useCallback((status) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-100 text-green-500";
-      case "Inactive":
-        return "bg-yellow-100 text-yellow-500";
-      case "Terminated":
-        return "bg-red-100 text-red-500";
-      case "Resigned":
-        return "bg-orange-100 text-orange-700";
-      default:
-        return "bg-gray-100 text-gray-500";
-    }
-  }, []);
-
   const fetchSystemUsers = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -1499,64 +1487,51 @@ function StaffManagement() {
     recordsPerPage,
   ]);
 
-  const staffTableFilters = useMemo(
-    () => [
-      {
-        isClearButton: true,
-        buttonProps: {
-          onClick: resetStaffFilters,
-        },
-      },
-      {
-        isBusinessDropdown: true,
-        businessDropdownProps: {
-          adminId: adminInfo?.id,
-          selectedBusiness: filters.business,
-          onChange: (value) => {
-            handleFilterChange("business", value);
-            handleFilterChange("department", "");
-            handleFilterChange("position", "");
-            if (value) {
-              fetchDepartmentsForFilter(value);
-              fetchPositionsForFilter(value);
-            } else {
-              setDepartments([]);
-              setPositions([]);
-            }
-          },
-          placeholder: t("Select Business"),
-        },
-      },
-      {
-        isTextInput: true,
-        name: "staffNameFilter",
-        value: filters.name,
-        onChange: (v) => handleFilterChange("name", v),
-        placeholder: t("staffManagement.searchByName"),
-      },
-      {
-        options: (departments || []).map((dept) => ({
-          value: dept._id,
-          label: dept.name,
-        })),
-        value: filters.department,
-        onChange: (value) => handleFilterChange("department", value),
-        placeholder: t("staffManagement.searchByDepartment"),
-        isClearable: true,
-      },
-      {
-        options: (positions || []).map((pos) => ({
-          value: pos._id,
-          label: pos.name,
-        })),
-        value: filters.position,
-        onChange: (value) => handleFilterChange("position", value),
-        placeholder: t("staffManagement.searchByPosition"),
-        isClearable: true,
-      },
-      {
+  const portalFilters = useMemo(() => {
+    const list = [];
+
+    if (!isSingleBusiness) {
+      list.push({
+        key: "business",
+        placeholder: t("Select Business"),
         options: [
-          { value: "all", label: "All" },
+          { value: "", label: t("Select Business") },
+          ...businesses.map((b) => ({
+            value: b._id,
+            label: b.name,
+          })),
+        ],
+      });
+    }
+
+    list.push(
+      {
+        key: "department",
+        placeholder: t("staffManagement.searchByDepartment"),
+        options: [
+          { value: "", label: t("staffManagement.searchByDepartment") },
+          ...(departments || []).map((dept) => ({
+            value: dept._id,
+            label: dept.name,
+          })),
+        ],
+      },
+      {
+        key: "position",
+        placeholder: t("staffManagement.searchByPosition"),
+        options: [
+          { value: "", label: t("staffManagement.searchByPosition") },
+          ...(positions || []).map((pos) => ({
+            value: pos._id,
+            label: pos.name,
+          })),
+        ],
+      },
+      {
+        key: "status",
+        placeholder: t("staffManagement.searchByStatus"),
+        options: [
+          { value: "", label: "All" },
           { value: "Active", label: "Active" },
           { value: "Inactive", label: "Inactive" },
           { value: "On Leave", label: "On Leave" },
@@ -1564,27 +1539,125 @@ function StaffManagement() {
           { value: "Promoted", label: "Promoted" },
           { value: "Terminated", label: "Terminated" },
         ],
-        value: filters.status,
-        onChange: (value) => handleFilterChange("status", value || "all"),
-        placeholder: t("staffManagement.searchByStatus"),
-        isClearable: false,
+      }
+    );
+
+    return list;
+  }, [isSingleBusiness, businesses, departments, positions, t]);
+
+  const portalFilterValues = {
+    business: filters.business || "",
+    department: filters.department || "",
+    position: filters.position || "",
+    status: filters.status === "all" ? "" : filters.status || "",
+  };
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "business") {
+      handleFilterChange("business", value || "");
+      handleFilterChange("department", "");
+      handleFilterChange("position", "");
+      if (value) {
+        fetchDepartmentsForFilter(value);
+        fetchPositionsForFilter(value);
+      } else {
+        setDepartments([]);
+        setPositions([]);
+      }
+      return;
+    }
+    if (key === "status") {
+      handleFilterChange("status", value || "all");
+      return;
+    }
+    handleFilterChange(key, value || "");
+  };
+
+  const staffListColumns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: t("staffManagement.name"),
+        width: "24%",
+        render: (staff) => (
+          <div className="flex items-center gap-2 min-w-0">
+            <img
+              src={staff.image ? `${staff.image}` : personPlaceholder}
+              onError={(e) => {
+                e.target.src = personPlaceholder;
+              }}
+              alt={staff.displayName || staff.person || ""}
+              className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
+            />
+            <span className="epc-cell__primary truncate" title={staff.displayName || ""}>
+              {staff.displayName || "—"}
+            </span>
+          </div>
+        ),
       },
       {
-        isDatePicker: true,
-        value: filters.date,
-        onChange: (val) => handleFilterChange("date", val),
-        clearable: true,
+        key: "icPassport",
+        header: t("staffManagement.icPassport"),
+        width: "14%",
+        render: (staff) => (
+          <span className="epc-cell__secondary">{staff.icorpassport || "—"}</span>
+        ),
+      },
+      {
+        key: "phone",
+        header: t("staffManagement.phone"),
+        width: "12%",
+        render: (staff) => staff.mobileNumber || "—",
+      },
+      {
+        key: "position",
+        header: t("staffManagement.position"),
+        width: "14%",
+        render: (staff) => (
+          <span className="epc-cell__primary">
+            {staff?.position?.name || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "department",
+        header: t("staffManagement.department"),
+        width: "14%",
+        render: (staff) => staff?.department?.name || "—",
+      },
+      {
+        key: "status",
+        header: t("staffManagement.status"),
+        width: "10%",
+        render: (staff) => <StatusPill status={staff.status || "—"} />,
+      },
+      {
+        key: "actions",
+        header: t("staffManagement.action"),
+        width: "12%",
+        align: "right",
+        render: (staff) =>
+          canViewStaffDetails ? (
+            <div className="epc-rowactions">
+              <ActionButtons
+                isCell
+                justifyCenter
+                items={[
+                  {
+                    action: ACTION_BUTTON_TYPES.VIEW,
+                    tooltip: t("common.view") || "View",
+                    permission: true,
+                    onClick: () => history.push(`/staff/${staff._id}`),
+                  },
+                ]}
+              />
+            </div>
+          ) : (
+            <span className="epc-cell__secondary text-sm">No access</span>
+          ),
       },
     ],
-    [
-      adminInfo?.id,
-      departments,
-      positions,
-      filters,
-      handleFilterChange,
-      resetStaffFilters,
-      t,
-    ]
+    [t, canViewStaffDetails, history]
   );
 
   const staffExportFilterLines = useMemo(() => {
@@ -1936,7 +2009,6 @@ function StaffManagement() {
 
   return (
     <RoutePermissionGate title={t("staffManagement.title")}>
-    <div className={HR_PAGE_SHELL}>
       {/* Generated Password Popup - same as SystemUserForm */}
       {isPasswordModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -1981,136 +2053,118 @@ function StaffManagement() {
 
       {/* <ToastContainer position="top-center" /> */}
       {currentView === "list" ? (
-        <div className={HR_PAGE_INNER}>
-          <PageHeader
-            variant="large"
-            title={t("staffManagement.title")}
-            description={t("staffManagement.pageDescription")}
-            showAddButton={canAddStaff}
-            addButtonText={t("staffManagement.addNew")}
-            AddNewButtonIcon={
-              <img src={userIcon} className="w-5 h-5 object-contain" alt="" />
-            }
-            onAddNew={() => {
-              setCurrentView("add");
-              setModalOpen(true);
-            }}
-            renderActions={
-              canViewStaff
-                ? [
-                    <button
-                      key="excel"
-                      type="button"
-                      className={HR_HEADER_BTN_EXCEL}
-                      onClick={downloadExcel}
-                    >
-                      <img
-                        src={csv || "/placeholder.svg"}
-                        alt="csv-icon"
-                        className="w-5 h-5 object-contain"
-                      />
-                      {t("staffManagement.downloadExcel")}
-                    </button>,
-                    <button
-                      key="pdf"
-                      type="button"
-                      className={HR_HEADER_BTN_PDF}
-                      onClick={downloadPDF}
-                    >
-                      <img
-                        src={pdfIcon || "/placeholder.svg"}
-                        alt="pdf-icon"
-                        className="w-5 h-5 object-contain"
-                      />
-                      {t("staffManagement.downloadPDF")}
-                    </button>,
-                  ]
-                : null
-            }
-          />
-
-          <UserLimitBanner userUsage={userUsage} />
-
-          {/* Staff List */}
-          {!canViewStaff ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-600">
-              You do not have permission to view staff records.
+        <EpcPage
+          flush
+          title={t("staffManagement.title")}
+          subtitle={t("staffManagement.pageDescription")}
+          action={
+            <div className="flex flex-wrap items-center gap-2">
+              {canViewStaff ? (
+                <>
+                  <PortalButton variant="secondary" onClick={downloadExcel}>
+                    <img
+                      src={csv || "/placeholder.svg"}
+                      alt=""
+                      className="w-4 h-4 object-contain"
+                    />
+                    {t("staffManagement.downloadExcel")}
+                  </PortalButton>
+                  <PortalButton variant="secondary" onClick={downloadPDF}>
+                    <img
+                      src={pdfIcon || "/placeholder.svg"}
+                      alt=""
+                      className="w-4 h-4 object-contain"
+                    />
+                    {t("staffManagement.downloadPDF")}
+                  </PortalButton>
+                </>
+              ) : null}
+              {canAddStaff ? (
+                <PortalButton
+                  onClick={() => {
+                    setCurrentView("add");
+                    setModalOpen(true);
+                  }}
+                >
+                  <PlusIcon size={15} />
+                  {t("staffManagement.addNew")}
+                </PortalButton>
+              ) : null}
             </div>
-          ) : (
-          <div className={HR_TABLE_CARD}>
-            <DataTable
-              wideTable
-              skipAutoPageSizeFromConfig
-              filters={staffTableFilters}
-              headers={[
-                t("staffManagement.name"),
-                t("staffManagement.icPassport"),
-                t("staffManagement.phone"),
-                t("staffManagement.position"),
-                t("staffManagement.department"),
-                t("staffManagement.status"),
-                t("staffManagement.action"),
-              ]}
-              data={staffList}
-              colWidths={{
-                Name: "200px",
-                Status: "100px",
-              }}
-              totalRecords={totalResults}
-              currentPage={currentPage}
-              onPageChange={handlePageChange}
-              onRecordsPerPageChange={handleRecordsPerPageChange}
-              recordsPerPage={recordsPerPage}
-              totalPages={totalPages}
-              loading={newRecordsLoading}
-              renderRow={(staff) => (
-                <tr key={staff.id} className="border-b">
-                  <td className="py-4">
-                    <div className="flex items-center">
-                      {console.log("MY NEW IMAGE : ", `${staff.image}`)}
-                      <img
-                        src={staff.image ? `${staff.image}` : personPlaceholder}
-                        onError={(e) => {
-                          e.target.src = personPlaceholder;
-                        }}
-                        alt={staff.person}
-                        className="w-16 h-16 rounded-xl mr-3 object-cover"
-                      />
-                      <span>{staff.displayName}</span>
-                    </div>
-                  </td>
-                  <td className="py-4">{staff.icorpassport}</td>
-                  <td className="py-4">{staff.mobileNumber}</td>
-                  <td className="py-4">{staff?.position?.name}</td>
-                  <td className="py-4">{staff?.department?.name}</td>
-                  <td className="py-4 text-center">
-                    <span
-                      className={`px-3 py-1 rounded-full ${getStatusClass(
-                        staff.status
-                      )}`}
-                    >
-                      {staff.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-center">
-                    {canViewStaffDetails ? (
-                      <button
-                        className="text-gray-500 p-2 rounded-lg border"
-                        onClick={() => history.push(`/staff/${staff._id}`)}
-                      >
-                        <Eye size={18} />
-                      </button>
-                    ) : (
-                      <span className="text-gray-400 text-sm">No access</span>
-                    )}
-                  </td>
-                </tr>
-              )}
-            />
+          }
+        >
+          <div className="epc-stack">
+            <UserLimitBanner userUsage={userUsage} />
+
+            {!canViewStaff ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-600">
+                You do not have permission to view staff records.
+              </div>
+            ) : (
+              <>
+                <FilterBar
+                  subtitle={t("staffManagement.pageDescription")}
+                  searchPlaceholder={t("staffManagement.searchByName")}
+                  searchValue={filters.name}
+                  onSearchChange={(value) => handleFilterChange("name", value)}
+                  filters={portalFilters}
+                  values={portalFilterValues}
+                  onChange={handlePortalFilterChange}
+                  onReset={resetStaffFilters}
+                />
+
+                <div className="flex flex-wrap gap-3 items-center">
+                  <label className="text-sm text-gray-600 flex items-center gap-2">
+                    <span>Date</span>
+                    <input
+                      type="date"
+                      value={filters.date || ""}
+                      onChange={(e) =>
+                        handleFilterChange("date", e.target.value)
+                      }
+                      className="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                </div>
+
+                <Card>
+                  <CardHeader
+                    title={t("staffManagement.title")}
+                    subtitle={
+                      newRecordsLoading
+                        ? "Loading…"
+                        : `${totalResults} total staff`
+                    }
+                  />
+
+                  <PortalDataTable
+                    columns={staffListColumns}
+                    rows={newRecordsLoading ? [] : staffList}
+                    rowKey="_id"
+                    emptyMessage={
+                      newRecordsLoading
+                        ? "Loading…"
+                        : "No staff match these filters."
+                    }
+                  />
+
+                  {!newRecordsLoading && totalResults > 0 ? (
+                    <Pagination
+                      page={currentPage}
+                      pageSize={recordsPerPage}
+                      total={totalResults}
+                      itemLabel="staff"
+                      onPageChange={handlePageChange}
+                      onPageSizeChange={handleRecordsPerPageChange}
+                    />
+                  ) : null}
+                </Card>
+              </>
+            )}
           </div>
-          )}
-        </div>
+        </EpcPage>
       ) : (
+        <div className={HR_PAGE_SHELL}>
         <div className={HR_PAGE_INNER}>
           {/* Add New Staff Form */}
            <PageHeader
@@ -4428,8 +4482,8 @@ function StaffManagement() {
             pauseOnHover
           />
         </div>
+        </div>
       )}
-    </div>
     </RoutePermissionGate>
   );
 }
