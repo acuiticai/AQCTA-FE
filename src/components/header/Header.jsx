@@ -466,10 +466,10 @@ const Header = () => {
     const lastVisibleIndex = visibleIndexes[visibleIndexes.length - 1];
 
     return (
-      <div className="flex items-center space-x-2 text-sm text-gray-600">
+      <div className="flex items-center space-x-2 text-[13px] text-[#5a5a5a]">
         <Link
           to="/home"
-          className="font-semibold text-gray-700 hover:text-[var(--header-text-hover)] transition-colors"
+          className="font-medium text-[#5a5a5a] transition-colors hover:text-[var(--header-text-hover)]"
         >
           {t("Dashboard")}
         </Link>
@@ -482,13 +482,16 @@ const Header = () => {
 
           return (
             <span key={routeTo} className="flex items-center space-x-2">
-              <span>/</span>
+              <span className="text-[#848484]">/</span>
               {isLast ? (
-                <span className="font-semibold text-gray-900">
+                <span className="font-semibold text-[#0a0a0a]">
                   {formatLabel(value)}
                 </span>
               ) : (
-                <Link to={routeTo} className="text-gray-600 hover:underline">
+                <Link
+                  to={routeTo}
+                  className="text-[#5a5a5a] hover:text-[var(--header-text-hover)]"
+                >
                   {formatLabel(value)}
                 </Link>
               )}
@@ -504,16 +507,16 @@ const Header = () => {
 
   return (
     <header
-      className="z-30 w-full border-b border-[#e6eef6] bg-white shadow-[0_4px_18px_rgba(7,16,31,0.04)]"
+      className="admin-topbar"
       style={{ backgroundColor: "var(--header-bg)" }}
     >
-      <div className="w-full flex items-center justify-between h-20 px-6">
+      <div className="admin-topbar__inner">
         {/* Left Section: Sidebar Toggle Icon and Breadcrumbs */}
-        <div className="flex items-center space-x-4 flex-1">
-          {/* Sidebar Toggle Button */}
+        <div className="flex flex-1 items-center space-x-3">
           <button
+            type="button"
             onClick={handleSidebarButtonClick}
-            className="p-2 rounded-lg hover:bg-[var(--header-hover-bg)] focus:outline-none transition-all duration-200 group"
+            className="admin-iconbtn"
             aria-label={
               isSettingsPage
                 ? "Toggle Settings Sidebar"
@@ -530,17 +533,15 @@ const Header = () => {
             }
           >
             {isSidebarCollapsed ? (
-              <FiMenu className="w-5 h-5 text-gray-600 group-hover:text-[var(--header-icon-hover)] transition-colors" />
+              <FiMenu className="h-[18px] w-[18px]" />
             ) : (
-              <FiChevronLeft className="w-5 h-5 text-gray-600 group-hover:text-[var(--header-icon-hover)] transition-colors" />
+              <FiChevronLeft className="h-[18px] w-[18px]" />
             )}
           </button>
 
-          {/* Breadcrumbs */}
           <div className="hidden md:block">{generateBreadcrumbs()}</div>
         </div>
 
-        {/* Right Section */}
         <div className="flex items-center space-x-3">
           {/* Search Bar */}
           {/* <div className="relative hidden lg:block">
@@ -554,15 +555,15 @@ const Header = () => {
             />
           </div> */}
 
-          {/* Language Switcher */}
           <div className="relative" ref={languageRef}>
             <button
+              type="button"
               onClick={() => setLanguageOpen(!languageOpen)}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-[var(--header-hover-bg)] transition-colors duration-200 focus:outline-none group"
+              className="admin-iconbtn admin-iconbtn--pill"
               aria-label="Change Language"
             >
-              <FiGlobe className="w-5 h-5 text-gray-600 group-hover:text-[var(--header-icon-hover)] transition-colors" />
-              <span className="text-sm font-medium text-gray-700 hidden sm:block">
+              <FiGlobe className="h-[18px] w-[18px]" />
+              <span className="hidden text-sm font-medium text-[#1a1a1a] sm:block">
                 {languageOptions.find((lang) => lang.value === currentLanguage)
                   ?.label || "English"}
               </span>
@@ -587,17 +588,17 @@ const Header = () => {
             )}
           </div>
 
-          {/* Notifications */}
           <div className="relative" ref={notificationRef}>
             <button
-              className="relative focus:outline-none p-2 rounded-lg hover:bg-[var(--header-hover-bg)] transition-colors duration-200 disabled:opacity-50 group"
+              type="button"
+              className="admin-iconbtn relative disabled:opacity-50"
               onClick={handleNotificationOpen}
               disabled={loading || isNotificationLoading}
               aria-label={t("Notifications")}
             >
-              <FiBell className="w-5 h-5 text-gray-600 group-hover:text-[var(--header-icon-hover)] transition-colors" />
+              <FiBell className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full animate-pulse">
+                <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#C5061A] px-1.5 text-xs font-bold leading-none text-white">
                   {unreadCount > 50 ? "50+" : unreadCount}
                 </span>
               )}
@@ -828,36 +829,33 @@ const Header = () => {
             )}
           </div>
 
-          {/* Profile */}
-          <div
-            className="relative flex items-center space-x-2"
-            ref={profileRef}
-          >
-            <img
-              src={getUserAvatar() || "/placeholder.svg"}
-              alt="User Avatar"
-              className="h-10 w-10 rounded-full border-2 border-gray-200 object-cover hover:border-[var(--header-focus-ring)] transition-colors flex-shrink-0"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = DEFAULT_AVATAR_URL;
-              }}
-            />
-            <div className="hidden sm:flex flex-col items-start mr-2 min-w-0">
-              <span className="text-sm font-semibold text-gray-800 leading-tight truncate max-w-[120px]">
-                {adminInfo?.name || "User"}
-              </span>
-              <span className="text-xs text-gray-500 leading-tight mt-0.5 truncate max-w-[120px]">
-                {adminInfo?.role?.name || "Admin"}
-              </span>
-            </div>
-            <div
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
               onClick={handleProfileOpen}
-              className="cursor-pointer flex items-center hover:bg-[var(--header-hover-bg)] rounded-lg px-3 py-2 transition-colors group"
+              className="admin-iconbtn admin-iconbtn--pill"
+              aria-expanded={profileOpen}
             >
-              {/* Dynamic chevron that rotates when dropdown is open */}
+              <img
+                src={getUserAvatar() || "/placeholder.svg"}
+                alt="User Avatar"
+                className="h-7 w-7 flex-shrink-0 rounded-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = DEFAULT_AVATAR_URL;
+                }}
+              />
+              <div className="hidden min-w-0 flex-col items-start sm:flex">
+                <span className="max-w-[120px] truncate text-sm font-semibold leading-tight text-[#0a0a0a]">
+                  {adminInfo?.name || "User"}
+                </span>
+                <span className="mt-0.5 max-w-[120px] truncate text-xs leading-tight text-[#5a5a5a]">
+                  {adminInfo?.role?.name || "Admin"}
+                </span>
+              </div>
               <svg
-                className={`w-4 h-4 text-gray-500 group-hover:text-[var(--header-icon-hover)] transition-all duration-200 flex-shrink-0 ${
-                  profileOpen ? "transform rotate-180" : ""
+                className={`h-4 w-4 flex-shrink-0 text-[#5a5a5a] transition-transform duration-200 ${
+                  profileOpen ? "rotate-180" : ""
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -869,18 +867,16 @@ const Header = () => {
                   strokeLinejoin="round"
                   strokeWidth="2"
                   d="M19 9l-7 7-7-7"
-                ></path>
+                />
               </svg>
-            </div>
+            </button>
 
-            {/* Profile Dropdown */}
             {profileOpen && (
               <ul
-                className="absolute right-0 w-48 bg-white rounded-lg shadow-xl border border-gray-200 text-sm z-50 overflow-hidden"
-                style={{ top: "100%", marginTop: "0.5rem" }}
+                className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-lg border border-[var(--acu-border)] bg-white text-sm shadow-xl"
               >
                 <li
-                  className="px-4 py-2.5 hover:bg-[var(--header-hover-bg)] cursor-pointer transition-colors text-gray-700 hover:text-[var(--header-text-hover)]"
+                  className="cursor-pointer px-4 py-2.5 text-gray-700 transition-colors hover:bg-[var(--header-hover-bg)] hover:text-[var(--header-text-hover)]"
                   onClick={() => {
                     history.push("/dashboard");
                     setProfileOpen(false);
@@ -890,7 +886,7 @@ const Header = () => {
                 </li>
                 {isStaff && (
                   <li
-                    className="px-4 py-2.5 hover:bg-[var(--header-hover-bg)] cursor-pointer transition-colors text-gray-700 hover:text-[var(--header-text-hover)]"
+                    className="cursor-pointer px-4 py-2.5 text-gray-700 transition-colors hover:bg-[var(--header-hover-bg)] hover:text-[var(--header-text-hover)]"
                     onClick={() => {
                       history.push("/my-HR");
                       setProfileOpen(false);
@@ -900,7 +896,7 @@ const Header = () => {
                   </li>
                 )}
                 <li
-                  className="px-4 py-2.5 hover:bg-[var(--header-hover-bg)] cursor-pointer transition-colors text-gray-700 hover:text-[var(--header-text-hover)]"
+                  className="cursor-pointer px-4 py-2.5 text-gray-700 transition-colors hover:bg-[var(--header-hover-bg)] hover:text-[var(--header-text-hover)]"
                   onClick={() => {
                     history.push("/edit-profile");
                     setProfileOpen(false);
@@ -908,9 +904,9 @@ const Header = () => {
                 >
                   {t("Edit Profile")}
                 </li>
-                <li className="border-t border-gray-200"></li>
+                <li className="border-t border-[var(--acu-border)]" />
                 <li
-                  className="px-4 py-2.5 text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
+                  className="cursor-pointer px-4 py-2.5 text-red-600 transition-colors hover:bg-red-50"
                   onClick={handleLogout}
                 >
                   {t("Logout")}

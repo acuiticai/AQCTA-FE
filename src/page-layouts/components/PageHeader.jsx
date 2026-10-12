@@ -101,103 +101,45 @@ const PageHeader = ({
 
   const filtersBlock =
     filters.length > 0 ? (
-      <div className="flex items-center flex-wrap gap-2 min-w-0">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         {filters.map((field) => (
           <FormInput key={field.name} {...field} />
         ))}
       </div>
     ) : null;
 
-  if (isLarge) {
-    return (
-      <div className="mb-8 w-full">
-        {showBackButton && (
-          <BackButton
-            onClick={onBackClick}
-            fallbackPath={backFallbackPath}
-            className="mb-4 !mt-0"
-          />
-        )}
-
-        <div className="flex w-full min-w-0 flex-col gap-4 rounded-[18px] border border-[#e6eef6] bg-white p-5 shadow-[0_10px_30px_rgba(7,16,31,0.05)] lg:flex-row lg:items-center lg:justify-between lg:p-6">
-          <div className="min-w-0 flex-1">
-            <div
-              className="mb-2 h-1.5 w-12 rounded-full"
-              style={{
-                background:
-                  "linear-gradient(90deg, #FE0032 0%, #C5061A 50%, #A30516 100%)",
-              }}
-            />
-            <h1
-              className="truncate text-3xl font-bold tracking-tight text-[#07101f]"
-              style={{ fontFamily: '"Outfit", "Plus Jakarta Sans", sans-serif' }}
-            >
-              {title}
-            </h1>
-            {description ? (
-              <p className="mt-2 text-[15px] text-[#5a6b80]">{description}</p>
-            ) : null}
-          </div>
-
-          {hasActions && (
-            <div
-              className={`flex w-full min-w-0 max-w-full flex-wrap items-center justify-end gap-3 lg:w-auto lg:gap-4 ${actionsContainerClassName}`}
-            >
-              {filtersBlock}
-              {CustomFilterComponent && <CustomFilterComponent />}
-              {renderActionButtons()}
-              {addButton}
-              {moreOptionsButton}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full">
+      {showBackButton && (
+        <BackButton
+          onClick={onBackClick}
+          fallbackPath={backFallbackPath}
+          className="mb-3 !mt-0"
+          compact={!isLarge}
+        />
+      )}
+
       <div
-        className={`mb-6 flex w-full flex-wrap justify-between gap-3 rounded-[18px] border border-[#e6eef6] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(7,16,31,0.05)] sm:px-5 ${
-          description ? "items-start" : "items-center"
+        className={`admin-pagehead ${
+          description || isLarge ? "items-start" : "items-center"
         }`}
       >
-        <div
-          className={`flex min-w-0 flex-1 gap-3 ${
-            description ? "items-start" : "items-center"
-          }`}
-        >
-          {showBackButton && (
-            <BackButton
-              compact
-              onClick={onBackClick}
-              fallbackPath={backFallbackPath}
-              className={description ? "mt-0.5" : ""}
-            />
-          )}
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div
-              className="mb-1 h-1 w-10 rounded-full"
-              style={{
-                background:
-                  "linear-gradient(90deg, #FE0032 0%, #C5061A 50%, #A30516 100%)",
-              }}
-            />
-            <h1
-              className="truncate text-xl font-bold leading-tight tracking-tight text-[#07101f]"
-              style={{ fontFamily: '"Outfit", "Plus Jakarta Sans", sans-serif' }}
-            >
-              {title}
-            </h1>
-            {description ? (
-              <p className="text-sm text-[#5a6b80]">{description}</p>
-            ) : null}
-          </div>
+        <div className="min-w-0 flex-1">
+          <h1
+            className={`truncate ${
+              isLarge ? "admin-pagehead__title" : "admin-pagehead__title admin-pagehead__title--sm"
+            }`}
+          >
+            {title}
+          </h1>
+          {description ? (
+            <p className="admin-pagehead__subtitle">{description}</p>
+          ) : null}
         </div>
 
         {hasActions && (
           <div
-            className={`flex items-center flex-wrap gap-2 w-full 2xl:w-auto justify-end min-w-0 ${actionsContainerClassName}`}
+            className={`flex w-full min-w-0 max-w-full flex-wrap items-center justify-end gap-2 lg:w-auto ${actionsContainerClassName}`}
           >
             {filtersBlock}
             {CustomFilterComponent && <CustomFilterComponent />}

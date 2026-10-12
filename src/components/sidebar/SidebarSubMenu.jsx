@@ -17,7 +17,6 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
       .map((r) => safePath(r.path))
       .filter(Boolean);
     const isExactMatch = routePaths.some((routePath) => path === routePath);
-    // More strict matching: only match if routePath is followed by /, :, or end of string
     const isNestedRoute = routePaths.some((routePath) => {
       return (
         path === routePath ||
@@ -29,7 +28,9 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
   };
 
   const isNotASidebarRoute = !sidebar.some((r) =>
-    (r.routes || []).some((subRoute) => safePath(subRoute.path) === location.pathname),
+    (r.routes || []).some(
+      (subRoute) => safePath(subRoute.path) === location.pathname,
+    ),
   );
 
   const [expanded, setExpanded] = useState(getInitialExpanded());
@@ -46,7 +47,6 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
     }
   }, [location.pathname]);
 
-  // Check if any sub-route is active
   const isParentActive = (route.routes || []).some((subRoute) => {
     const currentPath = location.pathname;
     const subRoutePath = safePath(subRoute.path);
@@ -54,8 +54,6 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
     const isExactMatch = currentPath === subRoutePath;
     const isNestedRoute = currentPath.startsWith(`${subRoutePath}/`);
     const pathBase = subRoutePath.split("/:")[0];
-    // More strict matching: only match if pathBase is followed by /, :, or end of string
-    // This prevents /business-group from matching /business
     const isEditRoute = Boolean(
       pathBase &&
         (currentPath === pathBase ||
@@ -66,42 +64,35 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
   });
 
   return (
-    <li className="relative mb-1">
-      {/* Parent Item */}
+    <li className="relative mb-0.5">
       <button
+        type="button"
         onClick={toggleExpand}
-        className={`flex w-full items-center ${
-          isCollapsed ? "px-3 justify-center" : "px-4"
-        } rounded-xl py-3.5 text-sm font-semibold transition-all duration-200 focus:outline-none ${
-          isParentActive
-            ? "bg-[#FDECEE] text-[#C5061A] shadow-[inset_3px_0_0_#C5061A]"
-            : "text-[#1A2740] hover:bg-[#F5F2F3] hover:text-[#C5061A]"
-        }`}
+        className={`admin-navitem admin-navitem--parent ${
+          isCollapsed ? "admin-navitem--collapsed" : ""
+        } ${isParentActive ? "is-active" : ""}`}
         title={isCollapsed ? route.name : ""}
       >
         {!isCollapsed && (
-          <span className="mr-2">
+          <span className="flex-shrink-0">
             {expanded ? (
-              <FiChevronDown className="w-4 h-4" />
+              <FiChevronDown className="h-4 w-4" />
             ) : (
-              <FiChevronRight className="w-4 h-4" />
+              <FiChevronRight className="h-4 w-4" />
             )}
           </span>
         )}
-        {/* Parent Icon */}
         {route.icon &&
           React.createElement(route.icon, {
-            className: `w-5 h-5 ${isCollapsed ? "" : "mr-3"}`,
+            className: "h-[18px] w-[18px] flex-shrink-0",
           })}
-        {/* Parent Name */}
         {!isCollapsed && (
-          <span className="flex-1 text-left">{route.name}</span>
+          <span className="min-w-0 flex-1 truncate text-left">{route.name}</span>
         )}
       </button>
 
-      {/* Submenu Items - Only show when not collapsed */}
       {!isCollapsed && expanded && route.routes && (
-        <ul className="ml-2 mt-1 space-y-1 border-l-2 border-[#D4DEE9] pl-4">
+        <ul className="admin-submenu space-y-0.5">
           {route.routes.map((subRoute) => {
             const currentPath = location.pathname;
             const subRoutePath = safePath(subRoute.path);
@@ -111,7 +102,7 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
                   key={subRoute.productKey || subRoute._id || subRoute.name}
                   className="relative"
                 >
-                  <span className="block px-3 py-2 text-sm italic text-slate-400">
+                  <span className="block px-3 py-2 text-sm italic text-white/40">
                     {subRoute.name || "Untitled"}{" "}
                     <span className="text-[10px] not-italic">(no path)</span>
                   </span>
@@ -121,15 +112,14 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
             const isExactMatch = currentPath === subRoutePath;
             const isNestedRoute = currentPath.startsWith(`${subRoutePath}/`);
             const pathBase = subRoutePath.split("/:")[0];
-            // More strict matching: only match if pathBase is followed by /, :, or end of string
-            // This prevents /business-group from matching /business
             const isEditRoute = Boolean(
               pathBase &&
                 (currentPath === pathBase ||
                   currentPath.startsWith(`${pathBase}/`) ||
                   currentPath.startsWith(`${pathBase}:`)),
             );
-            const isCurrentRoute = isExactMatch || isNestedRoute || isEditRoute;
+            const isCurrentRoute =
+              isExactMatch || isNestedRoute || isEditRoute;
 
             return (
               <li
@@ -138,15 +128,12 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
               >
                 <NavLink
                   to={subRoutePath}
-                  className={({ isActive }) =>
-                    `block rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                      isActive || isCurrentRoute
-                        ? "bg-[#FDECEE] font-semibold text-[#C5061A]"
-                        : "text-[#334155] hover:bg-[#F5F2F3] hover:text-[#C5061A]"
-                    }`
-                  }
+                  className={`admin-navitem${
+                    isCurrentRoute ? " is-active" : ""
+                  }`}
+                  activeClassName="is-active"
                 >
-                  {subRoute.name}
+                  <span className="min-w-0 flex-1 truncate">{subRoute.name}</span>
                 </NavLink>
               </li>
             );

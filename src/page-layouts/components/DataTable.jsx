@@ -50,7 +50,7 @@ const DataTable = ({
   filters = [],
   noPadding = false,
   noBackground = false,
-  containerClassName = "rounded-xl p-0 mb-[16px]",
+  containerClassName = "mb-4 p-0",
   wideTable = false,
   /** When set (e.g. css length), table area scrolls inside this max height; header stays sticky. */
   tableMaxHeight = "",
@@ -687,8 +687,8 @@ const DataTable = ({
               style={{
                 appearance: "none",
                 backgroundColor: "white",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
+                border: "1px solid var(--acu-border, #E0D6D8)",
+                borderRadius: "8px",
                 padding: "4px 12px 4px 8px",
                 paddingRight: "32px",
                 outline: "none",
@@ -756,9 +756,12 @@ const DataTable = ({
                   padding: "6px 12px",
                   borderRadius: "6px",
                   backgroundColor:
-                    currentPage === number ? "var(--p-blue)" : "white",
-                  color: currentPage === number ? "white" : "#000",
-                  border: currentPage === number ? "none" : "1px solid #e5e7eb",
+                    currentPage === number ? "var(--p-blue)" : "#FAF6F7",
+                  color: currentPage === number ? "white" : "#1A1A1A",
+                  border:
+                    currentPage === number
+                      ? "none"
+                      : "1px solid var(--acu-border, #E0D6D8)",
                 }}
               >
                 {number}
@@ -836,10 +839,10 @@ const DataTable = ({
 
   const navBtnStyle = {
     padding: "6px 12px",
-    borderRadius: "6px",
-    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    border: "1px solid var(--acu-border, #E0D6D8)",
     opacity: 1,
-    backgroundColor: "white",
+    backgroundColor: "#FAF6F7",
     cursor: "pointer",
     disabled: {
       opacity: 0.5,
@@ -1119,11 +1122,11 @@ const DataTable = ({
                   paddingRight: "0px",
                   paddingTop: "8px",
                   paddingBottom: "8px",
-                  border: "1px solid #E6EEF6",
+                  border: "1px solid var(--acu-border, #E0D6D8)",
                   outline: "none",
                   fontSize: "14px",
-                  borderRadius: "14px",
-                  background: "#F4F7FB",
+                  borderRadius: "12px",
+                  background: "var(--acu-surface-muted, #FAF6F7)",
                   width: "300px",
                   position: "relative",
                 }}
@@ -1186,7 +1189,7 @@ const DataTable = ({
         </div>
       </div>
       <div
-        className={`mt-5 w-full min-w-0 max-w-full ${
+        className={`admin-table-shell mt-5 w-full min-w-0 max-w-full ${
           wideTable || tableMaxHeight ? "" : "overflow-hidden"
         }`}
       >
@@ -1222,9 +1225,9 @@ const DataTable = ({
             }`}
           >
           <thead
-            className={tableMaxHeight ? "sticky top-0 z-20 shadow-sm" : ""}
+            className={tableMaxHeight ? "sticky top-0 z-20" : ""}
           >
-            <tr className="text-gray-600">
+            <tr>
               {selectable && (
                 <th
                   className="py-2 w-10"

@@ -37,6 +37,7 @@ import {
   readCachedBrandingLogo,
   writeCachedBrandingLogo,
 } from "@/utils/brandingLogo";
+import { AQCTA_IDENTITY } from "@/config/aqctaIdentity";
 
 const normalizeModulePath = (value = "") => {
   const raw = String(value || "").trim().toLowerCase();
@@ -100,9 +101,11 @@ const SidebarContent = () => {
   const { isSidebarCollapsed } = useContext(SidebarContext);
   const [sidebar, setSidebar] = useState([]);
   const location = useLocation();
-  const sidebarColor = "#ffffff";
   const [logo, setLogo] = useState(
-    () => readCachedBrandingLogo() || BRANDING_PLACEHOLDER_LOGO
+    () =>
+      readCachedBrandingLogo() ||
+      AQCTA_IDENTITY.logoDarkPath ||
+      BRANDING_PLACEHOLDER_LOGO
   );
   const history = useHistory();
   const { getModuleLabel } = useModuleLabels();
@@ -260,112 +263,104 @@ const SidebarContent = () => {
     }
   }, [state.adminInfo?.token, dispatch, history]);
 
+  const sidebarLogo =
+    logo ||
+    AQCTA_IDENTITY.logoDarkPath ||
+    (mode === "dark"
+      ? "/fallback-dark-logo.png"
+      : AQCTA_IDENTITY.logoLightPath);
+
   return (
-    <div
-      className="flex h-full flex-col border-r border-[#e2eaf2] bg-white transition-all duration-300"
-      style={{ backgroundColor: sidebarColor }}
-    >
-      {/* Logo Section - Fixed at top */}
-      <div className="flex h-20 flex-shrink-0 items-center justify-center border-b border-[#e2eaf2] bg-white px-4">
+    <div className="admin-sidebar">
+      <div className="admin-sidebar__brand">
         <Link
           to="/home"
           className={`flex items-center justify-center transition-all duration-300 ${
-            isSidebarCollapsed ? "px-2" : "px-4"
+            isSidebarCollapsed ? "px-1" : "px-2"
           }`}
         >
           <img
-            src={
-              logo ||
-              (mode === "dark"
-                ? "/fallback-dark-logo.png"
-                : "/fallback-light-logo.png")
-            }
+            src={sidebarLogo}
             alt="Logo"
-            width={isSidebarCollapsed ? "40" : "160"}
+            width={isSidebarCollapsed ? "40" : "168"}
             height="40"
             className={`object-contain transition-all duration-300 ${
-              isSidebarCollapsed ? "h-10 w-10" : "h-12"
+              isSidebarCollapsed ? "h-9 w-9" : "h-10 max-w-[168px]"
             }`}
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src = BRANDING_PLACEHOLDER_LOGO;
+              e.target.src =
+                AQCTA_IDENTITY.logoDarkPath || BRANDING_PLACEHOLDER_LOGO;
             }}
           />
         </Link>
       </div>
 
-      {/* Menu Items - Scrollable (native scroll; PerfectScrollbar conflicts with React DOM updates) */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-          <ul className="mt-4 pb-4 px-2">
-            {finalSidebar.map((route) =>
-              route.routes && route.routes.length > 0 ? (
-                <SidebarSubMenu
-                  sidebar={finalSidebar}
-                  route={route}
-                  key={route.productKey || route._id || route.name}
-                  isCollapsed={isSidebarCollapsed}
-                />
-              ) : (
-                <li
-                  className="relative mb-1"
-                  key={route.productKey || route._id || route.name}
-                >
-                  <NavLink
-                    to={route.path}
-                    target={route?.outside ? "_blank" : "_self"}
-                    end={route.path !== "/" && !route.path.endsWith("/")}
-                    isActive={(match, location) => {
-                      const currentPath = location.pathname;
-                      
-                      // For routes with path "/", only match if it's exactly "/" or matches a submodule
-                      if (route.path === "/") {
-                        if (currentPath === "/") return true;
-                        // Check if current path matches any submodule of this route
-                        if (route.routes && route.routes.length > 0) {
-                          return route.routes.some((subRoute) => {
-                            const subPath = subRoute.path;
-                            return currentPath === subPath || 
-                                   currentPath.startsWith(subPath + "/") ||
-                                   currentPath.startsWith(subPath + ":");
-                          });
-                        }
-                        return false;
+      <div className="admin-sidebar__nav">
+        <ul>
+          {finalSidebar.map((route) =>
+            route.routes && route.routes.length > 0 ? (
+              <SidebarSubMenu
+                sidebar={finalSidebar}
+                route={route}
+                key={route.productKey || route._id || route.name}
+                isCollapsed={isSidebarCollapsed}
+              />
+            ) : (
+              <li
+                className="relative mb-0.5"
+                key={route.productKey || route._id || route.name}
+              >
+                <NavLink
+                  to={route.path}
+                  target={route?.outside ? "_blank" : "_self"}
+                  exact={route.path === "/"}
+                  isActive={(match, loc) => {
+                    const currentPath = loc.pathname;
+
+                    if (route.path === "/") {
+                      if (currentPath === "/") return true;
+                      if (route.routes && route.routes.length > 0) {
+                        return route.routes.some((subRoute) => {
+                          const subPath = subRoute.path;
+                          return (
+                            currentPath === subPath ||
+                            currentPath.startsWith(subPath + "/") ||
+                            currentPath.startsWith(subPath + ":")
+                          );
+                        });
                       }
-                      
-                      // For other routes, ensure exact match or proper nested match
-                      // This prevents /business-group from matching /business
-                      if (currentPath === route.path) return true;
-                      
-                      // Only match if route path is followed by / or : (not other characters)
-                      return currentPath.startsWith(route.path + "/") ||
-                             currentPath.startsWith(route.path + ":");
-                    }}
-                    className={({ isActive }) =>
-                      `${
-                        isSidebarCollapsed ? "px-3 justify-center" : "px-4"
-                      } relative inline-flex w-full items-center rounded-xl py-3.5 text-sm font-semibold transition-all duration-200 ${
-                        isActive
-                          ? "bg-[#FDECEE] text-[#C5061A] shadow-[inset_3px_0_0_#C5061A]"
-                          : "text-[#1A2740] hover:bg-[#F5F2F3] hover:text-[#C5061A]"
-                      }`
+                      return false;
                     }
-                    rel="noreferrer"
-                    title={isSidebarCollapsed ? t(`${route.name}`) : ""}
-                  >
-                    {route.icon &&
-                      React.createElement(route.icon, {
-                        className: `w-5 h-5 ${
-                          isSidebarCollapsed ? "" : "mr-3"
-                        }`,
-                      })}
-                    {!isSidebarCollapsed && (
-                      <span className="ml-0">{t(`${route.name}`)}</span>
-                    )}
-                  </NavLink>
-                </li>
-              )
-            )}
-          </ul>
+
+                    if (currentPath === route.path) return true;
+
+                    return (
+                      currentPath.startsWith(route.path + "/") ||
+                      currentPath.startsWith(route.path + ":")
+                    );
+                  }}
+                  className={`admin-navitem ${
+                    isSidebarCollapsed ? "admin-navitem--collapsed" : ""
+                  }`}
+                  activeClassName="is-active"
+                  rel="noreferrer"
+                  title={isSidebarCollapsed ? t(`${route.name}`) : ""}
+                >
+                  {route.icon &&
+                    React.createElement(route.icon, {
+                      className: "h-[18px] w-[18px] flex-shrink-0",
+                    })}
+                  {!isSidebarCollapsed && (
+                    <span className="min-w-0 flex-1 truncate">
+                      {t(`${route.name}`)}
+                    </span>
+                  )}
+                </NavLink>
+              </li>
+            )
+          )}
+        </ul>
       </div>
     </div>
   );

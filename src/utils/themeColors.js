@@ -120,10 +120,21 @@ export function applyThemeColorVars({
     root.style.setProperty("--blue-800", darker);
     root.style.setProperty("--blue-900", darkenHex(buttons_color, 0.55));
 
-    // Sidebar accents follow primary (soft fill reads on white chrome)
-    root.style.setProperty("--sidebar-hover", buttons_color);
-    root.style.setProperty("--sidebar-active", buttons_color);
-    root.style.setProperty("--sidebar-active-bg", soft);
+    // Sidebar accents follow primary — tone depends on chrome (dark vs light).
+    const sidebarSurface =
+      leftbar_color ||
+      root.style.getPropertyValue("--sidebar-bg") ||
+      getComputedStyle(root).getPropertyValue("--sidebar-bg").trim() ||
+      "#0a0a0a";
+    if (isDarkSurface(sidebarSurface)) {
+      root.style.setProperty("--sidebar-hover", "#FE0032");
+      root.style.setProperty("--sidebar-active", "#FE0032");
+      root.style.setProperty("--sidebar-active-bg", "rgba(197, 6, 26, 0.22)");
+    } else {
+      root.style.setProperty("--sidebar-hover", buttons_color);
+      root.style.setProperty("--sidebar-active", buttons_color);
+      root.style.setProperty("--sidebar-active-bg", soft);
+    }
 
     // Header accent (icons / focus) follow primary
     root.style.setProperty("--header-text-hover", buttons_color);
@@ -136,30 +147,51 @@ export function applyThemeColorVars({
   }
 
   if (topbar_color) {
-    root.style.setProperty("--topbar-color", topbar_color);
-    root.style.setProperty("--header-bg", topbar_color);
+    // Legacy solid-white topbars → flat warm portal canvas
+    const nearWhite =
+      String(topbar_color).trim().toLowerCase() === "#ffffff" ||
+      String(topbar_color).trim().toLowerCase() === "#fff" ||
+      String(topbar_color).trim().toLowerCase() === "white" ||
+      relativeLuminance(topbar_color) > 0.92;
+    const effectiveTopbar = nearWhite ? "#F5F2F3" : topbar_color;
+    root.style.setProperty("--topbar-color", effectiveTopbar);
+    root.style.setProperty("--header-bg", effectiveTopbar);
   }
 
   if (leftbar_color) {
-    root.style.setProperty("--leftbar-color", leftbar_color);
-    root.style.setProperty("--sidebar-bg", leftbar_color);
+    // Legacy white leftbars → customer-portal black chrome (AQCTA product look).
+    const nearWhite =
+      String(leftbar_color).trim().toLowerCase() === "#ffffff" ||
+      String(leftbar_color).trim().toLowerCase() === "#fff" ||
+      String(leftbar_color).trim().toLowerCase() === "white" ||
+      relativeLuminance(leftbar_color) > 0.92;
+    const effectiveLeftbar = nearWhite ? "#0A0A0A" : leftbar_color;
+
+    root.style.setProperty("--leftbar-color", effectiveLeftbar);
+    root.style.setProperty("--sidebar-bg", effectiveLeftbar);
 
     const accent =
       root.style.getPropertyValue("--sidebar-active") ||
       getComputedStyle(root).getPropertyValue("--sidebar-active").trim() ||
       "#c5061a";
 
-    // White / light sidebars need solid dark labels (never translucent light text).
-    if (isDarkSurface(leftbar_color)) {
-      root.style.setProperty("--sidebar-text", "#E8F0FA");
-      root.style.setProperty("--sidebar-text-hover", "#ffffff");
-      root.style.setProperty("--sidebar-active-bg", "rgba(8, 160, 248, 0.22)");
-      root.style.setProperty("--sidebar-active", accent);
+    // Dark chrome matches customer portal; light chrome keeps solid dark labels.
+    if (isDarkSurface(effectiveLeftbar)) {
+      root.style.setProperty("--sidebar-border", "rgba(255, 255, 255, 0.08)");
+      root.style.setProperty("--sidebar-hover-bg", "rgba(255, 255, 255, 0.06)");
+      root.style.setProperty("--sidebar-text", "rgba(245, 245, 245, 0.68)");
+      root.style.setProperty("--sidebar-text-hover", "#F5F5F5");
+      root.style.setProperty("--sidebar-active-bg", "rgba(197, 6, 26, 0.22)");
+      root.style.setProperty("--sidebar-active", "#FE0032");
+      root.style.setProperty("--sidebar-hover", "#FE0032");
     } else {
-      root.style.setProperty("--sidebar-text", "#1A2740");
-      root.style.setProperty("--sidebar-text-hover", "#C5061A");
+      root.style.setProperty("--sidebar-border", "#E0D6D8");
+      root.style.setProperty("--sidebar-hover-bg", "#F5F2F3");
+      root.style.setProperty("--sidebar-text", "#1A1A1A");
+      root.style.setProperty("--sidebar-text-hover", accent);
       root.style.setProperty("--sidebar-active-bg", lightenHex(accent, 0.85));
       root.style.setProperty("--sidebar-active", accent);
+      root.style.setProperty("--sidebar-hover", accent);
     }
   }
 

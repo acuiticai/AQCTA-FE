@@ -7,10 +7,10 @@ const DesktopSidebar = () => {
 
   return (
     <aside
-      className={`z-20 hidden h-full flex-shrink-0 border-r border-[#e2eaf2] bg-white shadow-sm transition-all duration-300 lg:block ${
-        isSidebarCollapsed ? "w-100" : "w-fit-content"
+      className={`admin-shell__aside z-20 hidden h-full flex-shrink-0 transition-all duration-300 lg:block ${
+        isSidebarCollapsed ? "admin-shell__aside--collapsed" : ""
       }`}
-      style={{ backgroundColor: "#ffffff" }}
+      style={isSidebarCollapsed ? { width: 72 } : undefined}
     >
       <SidebarContent />
     </aside>

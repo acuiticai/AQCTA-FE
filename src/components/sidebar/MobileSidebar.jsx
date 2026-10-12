@@ -30,7 +30,7 @@ function MobileSidebar() {
           leaveFrom="opacity-100"
           leaveTo="opacity-0 transform -translate-x-20"
         >
-          <aside className="fixed inset-y-0 z-50 flex-shrink-0 w-64 mt-16 overflow-y-auto bg-white dark:bg-gray-800 lg:hidden">
+          <aside className="admin-shell__aside fixed inset-y-0 z-50 mt-16 w-64 flex-shrink-0 overflow-y-auto lg:hidden">
             <SidebarContent />
           </aside>
         </Transition>
