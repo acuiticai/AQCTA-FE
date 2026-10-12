@@ -1679,13 +1679,13 @@ table tr {
     background: transparent !important;
   }
 
-  table {
+  :is(table) {
     border-radius: 14px;
     overflow: hidden;
     border: 0;
   }
 
-  thead tr {
+  :is(thead) tr {
     background: #ffffff !important;
   }
 
@@ -1716,11 +1716,11 @@ table tr {
     }
   }
 
-  tbody tr:hover {
+  :is(tbody) tr:hover {
     background-color: #f5f9fd !important;
   }
 
-  tbody tr:last-child {
+  :is(tbody) tr:last-child {
     border-bottom: none;
   }
 
