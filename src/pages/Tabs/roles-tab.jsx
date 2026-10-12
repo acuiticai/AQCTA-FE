@@ -1,96 +1,97 @@
-import { useState, useEffect } from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { useState, useEffect } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function RolesTab({ profileData }) {
   const [expandedSections, setExpandedSections] = useState({
     sales: true,
     purchase: true,
-  })
-  const [role, setRole] = useState("")
-  const [assignedModules, setAssignedModules] = useState([])
-  const [assignedBusinesses, setAssignedBusinesses] = useState([])
+  });
+  const [role, setRole] = useState("");
+  const [assignedModules, setAssignedModules] = useState([]);
+  const [assignedBusinesses, setAssignedBusinesses] = useState([]);
 
   useEffect(() => {
     if (profileData) {
-      setRole(profileData.role?.name || "")
-      setAssignedModules(profileData.role?.modules || [])
-      setAssignedBusinesses(profileData.businesses || [])
+      setRole(profileData.role?.name || "");
+      setAssignedModules(profileData.role?.modules || []);
+      setAssignedBusinesses(profileData.businesses || []);
     }
-  }, [profileData])
+  }, [profileData]);
 
   const toggleSection = (section) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
-    }))
-  }
+    }));
+  };
 
   return (
     <div className="space-y-6">
+      <h3 className="ep-title">User Roles</h3>
+
       <div>
-        <label className="block text-sm text-gray-600 mb-2">Role</label>
-        <input
-          type="text"
-          value={role}
-          readOnly
-          className="w-full px-4 py-2.5 bg-gray-200 rounded-md text-gray-700"
-        />
+        <label className="ep-label">Role</label>
+        <input type="text" value={role} readOnly className="ep-input" />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <h4 className="text-base font-medium text-gray-800 mb-4">Assigned Roles</h4>
+          <h4 className="ep-label" style={{ fontSize: 14, color: "#2f2f2f" }}>
+            Assigned Roles
+          </h4>
           <div className="space-y-2">
+            {assignedModules.length === 0 && (
+              <p className="text-sm text-[#6e6e6e]">No modules assigned.</p>
+            )}
             {assignedModules.map((module) => (
               <div key={module._id} className="mb-2">
                 <button
+                  type="button"
                   onClick={() => toggleSection(module.name.toLowerCase())}
-                  className="w-full flex items-center justify-between p-3 bg-gray-100 rounded-md"
+                  className="ep-list-item"
                 >
-                  <span className="text-gray-700">{module.name}</span>
-                  {module.subModules && module.subModules.length > 0 && (
-                    expandedSections[module.name.toLowerCase()] ? 
-                      <ChevronUp className="w-4 h-4 text-gray-400" /> : 
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
-                  )}
-                </button>
-                {expandedSections[module.name.toLowerCase()] && module.subModules && (
-                  <div className="mt-1">
-                    {module.subModules.map((subModule) => (
-                      <div 
-                        key={subModule._id} 
-                        className="py-2 px-4 text-sm text-gray-600 hover:bg-gray-50"
-                      >
-                        {subModule.name}
-                      </div>
+                  <span>{module.name}</span>
+                  {module.subModules && module.subModules.length > 0 &&
+                    (expandedSections[module.name.toLowerCase()] ? (
+                      <ChevronUp className="w-4 h-4 text-[#6e6e6e]" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-[#6e6e6e]" />
                     ))}
-                  </div>
-                )}
+                </button>
+                {expandedSections[module.name.toLowerCase()] &&
+                  module.subModules && (
+                    <div className="mt-1 pl-2">
+                      {module.subModules.map((subModule) => (
+                        <div
+                          key={subModule._id}
+                          className="py-2 px-3 text-sm text-[#6e6e6e]"
+                        >
+                          {subModule.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
               </div>
             ))}
           </div>
         </div>
 
         <div>
-          <h4 className="text-base font-medium text-gray-800 mb-4">Assigned Businesses</h4>
+          <h4 className="ep-label" style={{ fontSize: 14, color: "#2f2f2f" }}>
+            Assigned Businesses
+          </h4>
           <div className="space-y-2">
+            {assignedBusinesses.length === 0 && (
+              <p className="text-sm text-[#6e6e6e]">No businesses assigned.</p>
+            )}
             {assignedBusinesses.map((business) => (
-              <div key={business._id} className="p-3 bg-gray-100 rounded-md text-gray-700">
+              <div key={business._id} className="ep-list-item" style={{ cursor: "default" }}>
                 {business.name}
               </div>
             ))}
           </div>
         </div>
       </div>
-
-      {/* Comment out Save button as requested */}
-      {/*
-      <div className="flex justify-end pt-4">
-        <button className="bg-lime-400 text-white px-8 py-2 rounded-lg hover:bg-lime-500 transition-colors">
-          Save
-        </button>
-      </div>
-      */}
     </div>
-  )
+  );
 }

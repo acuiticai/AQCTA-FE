@@ -18,6 +18,8 @@ import {
 import DepartmentsSettings from "./DepartmentsSettings";
 import PositionsSettings from "./PositionsSettings";
 import SettingsOrgBanner from "../SettingsOrgBanner";
+import useSingleBusinessMode from "@/hooks/useSingleBusinessMode";
+import { getSoleAssignedBusinessId } from "@/utils/sessionAssignedBusinesses";
 const BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
 const ItemTable = ({ items, onEdit, onDelete, onToggleStatus, onView }) => {
@@ -225,23 +227,41 @@ const EstimatesPage = () => {
   const [organization, setOrganization] = useState(null); // Set initially as null
   const [isOrgLoaded, setIsOrgLoaded] = useState(false); // To track when organization is loaded
   const location = useLocation();
+  const { singleBusinessId } = useSingleBusinessMode();
+  const usesChildSettings =
+    activeTab === "Positions" || activeTab === "Departments";
+
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    const selectedOrg = searchParams.get("selectedOrg");
+    const selectedOrg =
+      searchParams.get("selectedOrg") ||
+      sessionStorage.getItem("settingsSelectedOrg") ||
+      singleBusinessId ||
+      getSoleAssignedBusinessId() ||
+      "";
 
     if (selectedOrg) {
       setOrganization(selectedOrg);
+      sessionStorage.setItem("settingsSelectedOrg", selectedOrg);
+      setIsOrgLoaded(true);
+      return;
     }
 
-    setIsOrgLoaded(true); // Organization has been fetched
-  }, [location]);
+    setIsOrgLoaded(false);
+  }, [location, singleBusinessId]);
 
   useEffect(() => {
-    if (isOrgLoaded && organization) {
-      // Ensure organization is loaded before fetching items
-      fetchItems(activeTab, organization);
+    // Positions/Departments tabs render their own pages — don't block on parent fetch
+    if (usesChildSettings) {
+      setLoading(false);
+      return;
     }
-  }, [activeTab, organization, isOrgLoaded]);
+    if (isOrgLoaded && organization) {
+      fetchItems(activeTab, organization);
+    } else if (isOrgLoaded) {
+      setLoading(false);
+    }
+  }, [activeTab, organization, isOrgLoaded, usesChildSettings]);
 
   const headers = {
     "Content-Type": "application/json",
@@ -431,20 +451,20 @@ const EstimatesPage = () => {
           </nav>
         </div>
 
-        {!isOrgLoaded && !organization ? (
+        {!isOrgLoaded ? (
           <div className="fixed inset-0 flex items-center justify-center bg-white">
             <p className="text-gray-600">
               {thr("loadingOrganization", "Loading organization...")}
             </p>
           </div>
-        ) : loading ? (
-          <div>{thr("loading", "Loading...")}</div>
-        ) : error ? (
-          <div>{thr("errorPrefix", "Error: {{error}}", { error })}</div>
         ) : activeTab === "Positions" ? (
           <PositionsSettings organization={organization} headers={headers} />
         ) : activeTab === "Departments" ? (
           <DepartmentsSettings organization={organization} headers={headers} />
+        ) : loading ? (
+          <div>{thr("loading", "Loading...")}</div>
+        ) : error ? (
+          <div>{thr("errorPrefix", "Error: {{error}}", { error })}</div>
         ) : (
           <div className="bg-gray-50 rounded-lg p-6">
             <div className="flex justify-end items-end w-full mb-6 space-x-4">

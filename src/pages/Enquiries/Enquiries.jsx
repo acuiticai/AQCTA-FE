@@ -584,7 +584,6 @@ const Enquiries = () => {
       {
         key: "enquiryNumber",
         header: "Enquiry #",
-        width: "12%",
         render: (row) =>
           routePerms.canViewDetails && row._id ? (
             <button
@@ -601,55 +600,46 @@ const Enquiries = () => {
       {
         key: "name",
         header: "Name",
-        width: "12%",
         render: (row) => row.name || "—",
       },
       {
         key: "company",
         header: "Company",
-        width: "14%",
         render: (row) => row.companyName || "—",
       },
       {
         key: "email",
         header: "Email",
-        width: "14%",
         render: (row) => row.email || "—",
       },
       {
         key: "phone",
         header: "Phone",
-        width: "10%",
         render: (row) => row.phone || "—",
       },
       {
         key: "enquiringFor",
         header: "Enquiring For",
-        width: "10%",
         render: (row) => row.enquiringFor || "—",
       },
       {
         key: "channel",
         header: "Channel",
-        width: "8%",
         render: (row) => row.enquiryChannel || "—",
       },
       {
         key: "status",
         header: "Status",
-        width: "8%",
         render: (row) => <StatusPill status={row.status || "—"} />,
       },
       {
         key: "submitted",
         header: "Submitted",
-        width: "10%",
         render: (row) => formatDate(row.createdAt),
       },
       {
         key: "actions",
         header: "Actions",
-        width: "10%",
         align: "right",
         render: (row) => (
           <ActionButtons maxVisibleActions={2} items={buildActionItems(row)} />

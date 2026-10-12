@@ -11,6 +11,7 @@ import {
   CustomModal,
   ToggleSwitch,
 } from "@/page-layouts";
+import EpcSurface from "@/components/Epc/EpcSurface";
 import FilterBar from "@/customer/components/ui/FilterBar";
 import { Card, CardHeader } from "@/customer/components/ui/Card";
 import PortalDataTable from "@/customer/components/ui/DataTable";
@@ -360,6 +361,7 @@ export default function TabApplicationFieldOptions() {
     : `Add ${activeMeta.label || "Option"}`;
 
   return (
+    <EpcSurface>
     <div className="w-full max-w-full min-w-0 overflow-x-hidden">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">
@@ -490,7 +492,7 @@ export default function TabApplicationFieldOptions() {
                 </div>
               </div>
               {canAdd ? (
-                <Button onClick={openCreate}>
+                <Button size="sm" onClick={openCreate}>
                   <PlusIcon size={15} />
                   Add {activeMeta.label}
                 </Button>
@@ -685,5 +687,6 @@ export default function TabApplicationFieldOptions() {
         ) : null}
       </CustomModal>
     </div>
+    </EpcSurface>
   );
 }

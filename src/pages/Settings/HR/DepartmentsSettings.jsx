@@ -10,6 +10,8 @@ import reactSelectConfig from "@/utils/react-select-style-config";
 import { ActionButtons, Loader } from "@/page-layouts";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import { useSettingsCrudPermissions } from "@/hooks/useSettingsCrudPermissions";
+import useSingleBusinessMode from "@/hooks/useSingleBusinessMode";
+import { getSoleAssignedBusinessId } from "@/utils/sessionAssignedBusinesses";
 import EpcListPage from "@/components/Epc/EpcListPage";
 import Button from "@/customer/components/ui/Button";
 import { PlusIcon } from "@/customer/components/ui/icons";
@@ -233,6 +235,7 @@ const EstimatesPage = () => {
   const [staffOptions, setStaffOptions] = useState([]);
   const location = useLocation();
   const { canAdd, canUpdate, canDelete } = useSettingsCrudPermissions();
+  const { singleBusinessId } = useSingleBusinessMode();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -251,18 +254,28 @@ const EstimatesPage = () => {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    const selectedOrg = searchParams.get("selectedOrg");
+    const selectedOrg =
+      searchParams.get("selectedOrg") ||
+      sessionStorage.getItem("settingsSelectedOrg") ||
+      singleBusinessId ||
+      getSoleAssignedBusinessId() ||
+      "";
 
     if (selectedOrg) {
       setOrganization(selectedOrg);
+      sessionStorage.setItem("settingsSelectedOrg", selectedOrg);
+      setIsOrgLoaded(true);
+      return;
     }
 
-    setIsOrgLoaded(true);
-  }, [location]);
+    setIsOrgLoaded(false);
+  }, [location, singleBusinessId]);
 
   useEffect(() => {
     if (isOrgLoaded && organization) {
       fetchItems(activeTab, organization);
+    } else if (isOrgLoaded) {
+      setLoading(false);
     }
   }, [activeTab, organization, isOrgLoaded]);
 
@@ -510,7 +523,7 @@ const EstimatesPage = () => {
     [t, canUpdate, canDelete]
   );
 
-  if (!isOrgLoaded && !organization) {
+  if (!isOrgLoaded || !organization) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white">
         <Loader fullContainer={true} />

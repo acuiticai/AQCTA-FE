@@ -10,6 +10,8 @@ import { useTableSorting } from "@/utils/tableSorting.jsx";
 import useCheckTokenExpired from "@/hooks/useCheckTokenExpired";
 import SettingsOrgBanner from "../SettingsOrgBanner";
 import { useSettingsCrudPermissions } from "@/hooks/useSettingsCrudPermissions";
+import useSingleBusinessMode from "@/hooks/useSingleBusinessMode";
+import { getSoleAssignedBusinessId } from "@/utils/sessionAssignedBusinesses";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { ActionButtons } from "@/page-layouts";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
@@ -17,6 +19,7 @@ import { Card, CardHeader } from "@/customer/components/ui/Card";
 import PortalDataTable from "@/customer/components/ui/DataTable";
 import Pagination from "@/customer/components/ui/Pagination";
 import FilterBar from "@/customer/components/ui/FilterBar";
+import EpcSurface from "@/components/Epc/EpcSurface";
 
 const BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
@@ -225,7 +228,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                 value={formData.name}
                 onChange={handleChange}
                 placeholder={isTermsAndConditions ? "e.g. Standard, Net 30" : undefined}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 required
               />
             </div>
@@ -252,7 +255,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                     name="staffId"
                     value={formData.staffId}
                     onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                     required
                     disabled={Boolean(item?._id)}
                   >
@@ -304,7 +307,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                   step="0.01"
                   value={formData.commission}
                   onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 />
                 <p className="mt-1 text-xs text-gray-500">
                   Enter a number only (e.g. 5 for 5%).
@@ -327,7 +330,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                 min={0}
                 value={formData.numberOfDays}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 required={isPaymentTerms}
               />
               {errors.numberOfDays && (
@@ -348,7 +351,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                   min={1}
                   value={formData.repeatInterval}
                   onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                   required
                 />
                 {errors.repeatInterval && (
@@ -363,7 +366,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                   name="repeatUnit"
                   value={formData.repeatUnit}
                   onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 >
                   <option value="day">Day(s)</option>
                   <option value="week">Week(s)</option>
@@ -385,7 +388,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                 onChange={handleChange}
                 rows={6}
                 placeholder="Enter terms and conditions text..."
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent resize-y"
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent resize-y"
               />
               <p className="mt-1 text-xs text-gray-500">
                 Same as Create Customer Invoice — this content can be used on invoices.
@@ -401,7 +404,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
                 name="systemType"
                 value={formData.systemType}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A6C437] focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)] focus:border-transparent"
                 required
               >
                 <option value="BILLING">BILLING</option>
@@ -414,7 +417,7 @@ const AddEditModal = ({ isOpen, onClose, type, item, onSubmit, staffOptions = []
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-4 py-2 bg-[#A6C437] text-white rounded-lg hover:bg-opacity-90 transition-colors"
+              className="px-4 py-2 bg-[var(--p-blue)] text-white rounded-lg hover:bg-opacity-90 transition-colors"
             >
               {item ? "Update" : "Add"} {type}
             </button>
@@ -465,7 +468,6 @@ const EstimatesPage = () => {
   const { adminInfo } = state;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [locations, setLocation] = useState("All");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState(null);
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
@@ -475,6 +477,7 @@ const EstimatesPage = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const checkTokenExpired = useCheckTokenExpired(); // ✅ hook used properly
   const { canAdd, canUpdate, canDelete } = useSettingsCrudPermissions();
+  const { singleBusinessId } = useSingleBusinessMode();
 
   const [organization, setOrganization] = useState(null); // Set initially as null
   const [isOrgLoaded, setIsOrgLoaded] = useState(false); // To track when organization is loaded
@@ -496,21 +499,13 @@ const EstimatesPage = () => {
   // Sorting functionality
   const { sortedData } = useTableSorting(items);
 
-  const dropdownOptions = Array.from(
-    new Set((items || []).map((item) => item.name).filter(Boolean))
-  );
-
   const filteredItems = useMemo(() => {
-    const byName =
-      locations === "All"
-        ? sortedData
-        : sortedData.filter((item) => item.name === locations);
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return byName;
-    return byName.filter((item) =>
+    if (!q) return sortedData;
+    return sortedData.filter((item) =>
       String(item.name || "").toLowerCase().includes(q)
     );
-  }, [sortedData, locations, searchTerm]);
+  }, [sortedData, searchTerm]);
 
   const paginatedItems = filteredItems.slice(
     (currentPage - 1) * recordsPerPage,
@@ -655,31 +650,33 @@ const EstimatesPage = () => {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    const selectedOrg = searchParams.get("selectedOrg");
+    const selectedOrg =
+      searchParams.get("selectedOrg") ||
+      sessionStorage.getItem("settingsSelectedOrg") ||
+      singleBusinessId ||
+      getSoleAssignedBusinessId() ||
+      "";
 
     if (selectedOrg) {
       setOrganization(selectedOrg);
+      sessionStorage.setItem("settingsSelectedOrg", selectedOrg);
+      setIsOrgLoaded(true);
+      return;
     }
 
-    setIsOrgLoaded(true); // Organization has been fetched
-  }, [location]);
+    // Fixed single-business mode: wait for assigned business sync
+    setIsOrgLoaded(false);
+  }, [location, singleBusinessId]);
 
   useEffect(() => {
     if (isOrgLoaded && organization) {
       // Ensure organization is loaded before fetching items
       fetchItems(activeTab, organization);
+    } else if (isOrgLoaded) {
+      setLoading(false);
     }
-  }, [
-    activeTab,
-    organization,
-    isOrgLoaded,
-    adminInfo?.id,
-    adminInfo?._id,
-    adminInfo?.email,
-    adminInfo?.name,
-    adminInfo?.last_name,
-    adminInfo?.lastName,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch when tab/org ready; admin identity read inside fetchItems
+  }, [activeTab, organization, isOrgLoaded]);
 
   const headers = {
     "Content-Type": "application/json",
@@ -1188,7 +1185,6 @@ const EstimatesPage = () => {
   useEffect(() => {
     setCurrentPage(1);
     setSearchTerm("");
-    setLocation("All");
   }, [activeTab]);
 
   return (
@@ -1202,7 +1198,7 @@ const EstimatesPage = () => {
           {canAdd && (
             <button
               onClick={handleAddNew}
-              className="flex items-center px-4 py-2 bg-[#A6C437] text-white rounded-lg hover:bg-opacity-90 transition-colors"
+              className="flex items-center px-4 py-2 bg-[var(--p-blue)] text-white rounded-lg hover:bg-opacity-90 transition-colors"
             >
               <Plus className="w-5 h-5 mr-2" />
               Add New
@@ -1222,7 +1218,7 @@ const EstimatesPage = () => {
                 }}
                 className={`mr-8 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === tab
-                    ? "border-[#A6C437] text-[#A6C437]"
+                    ? "border-[var(--p-blue)] text-[var(--p-blue)]"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
@@ -1232,91 +1228,76 @@ const EstimatesPage = () => {
           </nav>
         </div>
 
-        {!isOrgLoaded && !organization ? (
+        {!isOrgLoaded || !organization ? (
           <div className="fixed inset-0 flex items-center justify-center bg-white">
             <p className="text-gray-600">Loading organization...</p>
           </div>
         ) : (
-          <div className="epc-stack">
-            <FilterBar
-              subtitle={`Filter ${activeTab.toLowerCase()} by name.`}
-              searchPlaceholder={`Search ${activeTab.toLowerCase()}…`}
-              searchValue={searchTerm}
-              onSearchChange={(value) => {
-                setSearchTerm(value || "");
-                setCurrentPage(1);
-              }}
-              filters={[
-                {
-                  key: "name",
-                  placeholder: "All names",
-                  options: dropdownOptions.map((name) => ({
-                    value: name,
-                    label: name,
-                  })),
-                },
-              ]}
-              values={{
-                name: locations === "All" ? "" : locations,
-              }}
-              onChange={(key, value) => {
-                if (key === "name") {
-                  setLocation(value || "All");
+          <EpcSurface>
+            <div className="epc-stack">
+              <FilterBar
+                subtitle={`Filter ${activeTab.toLowerCase()} by name.`}
+                searchPlaceholder={`Search ${activeTab.toLowerCase()}…`}
+                searchValue={searchTerm}
+                onSearchChange={(value) => {
+                  setSearchTerm(value || "");
                   setCurrentPage(1);
-                }
-              }}
-              onReset={() => {
-                setSearchTerm("");
-                setLocation("All");
-                setCurrentPage(1);
-              }}
-            />
+                }}
+                filters={[]}
+                values={{}}
+                onChange={() => {}}
+                onReset={() => {
+                  setSearchTerm("");
+                  setCurrentPage(1);
+                }}
+              />
 
-            <Card>
-              <CardHeader
-                title={activeTab}
-                subtitle={
-                  loading
-                    ? "Loading…"
-                    : `${filteredItems.length} ${
-                        filteredItems.length === 1 ? "item" : "items"
-                      }`
-                }
-                action={
-                  activeTab === "Terms and Conditions" && items.length > 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => setDeleteAllModalOpen(true)}
-                      className="px-3 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      Delete all
-                    </button>
-                  ) : null
-                }
-              />
-              <PortalDataTable
-                columns={columns}
-                rows={loading ? [] : paginatedItems}
-                rowKey="_id"
-                emptyMessage={
-                  loading ? "Loading…" : "No data available"
-                }
-              />
-              {!loading && filteredItems.length > 0 ? (
-                <Pagination
-                  page={currentPage}
-                  pageSize={recordsPerPage}
-                  total={filteredItems.length}
-                  itemLabel="items"
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={(perPage) => {
-                    setRecordsPerPage(perPage);
-                    setCurrentPage(1);
-                  }}
+              <Card>
+                <CardHeader
+                  title={activeTab}
+                  subtitle={
+                    loading
+                      ? "Loading…"
+                      : `${filteredItems.length} ${
+                          filteredItems.length === 1 ? "item" : "items"
+                        }`
+                  }
+                  action={
+                    activeTab === "Terms and Conditions" && items.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteAllModalOpen(true)}
+                        className="px-3 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        Delete all
+                      </button>
+                    ) : null
+                  }
                 />
-              ) : null}
-            </Card>
-          </div>
+                <PortalDataTable
+                  columns={columns}
+                  rows={loading ? [] : paginatedItems}
+                  rowKey="_id"
+                  emptyMessage={
+                    loading ? "Loading…" : "No data available"
+                  }
+                />
+                {!loading && filteredItems.length > 0 ? (
+                  <Pagination
+                    page={currentPage}
+                    pageSize={recordsPerPage}
+                    total={filteredItems.length}
+                    itemLabel="items"
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={(perPage) => {
+                      setRecordsPerPage(perPage);
+                      setCurrentPage(1);
+                    }}
+                  />
+                ) : null}
+              </Card>
+            </div>
+          </EpcSurface>
         )}
         <AddEditModal
           isOpen={modalOpen}
