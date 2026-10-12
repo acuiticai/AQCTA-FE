@@ -1,21 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
-import { useHistory } from "react-router-dom";
-const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
-
 import tickCircle from "../../../assets/img/icons/tick-circle.png";
 import closeCircle from "../../../assets/img/icons/close-circle.png";
 import { notifyError, notifySuccess } from "@/utils/toast";
-import { CustomDatePicker, DataTable } from "@/page-layouts/index";
+import { CustomDatePicker, DropdownBasic } from "@/page-layouts/index";
 import { Link } from "react-router-dom";
 import {
   formatAttendanceTime,
   formatShiftScheduleDisplay,
   resolveStaffTimezone,
 } from "@/components/formatAmount";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
 
 const SKIP_IN_STATUSES = ["Absent", "Leave", "Public Holiday", "Weekly Off"];
 
@@ -42,26 +43,30 @@ const ShiftScheduleCell = ({ shift }) => {
 };
 
 const AttendanceList = ({
-  filters = [],
   attendanceRecords,
   updateAttendanceStatus,
   updateAttendanceDates,
   currentPage,
   recordsPerPage,
   totalResults,
-  totalPages,
   onPageChange,
   onRecordsPerPageChange,
   loading,
+  searchParams = {},
+  setSearchParams = () => {},
+  departments = [],
+  positions = [],
+  selectedBusiness = "",
+  setSelectedBusiness = () => {},
+  onClearFilters = () => {},
+  adminInfo = null,
 }) => {
   const { t } = useTranslation();
-  const history = useHistory();
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [currentAttendanceId, setCurrentAttendanceId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState({
     date_from: "",
@@ -297,146 +302,219 @@ const AttendanceList = ({
     );
   };
 
-  const q = searchQuery.trim().toLowerCase();
-  const filteredAttendanceRecords = q
-    ? attendanceRecords.filter(
-        (attendance) =>
-          (attendance.displayName || "")
-            .toLowerCase()
-            .includes(q) ||
-          attendance.status?.toLowerCase().includes(q) ||
-          attendance.reason?.toLowerCase().includes(q)
-      )
-    : attendanceRecords;
+  const uniqueDepartments = useMemo(
+    () =>
+      departments?.filter(
+        (dept, index, self) =>
+          index === self.findIndex((d) => d.name === dept.name)
+      ) || [],
+    [departments]
+  );
+
+  const uniquePositions = useMemo(
+    () =>
+      positions?.filter(
+        (pos, index, self) =>
+          index === self.findIndex((p) => p.name === pos.name)
+      ) || [],
+    [positions]
+  );
+
+  const portalFilters = useMemo(
+    () => [
+      {
+        key: "departmentName",
+        placeholder: t("attendance.searchByDepartment"),
+        options: uniqueDepartments.map((dept) => ({
+          value: dept.name,
+          label: dept.name,
+        })),
+      },
+      {
+        key: "positionName",
+        placeholder: t("attendance.searchByPosition"),
+        options: uniquePositions.map((pos) => ({
+          value: pos.name,
+          label: pos.name,
+        })),
+      },
+    ],
+    [t, uniqueDepartments, uniquePositions]
+  );
+
+  const portalFilterValues = {
+    departmentName: searchParams.departmentName || "",
+    positionName: searchParams.positionName || "",
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: t("attendance.name"),
+        width: "22%",
+        render: (attendance) => (
+          <div className="flex items-center">
+            {attendance?.image ? (
+              <img
+                src={`${attendance.image}`}
+                alt={attendance.displayName}
+                className="w-16 h-16 rounded-xl mr-3 object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 flex items-center justify-center text-gray-600 font-medium">
+                {attendance.displayName?.charAt(0)}
+              </div>
+            )}
+            <Link
+              to={`/attendance-details?id=${attendance._id}`}
+              className="epc-cell__link"
+            >
+              {attendance.displayName}
+            </Link>
+          </div>
+        ),
+      },
+      {
+        key: "date",
+        header: t("attendance.date"),
+        render: (attendance) =>
+          attendance.attendance?.length > 0
+            ? attendance.attendance.at(-1).formattedDate
+            : "—",
+      },
+      {
+        key: "shift",
+        header: "Shift Time",
+        render: (attendance) => (
+          <ShiftScheduleCell shift={attendance.shift} />
+        ),
+      },
+      {
+        key: "in",
+        header: t("attendance.in"),
+        render: (attendance) => {
+          const latest = attendance?.attendance?.at(-1);
+          if (latest && SKIP_IN_STATUSES.includes(latest.status)) return "—";
+          return (
+            <AttendanceTimeCell
+              checkInOrOut={latest?.firstCheckIn}
+              staff={attendance}
+            />
+          );
+        },
+      },
+      {
+        key: "out",
+        header: t("attendance.out"),
+        render: (attendance) => {
+          const latest = attendance?.attendance?.at(-1);
+          if (latest?.status === "Absent") return "—";
+          return (
+            <AttendanceTimeCell
+              checkInOrOut={latest?.lastCheckOut}
+              staff={attendance}
+            />
+          );
+        },
+      },
+      {
+        key: "status",
+        header: t("attendance.status"),
+        render: (attendance) => {
+          const status = attendance?.attendance?.at(-1)?.status;
+          return (
+            <span
+              className={`px-3 py-1 rounded-full ${getStatusColor(status)}`}
+            >
+              {status || "No Record"}
+            </span>
+          );
+        },
+      },
+    ],
+    [t]
+  );
 
   return (
-    <div>
-      <div className="overflow-x-auto">
-        <DataTable
-          filters={filters}
-          // actionButtons={[
-          //   {
-          //     label: "New Attendance Request",
-          //     onClick: () => history.push("/apply-attendance"),
-          //   },
-          // ]}
-          searchValue={searchQuery}
-          onSearch={(value) => setSearchQuery(value)}
-          searchPlaceholder={t("attendance.search")}
-          // headers={["Name", "IN", "OUT", "Reason", "Status", "Action"]}
-          headers={[
-            t("attendance.name"),
-            t("attendance.date"),
-            "Shift Time",
-            t("attendance.in"),
-            t("attendance.out"),
-            t("attendance.status"),
-          ]}
-          data={filteredAttendanceRecords}
-          colWidths={{
-            Name: "200px",
-          }}
-          totalPages={totalPages}
-          totalRecords={totalResults}
-          currentPage={currentPage}
-          onPageChange={onPageChange}
-          recordsPerPage={recordsPerPage}
-          onRecordsPerPageChange={onRecordsPerPageChange}
-          loading={loading}
-          renderRow={(attendance) => {
-            const latest = attendance?.attendance?.at(-1);
-            return (
-              attendance && (
-                <tr key={attendance._id} className="border-b border-gray-100">
-                  <td className="py-4 px-4">
-                    <div className="flex items-center">
-                      {attendance?.image ? (
-                        <img
-                          src={`${attendance.image}`}
-                          alt={attendance.displayName}
-                          className="w-16 h-16 rounded-xl mr-3 object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 flex items-center justify-center text-gray-600 font-medium">
-                          {attendance.displayName.charAt(0)}
-                        </div>
-                      )}
-                      <Link
-                        to={`/attendance-details?id=${attendance._id}`}
-                        className="hover:underline"
-                      >
-                        {attendance.displayName}
-                      </Link>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    {attendance.attendance.length > 0
-                      ? attendance.attendance.at(-1).formattedDate
-                      : "-"}
-                  </td>
-                  <td className="py-4 px-4">
-                    <ShiftScheduleCell shift={attendance.shift} />
-                  </td>
-                  <td className="py-4 px-4">
-                    {latest && SKIP_IN_STATUSES.includes(latest.status) ? (
-                      "-"
-                    ) : (
-                      <AttendanceTimeCell
-                        checkInOrOut={latest?.firstCheckIn}
-                        staff={attendance}
-                      />
-                    )}
-                  </td>
-                  <td className="py-4 px-4">
-                    {latest?.status === "Absent" ? (
-                      "-"
-                    ) : (
-                      <AttendanceTimeCell
-                        checkInOrOut={latest?.lastCheckOut}
-                        staff={attendance}
-                      />
-                    )}
-                  </td>
-                  <td className="py-4 px-4">
-                    <span
-                      className={`px-3 py-1 rounded-full ${getStatusColor(
-                        attendance?.attendance?.at(-1)?.status
-                      )}`}
-                    >
-                      {attendance?.attendance?.at(-1)?.status
-                        ? attendance?.attendance?.at(-1)?.status
-                        : "No Record"}
-                    </span>
-                  </td>
-                  {/* <td className="py-4 px-4">
-                    {attendance.attendance.length > 0 ? formatDate(attendance.attendance.at(-1).date) : "-"}
-                  </td>
-                  <td className="py-4 px-4">
-                    {attendance.attendance.length > 0 &&
-                      attendance.attendance.at(-1).firstCheckIn?.timestamp ?
-                      formatTime(attendance.attendance.at(-1).firstCheckIn.timestamp) :
-                      (attendance.attendance.length > 0 && attendance.attendance.at(-1).status === 'absent' ?
-                        "Absent" : "-")}
-                  </td>
-                  <td className="py-4 px-4">
-                    {attendance.attendance.length > 0 &&
-                      attendance.attendance.at(-1)?.lastCheckOut?.timestamp ?
-                      formatTime(attendance.attendance.at(-1).lastCheckOut.timestamp) :
-                      (attendance.attendance.length > 0 && attendance.attendance.at(-1).status === 'absent' ?
-                        "Absent" : "-")}
-                  </td> */}
+    <EpcPage flush>
+      <div className="epc-stack">
+        <div className="flex flex-wrap items-end gap-3 mb-1">
+          <div className="min-w-[200px]">
+            <DropdownBasic
+              isBusinessDropdown
+              isClearable
+              businessDropdownProps={{
+                adminId: adminInfo?.id,
+                selectedBusiness,
+                onChange: setSelectedBusiness,
+                placeholder: t("attendance.selectBusiness"),
+                isClearable: true,
+                appearance: "filterPill",
+              }}
+            />
+          </div>
+          <div className="min-w-[180px]">
+            <CustomDatePicker
+              type="date"
+              value={searchParams.date || ""}
+              onChange={(date) =>
+                setSearchParams((prev) => ({ ...prev, date: date || "" }))
+              }
+              clearable
+            />
+          </div>
+        </div>
 
-                  {/* <td className="py-4 px-4">
-                    <span className={`px-3 py-1 rounded-full ${getStatusColor(attendance.status)}`}>
-                      {attendance.status}
-                    </span>
-                  </td> */}
-                  {/* <td className="py-4 px-4">{getActionButtons(attendance)}</td> */}
-                </tr>
-              )
-            );
+        <FilterBar
+          title={t("attendance.find", "Find")}
+          subtitle={t(
+            "attendance.filterSubtitle",
+            "Narrow by department, position or search by name."
+          )}
+          searchValue={searchParams.name || ""}
+          searchPlaceholder={t("attendance.search")}
+          onSearchChange={(value) =>
+            setSearchParams((prev) => ({ ...prev, name: value || "" }))
+          }
+          filters={portalFilters}
+          values={portalFilterValues}
+          onChange={(key, value) => {
+            setSearchParams((prev) => ({ ...prev, [key]: value || "" }));
           }}
+          onReset={onClearFilters}
         />
+
+        <Card>
+          <CardHeader
+            title={t("attendance.records", "Attendance")}
+            subtitle={
+              loading
+                ? "Loading…"
+                : `${totalResults} total records`
+            }
+          />
+          <PortalDataTable
+            columns={columns}
+            rows={loading ? [] : attendanceRecords.filter(Boolean)}
+            rowKey="_id"
+            emptyMessage={
+              loading
+                ? "Loading…"
+                : t("attendance.noData", "No attendance records found.")
+            }
+          />
+          {!loading && totalResults > 0 ? (
+            <Pagination
+              page={currentPage}
+              pageSize={recordsPerPage}
+              total={totalResults}
+              itemLabel="records"
+              onPageChange={onPageChange}
+              onPageSizeChange={onRecordsPerPageChange}
+            />
+          ) : null}
+        </Card>
       </div>
 
       {/* Approval Modal */}
@@ -675,7 +753,7 @@ const AttendanceList = ({
           </div>
         </div>
       )}
-    </div>
+    </EpcPage>
   );
 };
 

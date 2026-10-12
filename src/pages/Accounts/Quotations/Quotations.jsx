@@ -8,14 +8,19 @@ import {
 import { useHistory } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
-import { Building, FileText, Plus, User } from "lucide-react";
 import {
   ActionButtons,
-  DataTable,
   SummaryCards,
   DateRangeComponent,
 } from "@/page-layouts/index";
-import StandardPageHeader from "@/components/StandardPageHeader";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import { formatAmount, formatDate } from "@/components/formatAmount";
 import QuotationServices from "@/services/QuotationServices";
 import { notifyError, notifySuccess } from "@/utils/toast";
@@ -44,28 +49,13 @@ const emptyStats = {
   totalValue: 0,
 };
 
-const statusStyles = {
-  draft: "bg-gray-100 text-gray-700 border-gray-200",
-  sent: "bg-blue-50 text-blue-700 border-blue-200",
-  accepted: "bg-green-50 text-green-700 border-green-200",
-  rejected: "bg-red-50 text-red-700 border-red-200",
-  expired: "bg-amber-50 text-amber-700 border-amber-200",
+const QUOTATION_STATUS_TONES = {
+  draft: "neutral",
+  sent: "info",
+  accepted: "success",
+  rejected: "danger",
+  expired: "warning",
 };
-
-function StatusBadge({ status, t }) {
-  const normalized = QuotationServices.normalizeStatus(status);
-  return (
-    <span
-      className={`inline-flex px-2.5 py-1 rounded-full border text-xs font-medium ${
-        statusStyles[normalized] || statusStyles.draft
-      }`}
-    >
-      {t(`accounts.quotations.statuses.${normalized}`, {
-        defaultValue: QuotationServices.getStatusLabel(normalized),
-      })}
-    </span>
-  );
-}
 
 export default function Quotations() {
   const { t } = useTranslation();
@@ -97,7 +87,6 @@ export default function Quotations() {
 
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState(emptyStats);
   const [currenciesList, setCurrenciesList] = useState([]);
@@ -184,20 +173,19 @@ export default function Quotations() {
   );
 
   const clearAllFilters = useCallback(() => {
-    setSelectedBusinessFilter("");
+    setSelectedBusinessFilter(businesses.length === 1 ? businesses[0]._id : "");
     setSelectedCustomerFilter("");
     setSelectedStatusFilter("All");
     setDateRangeStart("");
     setDateRangeEnd("");
     setSearchTerm("");
     setCurrentPage(1);
-  }, []);
+  }, [businesses]);
 
   const fetchQuotations = useCallback(async () => {
     if (businessesLoading) return;
     if (!businesses.length) {
       setQuotations([]);
-      setTotalPages(1);
       setTotalCount(0);
       setStats(emptyStats);
       setLoading(false);
@@ -223,7 +211,6 @@ export default function Quotations() {
 
       const response = await QuotationServices.getAllQuotations(params);
       setQuotations(response.data?.data || []);
-      setTotalPages(response.data?.totalPages || 1);
       setTotalCount(response.data?.totalCount ?? 0);
       setStats({ ...emptyStats, ...(response.data?.stats || {}) });
     } catch (error) {
@@ -239,6 +226,7 @@ export default function Quotations() {
   }, [
     assignedBusinessIds,
     businessesLoading,
+    businesses.length,
     currentPage,
     dateRangeEnd,
     dateRangeStart,
@@ -247,6 +235,7 @@ export default function Quotations() {
     selectedBusinessFilter,
     selectedCustomerFilter,
     selectedStatusFilter,
+    t,
   ]);
 
   useEffect(() => {
@@ -310,127 +299,269 @@ export default function Quotations() {
     });
   };
 
-  const filters = useMemo(
+  const portalFilterValues = {
+    business: selectedBusinessFilter || "",
+    customer: selectedCustomerFilter || "",
+    status: selectedStatusFilter === "All" ? "" : selectedStatusFilter,
+  };
+
+  const portalFilters = useMemo(
     () => [
-      {
-        isClearButton: true,
-        buttonProps: {
-          onClick: () => {
-            clearAllFilters();
-            setCurrentPage(1);
-          },
-        },
-      },
       ...(!isSingleAssignedBusiness()
         ? [
             {
-              label: t("common.business", { defaultValue: "Business" }),
-              value: selectedBusinessFilter,
-              onChange: (value) => {
-                setSelectedBusinessFilter(value);
-                setCurrentPage(1);
-              },
-              options: businesses.map((b) => ({
-                value: b._id,
-                label: b.name,
-              })),
+              key: "business",
               placeholder: t("common.selectBusiness", {
                 defaultValue: "Select Business",
               }),
-              icon: Building,
+              options: [
+                {
+                  value: "",
+                  label: t("common.allBusinesses", {
+                    defaultValue: "All Businesses",
+                  }),
+                },
+                ...businesses.map((b) => ({
+                  value: b._id,
+                  label: b.name,
+                })),
+              ],
             },
           ]
         : []),
       {
-        label: t("common.customer", { defaultValue: "Customer" }),
-        value: selectedCustomerFilter,
-        onChange: (value) => {
-          setSelectedCustomerFilter(value);
-          setCurrentPage(1);
-        },
-        options: customers.map((c) => ({
-          value: c._id,
-          label:
-            c.basicInformation?.customerDisplayName ??
-            c.basicInformation?.companyName ??
-            "—",
-        })),
-        placeholder: t("common.selectCustomer", { defaultValue: "Select Customer" }),
-        icon: User,
-      },
-      {
-        label: t("common.status", { defaultValue: "Status" }),
-        value: selectedStatusFilter,
-        onChange: (value) => {
-          setSelectedStatusFilter(value);
-          setCurrentPage(1);
-        },
+        key: "customer",
+        placeholder: t("common.selectCustomer", {
+          defaultValue: "Select Customer",
+        }),
         options: [
-          { value: "All", label: t("accounts.quotations.statuses.all", { defaultValue: "All Statuses" }) },
-          ...["draft", "sent", "accepted", "rejected", "expired"].map((status) => ({
-            value: status,
-            label: t(`accounts.quotations.statuses.${status}`, {
-              defaultValue: QuotationServices.getStatusLabel(status),
-            }),
+          {
+            value: "",
+            label: t("common.allCustomers", { defaultValue: "All Customers" }),
+          },
+          ...customers.map((c) => ({
+            value: c._id,
+            label:
+              c.basicInformation?.customerDisplayName ??
+              c.basicInformation?.companyName ??
+              "—",
           })),
         ],
+      },
+      {
+        key: "status",
         placeholder: t("accounts.quotations.filters.allStatuses", {
-          defaultValue: "Quotation Status: All",
+          defaultValue: "All Statuses",
         }),
-        icon: FileText,
+        options: [
+          {
+            value: "",
+            label: t("accounts.quotations.statuses.all", {
+              defaultValue: "All Statuses",
+            }),
+          },
+          ...["draft", "sent", "accepted", "rejected", "expired"].map(
+            (status) => ({
+              value: status,
+              label: t(`accounts.quotations.statuses.${status}`, {
+                defaultValue: QuotationServices.getStatusLabel(status),
+              }),
+            }),
+          ),
+        ],
+      },
+    ],
+    [businesses, customers, t],
+  );
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "business") {
+      setSelectedBusinessFilter(value || "");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "customer") {
+      setSelectedCustomerFilter(value || "");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "status") {
+      setSelectedStatusFilter(value || "All");
+      setCurrentPage(1);
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "quoteNumber",
+        header: t("accounts.quotations.table.quoteNumber", {
+          defaultValue: "Quote No",
+        }),
+        width: "12%",
+        render: (quotation) =>
+          canView || canViewDetails ? (
+            <button
+              type="button"
+              className="epc-cell__link"
+              onClick={() => history.push(`/quotations/view/${quotation._id}`)}
+            >
+              #{quotation.quote_number}
+            </button>
+          ) : (
+            <span className="epc-cell__primary">#{quotation.quote_number}</span>
+          ),
+      },
+      {
+        key: "customer",
+        header: t("common.customer", { defaultValue: "Customer" }),
+        width: "18%",
+        render: (quotation) => (
+          <>
+            <div className="epc-cell__primary">
+              {quotation.customer_name ||
+                quotation.customer_id?.basicInformation?.customerDisplayName ||
+                quotation.customer_id?.basicInformation?.companyName ||
+                "—"}
+            </div>
+            <div className="epc-cell__secondary">
+              {t("common.customer", { defaultValue: "Customer" })}
+            </div>
+          </>
+        ),
+      },
+      {
+        key: "business",
+        header: t("common.business", { defaultValue: "Business" }),
+        width: "16%",
+        render: (quotation) => (
+          <div className="epc-cell__primary">
+            {quotation.business_id?.name || "—"}
+          </div>
+        ),
+      },
+      {
+        key: "quoteDate",
+        header: t("accounts.quotations.fields.quoteDate", {
+          defaultValue: "Quote Date",
+        }),
+        width: "10%",
+        render: (quotation) => formatDate(quotation.quote_date),
+      },
+      {
+        key: "expiryDate",
+        header: t("accounts.quotations.fields.expiryDate", {
+          defaultValue: "Expiry Date",
+        }),
+        width: "10%",
+        render: (quotation) => formatDate(quotation.expiry_date),
+      },
+      {
+        key: "status",
+        header: t("common.status", { defaultValue: "Status" }),
+        width: "10%",
+        render: (quotation) => {
+          const normalized = QuotationServices.normalizeStatus(quotation.status);
+          const label = t(`accounts.quotations.statuses.${normalized}`, {
+            defaultValue: QuotationServices.getStatusLabel(normalized),
+          });
+          return (
+            <StatusPill
+              status={label}
+              tone={QUOTATION_STATUS_TONES[normalized] || "neutral"}
+            />
+          );
+        },
+      },
+      {
+        key: "amount",
+        header: t("common.amount", { defaultValue: "Amount" }),
+        width: "12%",
+        align: "right",
+        render: (quotation) => (
+          <span className="epc-cell__primary">
+            {QuotationServices.formatCurrency(
+              quotation.grandTotal,
+              quotation.currency,
+              currenciesList,
+            )}
+          </span>
+        ),
+      },
+      {
+        key: "actions",
+        header: t("common.actions", { defaultValue: "Actions" }),
+        width: "12%",
+        align: "right",
+        render: (quotation) => (
+          <ActionButtons
+            maxVisibleActions={2}
+            items={[
+              {
+                action: ACTION_BUTTON_TYPES.VIEW,
+                title: t("common.view", { defaultValue: "View" }),
+                permission: canView || canViewDetails,
+                onClick: () =>
+                  history.push(`/quotations/view/${quotation._id}`),
+              },
+              {
+                action: ACTION_BUTTON_TYPES.EDIT,
+                title: t("common.edit", { defaultValue: "Edit" }),
+                permission: canUpdate && !quotation.convertedInvoiceId,
+                onClick: () =>
+                  history.push(`/quotations/edit/${quotation._id}`),
+              },
+              {
+                action: ACTION_BUTTON_TYPES.VIEW_PDF,
+                title: t("accounts.quotations.actions.convertToInvoice", {
+                  defaultValue: "Convert to Invoice",
+                }),
+                permission:
+                  !isPciApplicationQuotation(quotation) &&
+                  !["rejected", "expired"].includes(
+                    QuotationServices.normalizeStatus(quotation.status),
+                  ) &&
+                  !quotation.convertedInvoiceId,
+                onClick: () =>
+                  handleNavigateToInvoiceFromQuotation(quotation),
+              },
+              {
+                action: ACTION_BUTTON_TYPES.DELETE,
+                title: t("common.delete", { defaultValue: "Delete" }),
+                permission: canDelete && !quotation.convertedInvoiceId,
+                onClick: () => handleDelete(quotation),
+              },
+            ]}
+          />
+        ),
       },
     ],
     [
-      businesses,
-      customers,
-      selectedBusinessFilter,
-      selectedCustomerFilter,
-      selectedStatusFilter,
-      clearAllFilters,
+      canDelete,
+      canUpdate,
+      canView,
+      canViewDetails,
+      currenciesList,
+      history,
       t,
     ],
-  );
-
-  const quotationTableHeaders = [
-    t("accounts.quotations.table.quoteNumber", { defaultValue: "Quote No" }),
-    t("common.customer", { defaultValue: "Customer" }),
-    t("common.business", { defaultValue: "Business" }),
-    t("accounts.quotations.fields.quoteDate", { defaultValue: "Quote Date" }),
-    t("accounts.quotations.fields.expiryDate", { defaultValue: "Expiry Date" }),
-    t("common.status", { defaultValue: "Status" }),
-    t("common.amount", { defaultValue: "Amount" }),
-    t("common.actions", { defaultValue: "Actions" }),
-  ];
-
-  const quotationTableColWidths = useMemo(
-    () => ({
-      [t("accounts.quotations.table.quoteNumber", { defaultValue: "Quote No" })]:
-        "120px",
-      [t("common.customer", { defaultValue: "Customer" })]: "200px",
-      [t("common.business", { defaultValue: "Business" })]: "200px",
-      [t("accounts.quotations.fields.quoteDate", { defaultValue: "Quote Date" })]:
-        "120px",
-      [t("accounts.quotations.fields.expiryDate", {
-        defaultValue: "Expiry Date",
-      })]: "120px",
-      [t("common.status", { defaultValue: "Status" })]: "100px",
-      [t("common.amount", { defaultValue: "Amount" })]: "120px",
-      [t("common.actions", { defaultValue: "Actions" })]: "160px",
-    }),
-    [t],
   );
 
   const summaryCardsData = useMemo(
     () => [
       {
-        title: t("accounts.quotations.summary.total", { defaultValue: "Total Quotations" }),
+        title: t("accounts.quotations.summary.total", {
+          defaultValue: "Total Quotations",
+        }),
         value: totalCount,
         backgroundColor: "summary-light",
         iconColor: "summary-dark",
         Icon: SummarySvg,
       },
       {
-        title: t("accounts.quotations.statuses.draft", { defaultValue: "Draft" }),
+        title: t("accounts.quotations.statuses.draft", {
+          defaultValue: "Draft",
+        }),
         value: stats.draft ?? 0,
         backgroundColor: "completed-light",
         iconColor: "completed-dark",
@@ -444,7 +575,9 @@ export default function Quotations() {
         Icon: InProgressSvg,
       },
       {
-        title: t("accounts.quotations.summary.totalValue", { defaultValue: "Total Value" }),
+        title: t("accounts.quotations.summary.totalValue", {
+          defaultValue: "Total Value",
+        }),
         value: formatAmount(stats.totalValue ?? 0),
         backgroundColor: "completed-light",
         iconColor: "overdue-dark",
@@ -454,186 +587,95 @@ export default function Quotations() {
     [stats, totalCount, t],
   );
 
+  const tableLoading = loading || businessesLoading;
+
   return (
-    <div className="bg-gray-50 min-h-screen overflow-x-hidden">
-      <div className="max-w-full mx-auto px-6 py-8 min-w-0 w-full">
-        <StandardPageHeader
+    <EpcPage
+      title={t("accounts.quotations.title", { defaultValue: "Quotations" })}
+      subtitle={t("accounts.quotations.subtitle", {
+        defaultValue: "Manage and track customer quotations before invoicing.",
+      })}
+      action={
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangeComponent
+            startDate={dateRangeStart}
+            endDate={dateRangeEnd}
+            onApply={handleDateRangeApply}
+            onClear={handleDateRangeClear}
+            placeholder={t("common.filterByDateRange", {
+              defaultValue: "Filter by date range",
+            })}
+          />
+          {canAdd ? (
+            <Button onClick={() => history.push("/quotations/create")}>
+              <PlusIcon size={15} />
+              {t("accounts.quotations.actions.new", {
+                defaultValue: "New Quotation",
+              })}
+            </Button>
+          ) : null}
+        </div>
+      }
+    >
+      <SummaryCards
+        cards={summaryCardsData}
+        columnsCount={4}
+        loading={tableLoading && quotations.length === 0}
+      />
+
+      <FilterBar
+        subtitle={t("accounts.quotations.filterSubtitle", {
+          defaultValue: "Narrow by business, customer or status.",
+        })}
+        searchPlaceholder={t("accounts.quotations.searchPlaceholder", {
+          defaultValue: "Search quotations...",
+        })}
+        searchValue={searchTerm}
+        onSearchChange={(value) => {
+          setSearchTerm(value);
+          setCurrentPage(1);
+        }}
+        values={portalFilterValues}
+        onChange={handlePortalFilterChange}
+        onReset={clearAllFilters}
+        filters={portalFilters}
+      />
+
+      <Card>
+        <CardHeader
           title={t("accounts.quotations.title", { defaultValue: "Quotations" })}
-          subtitle={t("accounts.quotations.subtitle", {
-            defaultValue: "Manage and track customer quotations before invoicing.",
-          })}
-          actions={
-            <>
-              <DateRangeComponent
-                startDate={dateRangeStart}
-                endDate={dateRangeEnd}
-                onApply={handleDateRangeApply}
-                onClear={handleDateRangeClear}
-                placeholder={t("common.filterByDateRange", {
-                  defaultValue: "Filter by date range",
-                })}
-              />
-              {canAdd && (
-                <button
-                  type="button"
-                  className="flex items-center gap-2 px-6 py-3 bg-[var(--p-blue)] text-white rounded-lg hover:bg-[var(--p-blue-dark)] transition-colors shadow-sm"
-                  onClick={() => history.push("/quotations/create")}
-                >
-                  <Plus size={20} />
-                  {t("accounts.quotations.actions.new", { defaultValue: "New Quotation" })}
-                </button>
-              )}
-            </>
+          subtitle={
+            tableLoading
+              ? "Loading…"
+              : `${totalCount} total quotations`
           }
         />
-
-        <SummaryCards cards={summaryCardsData} columnsCount={4} />
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-w-0 max-w-full overflow-hidden">
-          <DataTable
-            filters={filters}
-            colWidths={quotationTableColWidths}
-            wideTable={true}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalRecords={totalCount}
-            onPageChange={(page) => setCurrentPage(page)}
-            recordsPerPage={entriesPerPage}
-            onRecordsPerPageChange={(num) => {
-              setEntriesPerPage(num);
+        <PortalDataTable
+          columns={columns}
+          rows={tableLoading ? [] : quotations}
+          rowKey="_id"
+          emptyMessage={
+            tableLoading
+              ? "Loading quotations…"
+              : t("accounts.quotations.empty", {
+                  defaultValue: "No quotations found.",
+                })
+          }
+        />
+        {!tableLoading && totalCount > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={entriesPerPage}
+            total={totalCount}
+            itemLabel="quotations"
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(perPage) => {
+              setEntriesPerPage(perPage);
               setCurrentPage(1);
             }}
-            searchValue={searchTerm}
-            onSearch={(val) => {
-              setSearchTerm(val);
-              setCurrentPage(1);
-            }}
-            searchPlaceholder={t("accounts.quotations.searchPlaceholder", {
-              defaultValue: "Search quotations...",
-            })}
-            headers={quotationTableHeaders}
-            data={quotations}
-            loading={loading || businessesLoading}
-            emptyMessage={t("accounts.quotations.empty", {
-              defaultValue: "No quotations found.",
-            })}
-            renderRow={(quotation) => (
-              <tr
-                key={quotation._id}
-                className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-              >
-                <td className="py-4 px-4">
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => history.push(`/quotations/view/${quotation._id}`)}
-                      className="font-semibold text-[var(--p-blue)] hover:underline"
-                    >
-                      #{quotation.quote_number}
-                    </button>
-                  </div>
-                </td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                      <User size={16} className="text-gray-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900 truncate max-w-[200px]">
-                        {quotation.customer_name ||
-                          quotation.customer_id?.basicInformation?.customerDisplayName ||
-                          quotation.customer_id?.basicInformation?.companyName ||
-                          "-"}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {t("common.customer", { defaultValue: "Customer" })}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                      <Building size={16} className="text-gray-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900 truncate max-w-[200px]">
-                        {quotation.business_id?.name || "-"}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {t("common.business", { defaultValue: "Business" })}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-4 px-4">
-                  <span className="text-gray-900">{formatDate(quotation.quote_date)}</span>
-                </td>
-                <td className="py-4 px-4">
-                  <span className="text-gray-900">{formatDate(quotation.expiry_date)}</span>
-                </td>
-                <td className="py-4 px-4">
-                  <StatusBadge status={quotation.status} t={t} />
-                </td>
-                <td className="py-4 px-4 text-right font-semibold text-gray-900">
-                  {QuotationServices.formatCurrency(
-                    quotation.grandTotal,
-                    quotation.currency,
-                    currenciesList,
-                  )}
-                </td>
-                <td className="py-4 px-4">
-                  <ActionButtons
-                    maxVisibleActions={2}
-                    items={[
-                      {
-                        action: ACTION_BUTTON_TYPES.VIEW,
-                        title: t("common.view", { defaultValue: "View" }),
-                        permission: canView || canViewDetails,
-                        onClick: () =>
-                          history.push(`/quotations/view/${quotation._id}`),
-                      },
-                      {
-                        action: ACTION_BUTTON_TYPES.EDIT,
-                        title: t("common.edit", { defaultValue: "Edit" }),
-                        permission:
-                          canUpdate && !quotation.convertedInvoiceId,
-                        onClick: () =>
-                          history.push(`/quotations/edit/${quotation._id}`),
-                      },
-                      {
-                        action: ACTION_BUTTON_TYPES.VIEW_PDF,
-                        title: t(
-                          "accounts.quotations.actions.convertToInvoice",
-                          { defaultValue: "Convert to Invoice" },
-                        ),
-                        permission:
-                          !isPciApplicationQuotation(quotation) &&
-                          !["rejected", "expired"].includes(
-                            QuotationServices.normalizeStatus(
-                              quotation.status,
-                            ),
-                          ) && !quotation.convertedInvoiceId,
-                        onClick: () =>
-                          handleNavigateToInvoiceFromQuotation(quotation),
-                      },
-                      {
-                        action: ACTION_BUTTON_TYPES.DELETE,
-                        title: t("common.delete", {
-                          defaultValue: "Delete",
-                        }),
-                        permission:
-                          canDelete && !quotation.convertedInvoiceId,
-                        onClick: () => handleDelete(quotation),
-                      },
-                    ]}
-                  />
-                </td>
-              </tr>
-            )}
           />
-        </div>
-      </div>
-    </div>
+        ) : null}
+      </Card>
+    </EpcPage>
   );
 }

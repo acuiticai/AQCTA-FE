@@ -1,21 +1,8 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import axios from "axios";
-import {
-  AiOutlineEdit,
-  AiOutlineDelete,
-  AiOutlineFileSync,
-} from "react-icons/ai";
-import { Plus, Download } from "lucide-react";
 import { useHistory } from "react-router-dom";
-const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 import { formatAmount } from "@/components/formatAmount";
-import stat1 from "../../assets/img/icons/stats-1.png";
-import stat2 from "../../assets/img/icons/stats-2.png";
-import stat3 from "../../assets/img/icons/stats-3.png";
-import stat4 from "../../assets/img/icons/stats-4.png";
-import { saveAs } from "file-saver";
-import Papa from "papaparse";
-import { DataTable, ToggleSwitch } from "@/page-layouts/index";
+import { ActionButtons, ToggleSwitch } from "@/page-layouts/index";
 import DateRangeComponent from "@/page-layouts/components/DateRangeComponent";
 import { notifySuccess, notifyError } from "@/utils/toast";
 import Swal from "sweetalert2";
@@ -26,6 +13,26 @@ import {
   useRouteModulePermissions,
 } from "@/utils/permissionUtils";
 import { isSingleAssignedBusiness } from "@/utils/sessionAssignedBusinesses";
+import { ACTION_BUTTON_TYPES } from "@/utils/constants";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import StatCard from "@/customer/components/ui/StatCard";
+import {
+  DownloadIcon,
+  PlusIcon,
+  WalletIcon,
+  DocumentIcon,
+  InvoiceIcon,
+  FileIcon,
+} from "@/customer/components/ui/icons";
+import { saveAs } from "file-saver";
+import Papa from "papaparse";
+
+const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
 const BankingManagement = () => {
   const { state } = useContext(AdminContext);
@@ -33,7 +40,6 @@ const BankingManagement = () => {
   const headers = { authorization: `Bearer ${adminInfo?.token}` };
   const routePerms = useRouteModulePermissions();
 
-  const [accounts, setAccounts] = useState([]);
   const [filteredAccounts, setFilteredAccounts] = useState([]);
   const [selectedBusiness, setSelectedBusiness] = useState("");
   const [loading, setLoading] = useState(true);
@@ -51,7 +57,6 @@ const BankingManagement = () => {
   const [totalResults, setTotalResults] = useState(0);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const currentPageRef = useRef(1);
 
   // Filters
@@ -63,22 +68,12 @@ const BankingManagement = () => {
 
   const history = useHistory();
   const isSingleBusiness = isSingleAssignedBusiness();
-  const accountTableHeaders = [
-    ...(!isSingleBusiness ? ["Business Name"] : []),
-    "Account Name",
-    "Account Type",
-    "Account Number",
-    "Account Code",
-    "Currency",
-    "Balance",
-    "Status",
-    "Action",
-  ];
 
   useEffect(() => {
     // Wait until assigned businesses are resolved before fetching
     if (businessesLoading) return;
     fetchAccounts(currentPage, recordsPerPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     businessesLoading,
     businesses,
@@ -97,7 +92,9 @@ const BankingManagement = () => {
     const fetchBankAccountTypes = async () => {
       try {
         const params = selectedBusiness ? { business: selectedBusiness } : {};
-        const response = await axios.get(`${Base_URL}/bank-account-types`, { params });
+        const response = await axios.get(`${Base_URL}/bank-account-types`, {
+          params,
+        });
         setAccountTypes(response.data);
       } catch (error) {
         console.error("Error fetching bank account types:", error);
@@ -131,6 +128,7 @@ const BankingManagement = () => {
       }
     };
     fetchAssignedBusinesses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminInfo?.id]);
 
   const fetchAccounts = async (page = 1, limit = recordsPerPage) => {
@@ -164,10 +162,8 @@ const BankingManagement = () => {
 
       const { accounts = [], total = 0, stats = {} } = response.data;
 
-      setAccounts(accounts);
       setFilteredAccounts(accounts);
       setTotalResults(total);
-      setTotalPages(Math.ceil(total / recordsPerPage));
       setBankStats({
         totalBalance: stats.totalBalance || 0,
         totalAccounts: stats.totalAccounts || 0,
@@ -185,7 +181,6 @@ const BankingManagement = () => {
   const handlePageChange = (page) => {
     setCurrentPage(page);
     currentPageRef.current = page;
-    fetchAccounts(page, recordsPerPage);
   };
 
   const handleToggleStatus = async (id, currentStatus) => {
@@ -244,7 +239,9 @@ const BankingManagement = () => {
       notifySuccess("Bank account deleted successfully");
       fetchAccounts(currentPage, recordsPerPage);
     } catch (error) {
-      notifyError(error.response?.data?.message || "Failed to delete bank account");
+      notifyError(
+        error.response?.data?.message || "Failed to delete bank account"
+      );
     }
   };
 
@@ -341,241 +338,228 @@ const BankingManagement = () => {
     setCurrentPage(1);
   };
 
-  const renderTableView = () => (
-    <div className="mt-8">
-      <div className="overflow-x-auto">
-        <DataTable
-          headers={accountTableHeaders}
-          loading={loading}
-          data={filteredAccounts}
-          title=""
-          totalRecords={totalResults}
-          currentPage={currentPage}
-          filters={[
-            {
-              isClearButton: true,
-              buttonProps: {
-                onClick: () => {
-                  clearAllFilters();
-                  setCurrentPage(1);
-                },
-              },
-            },
-            {
-              isBusinessDropdown: true,
-              businessDropdownProps: {
-                selectionMode: "single",
-                selectedBusiness,
-                onChange: (id) => {
-                  handleBusinessChange(id);
-                  setCurrentPage(1);
-                },
-                placeholder: "Select Business",
-              },
-            },
-            {
-              options: [
-                { value: "All", label: "Bank Type: All" },
-                { value: "Bank Account", label: "Bank Account" },
-                { value: "Money Changer", label: "Money Changer" },
-              ],
-              value: transactionType,
-              onChange: (value) => {
-                setTransactionType(value);
-                setCurrentPage(1);
-              },
-              placeholder: "Bank Type: All",
-            },
-            {
-              options: [
-                { value: "All", label: "Account Type: All" },
-                ...accountTypes.map((accountType) => ({
-                  value: accountType._id,
-                  label: accountType.name,
-                })),
-              ],
-              value: category,
-              onChange: (value) => {
-                setCategory(value);
-                setCurrentPage(1);
-                currentPageRef.current = 1;
-              },
-              placeholder: "Account Type: All",
-            },
-          ]}
-          onPageChange={handlePageChange}
-          recordsPerPage={recordsPerPage}
-          onRecordsPerPageChange={(value) => {
-            setRecordsPerPage(value);
-            setCurrentPage(1);
-          }}
-          totalPages={totalPages}
-          onSearch={(val) => { setSearchQuery(val); setCurrentPage(1); currentPageRef.current = 1; }}
-          searchValue={searchQuery}
-          renderRow={(account) => (
-            <tr key={account._id} className="border-t border-gray-100">
-              {!isSingleBusiness && (
-                <td className="py-3 px-4">
-                  {account.business?.name || (
-                    <span className="italic">No business</span>
-                  )}
-                </td>
-              )}
-              <td className="py-3 px-4">
-                {account.accountName || <span className="italic">No account name</span>}
-              </td>
-              <td className="py-3 px-4">
-                <span
-                  className={`text-${
-                    account.accountType === "Income" ? "green" : "red"
-                  }-500`}
-                >
-                  {account.accountType?.name || account.accountType}
-                </span>
-              </td>
-              <td className="py-3 px-4">{account.accountNumber}</td>
-              <td className="py-3 px-4">
-                {account.accountCode ? (
-                  <div>
-                    {account.accountCode.code} -{" "}
-                    {account.accountCode.accountName}
-                  </div>
-                ) : (
-                  <span className="italic">No account code</span>
-                )}
-              </td>
-              <td className="py-3 px-4">{account.currencyType}</td>
-              <td className="py-3 px-4">
-                {formatAmount(account.openingBalance)}
-              </td>
-              <td className="py-3 px-4">
-                <div className="flex items-center">
-                  <ToggleSwitch
-                    isOn={account.isActive}
-                    handleToggle={() =>
-                      routePerms.canUpdate &&
-                      handleToggleStatus(account._id, account.isActive)
-                    }
-                    id={`toggle-table-${account._id}`}
-                  />
-                </div>
-              </td>
-              <td className="py-3 px-4">
-                <div className="flex gap-3">
-                  {/* Statement reconciliation is only for real bank accounts.
-                      Cash is counted; clearing settles against a provider; a
-                      money changer is an FX dealer (also caught by bankType so
-                      legacy accounts without a category are excluded). */}
-                  {(account.accountCategory || "bank") === "bank" &&
-                    account.bankType !== "Money Changer" && (
-                    <button
-                      onClick={() =>
-                        history.push(
-                          `/bank-management/${account._id}/reconciliations`
-                        )
-                      }
-                      className="text-gray-600 hover:text-blue-700"
-                      title="Reconciliations"
-                    >
-                      <AiOutlineFileSync size={20} />
-                    </button>
-                  )}
-                  {routePerms.canUpdate && (
-                    <button
-                      onClick={() =>
-                        history.push(`/edit-account/${account._id}`)
-                      }
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      <AiOutlineEdit size={20} />
-                    </button>
-                  )}
-                  {routePerms.canDelete && (
-                    <button
-                      onClick={() => handleDelete(account._id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <AiOutlineDelete size={20} />
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          )}
-        />
-      </div>
-    </div>
-  );
-
-  const renderStats = () => (
-    <div className="bg-[#FAFAFA] rounded-xl p-6 flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-grow">
-        {/* Total Balance */}
-        <div className="bg-[#C1B31426] rounded-xl p-4 w-full">
-          <div className="flex items-center space-x-3">
-            <img src={stat1} alt="stat1" className="w-10 h-10" />
-          </div>
-          <h3 className="text-2xl font-semibold mt-3 text-[#1C1C1C]">
-            {formatAmount(bankStats.totalBalance)}
-          </h3>
-          <p className="text-sm text-[#475467] mt-1">Total Balance</p>
-        </div>
-
-        {/* Total Accounts */}
-        <div className="bg-[#DCFCE7] rounded-xl p-4 w-full">
-          <div className="flex items-center space-x-3">
-            <img src={stat2} alt="stat2" className="w-10 h-10" />
-          </div>
-          <h3 className="text-2xl font-semibold mt-3 text-[#1C1C1C]">
-            {bankStats.totalAccounts}
-          </h3>
-          <p className="text-sm text-[#475467] mt-1">Total Accounts</p>
-        </div>
-
-        {/* Bank Accounts */}
-        <div className="bg-[#FFF4DE] rounded-xl p-4 w-full">
-          <div className="flex items-center space-x-3">
-            <img src={stat3} alt="stat3" className="w-10 h-10" />
-          </div>
-          <h3 className="text-2xl font-semibold mt-3 text-[#1C1C1C]">
-            {bankStats.bankAccounts}
-          </h3>
-          <p className="text-sm text-[#475467] mt-1">Bank Accounts</p>
-        </div>
-
-        {/* Money Changer Accounts */}
-        <div className="bg-[#F3E8FF] rounded-xl p-4 w-full">
-          <div className="flex items-center space-x-3">
-            <img src={stat4} alt="stat4" className="w-10 h-10" />
-          </div>
-          <h3 className="text-2xl font-semibold mt-3 text-[#1C1C1C]">
-            {bankStats.moneyChangerAccounts}
-          </h3>
-          <p className="text-sm text-[#475467] mt-1">Money Changer Accounts</p>
-        </div>
-      </div>
-    </div>
-  );
-
   const handleBusinessChange = (businessId) => {
     setSelectedBusiness(businessId);
     setCurrentPage(1);
   };
+
+  const buildActionItems = (account) => [
+    ...((account.accountCategory || "bank") === "bank" &&
+    account.bankType !== "Money Changer"
+      ? [
+          {
+            action: ACTION_BUTTON_TYPES.HISTORY,
+            title: "Reconciliations",
+            onClick: () =>
+              history.push(`/bank-management/${account._id}/reconciliations`),
+          },
+        ]
+      : []),
+    ...(routePerms.canUpdate
+      ? [
+          {
+            action: ACTION_BUTTON_TYPES.EDIT,
+            title: "Edit",
+            onClick: () => history.push(`/edit-account/${account._id}`),
+          },
+        ]
+      : []),
+    ...(routePerms.canDelete
+      ? [
+          {
+            action: ACTION_BUTTON_TYPES.DELETE,
+            title: "Delete",
+            onClick: () => handleDelete(account._id),
+          },
+        ]
+      : []),
+  ];
+
+  const columns = [
+    ...(!isSingleBusiness
+      ? [
+          {
+            key: "business",
+            header: "Business Name",
+            render: (row) => (
+              <span className="epc-cell__primary">
+                {row.business?.name || "No business"}
+              </span>
+            ),
+          },
+        ]
+      : []),
+    {
+      key: "accountName",
+      header: "Account Name",
+      render: (row) => (
+        <span className="epc-cell__primary">
+          {row.accountName || "No account name"}
+        </span>
+      ),
+    },
+    {
+      key: "accountType",
+      header: "Account Type",
+      render: (row) => (
+        <span className="epc-cell__secondary">
+          {row.accountType?.name || row.accountType || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "accountNumber",
+      header: "Account Number",
+      render: (row) => row.accountNumber || "—",
+    },
+    {
+      key: "accountCode",
+      header: "Account Code",
+      render: (row) =>
+        row.accountCode ? (
+          <>
+            <div className="epc-cell__primary">{row.accountCode.code}</div>
+            <div className="epc-cell__secondary">
+              {row.accountCode.accountName}
+            </div>
+          </>
+        ) : (
+          <span className="epc-cell__secondary">No account code</span>
+        ),
+    },
+    {
+      key: "currency",
+      header: "Currency",
+      render: (row) => row.currencyType || "—",
+    },
+    {
+      key: "balance",
+      header: "Balance",
+      render: (row) => (
+        <span className="epc-cell__primary">
+          {formatAmount(row.openingBalance)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => (
+        <ToggleSwitch
+          isOn={row.isActive}
+          handleToggle={() =>
+            routePerms.canUpdate &&
+            handleToggleStatus(row._id, row.isActive)
+          }
+          id={`toggle-table-${row._id}`}
+        />
+      ),
+    },
+    {
+      key: "actions",
+      header: "Action",
+      align: "right",
+      render: (row) => (
+        <ActionButtons maxVisibleActions={3} items={buildActionItems(row)} />
+      ),
+    },
+  ];
+
+  const portalFilters = [
+    ...(!isSingleBusiness
+      ? [
+          {
+            key: "business",
+            placeholder: "Select Business",
+            options: [
+              { value: "", label: "All Businesses" },
+              ...businesses.map((b) => ({ value: b._id, label: b.name })),
+            ],
+          },
+        ]
+      : []),
+    {
+      key: "transactionType",
+      placeholder: "Bank Type: All",
+      options: [
+        { value: "", label: "Bank Type: All" },
+        { value: "Bank Account", label: "Bank Account" },
+        { value: "Money Changer", label: "Money Changer" },
+      ],
+    },
+    {
+      key: "category",
+      placeholder: "Account Type: All",
+      options: [
+        { value: "", label: "Account Type: All" },
+        ...accountTypes.map((accountType) => ({
+          value: accountType._id,
+          label: accountType.name,
+        })),
+      ],
+    },
+  ];
+
+  const portalFilterValues = {
+    business: selectedBusiness || "",
+    transactionType: transactionType === "All" ? "" : transactionType,
+    category: category === "All" ? "" : category,
+  };
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "business") {
+      handleBusinessChange(value || "");
+      return;
+    }
+    if (key === "transactionType") {
+      setTransactionType(value || "All");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "category") {
+      setCategory(value || "All");
+      setCurrentPage(1);
+      currentPageRef.current = 1;
+    }
+  };
+
+  const stats = [
+    {
+      icon: WalletIcon,
+      label: "Total Balance",
+      value: formatAmount(bankStats.totalBalance),
+      tone: "brand",
+    },
+    {
+      icon: DocumentIcon,
+      label: "Total Accounts",
+      value: String(bankStats.totalAccounts),
+      tone: "success",
+    },
+    {
+      icon: InvoiceIcon,
+      label: "Bank Accounts",
+      value: String(bankStats.bankAccounts),
+      tone: "warning",
+    },
+    {
+      icon: FileIcon,
+      label: "Money Changer Accounts",
+      value: String(bankStats.moneyChangerAccounts),
+      tone: "info",
+    },
+  ];
 
   return (
     <RouteActionGate
       title="Banking Accounts"
       requiredPermission={PERMISSION_ACTION.VIEW}
     >
-      <div className="w-full container py-8 px-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Banking Management</h1>
-            <p className="text-gray-600 mt-2">Manage and track all bank accounts</p>
-          </div>
-          <div className="flex items-center gap-4">
+      <EpcPage
+        title="Banking Management"
+        subtitle="Manage and track all bank accounts"
+        action={
+          <div className="flex flex-wrap items-center gap-3">
             <DateRangeComponent
               startDate={dateRangeStart}
               endDate={dateRangeEnd}
@@ -583,40 +567,79 @@ const BankingManagement = () => {
               onClear={handleDateRangeClear}
               placeholder="Filter by date range"
             />
-            <button
+            <Button
+              variant="secondary"
               onClick={() => history.push("/provider-settlements")}
-              className="flex items-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Settlements
-            </button>
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <Download size={18} />
+            </Button>
+            <Button variant="secondary" onClick={handleExport}>
+              <DownloadIcon size={15} />
               Export
-            </button>
-            {routePerms.canAdd && (
-              <button
-                onClick={() => history.push("/add-account")}
-                className="flex items-center gap-2 px-6 py-3 bg-[var(--p-blue)] text-white rounded-lg hover:bg-[var(--p-blue-dark)] transition-colors shadow-sm"
-              >
-                <Plus size={20} />
+            </Button>
+            {routePerms.canAdd ? (
+              <Button onClick={() => history.push("/add-account")}>
+                <PlusIcon size={15} />
                 Add New
-              </button>
-            )}
+              </Button>
+            ) : null}
           </div>
+        }
+      >
+        <div className="epc-stack">
+          <div className="epc-statgrid">
+            {stats.map((stat) => (
+              <StatCard key={stat.label} {...stat} />
+            ))}
+          </div>
+
+          <FilterBar
+            subtitle="Narrow by business, bank type, account type or search."
+            searchPlaceholder="Search accounts…"
+            searchValue={searchQuery}
+            onSearchChange={(val) => {
+              setSearchQuery(val);
+              setCurrentPage(1);
+              currentPageRef.current = 1;
+            }}
+            values={portalFilterValues}
+            onChange={handlePortalFilterChange}
+            onReset={clearAllFilters}
+            filters={portalFilters}
+          />
+
+          <Card>
+            <CardHeader
+              title="Bank Accounts"
+              subtitle={
+                loading ? "Loading…" : `${totalResults} total accounts`
+              }
+            />
+
+            <PortalDataTable
+              columns={columns}
+              rows={loading ? [] : filteredAccounts}
+              rowKey="_id"
+              emptyMessage={
+                loading ? "Loading accounts…" : "No bank accounts found."
+              }
+            />
+            {!loading && totalResults > 0 ? (
+              <Pagination
+                page={currentPage}
+                pageSize={recordsPerPage}
+                total={totalResults}
+                itemLabel="accounts"
+                onPageChange={handlePageChange}
+                onPageSizeChange={(value) => {
+                  setRecordsPerPage(value);
+                  setCurrentPage(1);
+                }}
+              />
+            ) : null}
+          </Card>
         </div>
-      </div>
-
-      {/* Overview Stats */}
-      {renderStats()}
-
-      <div className="w-full">
-        {renderTableView()}
-      </div>
-
-      </div>
+      </EpcPage>
     </RouteActionGate>
   );
 };

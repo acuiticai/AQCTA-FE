@@ -1,13 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Building, FileText, Layers } from "lucide-react";
 import {
-  DataTable,
   ActionButtons,
   SummaryCards,
   CustomModal,
   ToggleSwitch,
 } from "@/page-layouts";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import {
@@ -44,7 +50,6 @@ export default function TabClassCategories() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [stats, setStats] = useState({
@@ -64,8 +69,6 @@ export default function TabClassCategories() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [rowToDelete, setRowToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-
-  const headers = ["Name", "Product fields", "Status", "Actions"];
 
   useEffect(() => {
     let cancelled = false;
@@ -309,182 +312,205 @@ export default function TabClassCategories() {
     setCurrentPage(1);
   };
 
-  const filters = useMemo(
+  const portalFilters = useMemo(
     () => [
-      {
-        isClearButton: true,
-        buttonProps: { onClick: clearAllFilters },
-      },
       ...(!isSingleAssignedBusiness()
         ? [
             {
-              label: "Business",
-              value: businessId,
-              onChange: (value) => {
-                setBusinessId(value);
-                setCurrentPage(1);
-              },
+              key: "business",
+              placeholder: "Select Business",
               options: businesses.map((b) => ({
                 value: String(b._id || b.id || ""),
                 label: b.name || b.businessName || "Business",
               })),
-              placeholder: "Select Business",
-              icon: Building,
             },
           ]
         : []),
       {
-        label: "Status",
-        value: statusFilter,
-        onChange: (value) => {
-          setStatusFilter(value);
-          setCurrentPage(1);
-        },
-        options: [
-          { value: "all", label: "All Status" },
-          { value: "Active", label: "Active" },
-          { value: "Inactive", label: "Inactive" },
-        ],
-        placeholder: "Select Status",
-        icon: FileText,
+        key: "status",
+        placeholder: "All Statuses",
+        options: ["Active", "Inactive"],
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [businessId, businesses, statusFilter],
+    [businesses],
   );
 
   const summaryCardsData = [
     {
       title: "Total",
       value: stats.total,
-      icon: SummarySvg,
+      backgroundColor: "summary-light",
+      iconColor: "summary-dark",
+      Icon: SummarySvg,
     },
     {
       title: "Active",
       value: stats.active,
-      icon: CompletedSvg,
+      backgroundColor: "completed-light",
+      iconColor: "completed-dark",
+      Icon: CompletedSvg,
     },
     {
       title: "Inactive",
       value: stats.inactive,
-      icon: InProgressSvg,
+      backgroundColor: "processing-light",
+      iconColor: "processing-dark",
+      Icon: InProgressSvg,
     },
     {
       title: "With product fields",
       value: stats.withFields,
-      icon: SummarySvg,
+      backgroundColor: "summary-light",
+      iconColor: "summary-dark",
+      Icon: SummarySvg,
     },
   ];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <Layers className="w-5 h-5 text-violet-600" />
-            Class / Category
-          </h2>
-          <p className="mt-1 text-sm text-gray-500 max-w-2xl">
-            Manage application class/categories and their product fields shown
-            on the Product Details step in certification and inspection
-            applications (admin and customer portal).
-          </p>
-        </div>
-        {canAdd ? (
-          <button
-            type="button"
-            onClick={openCreate}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-white"
-            style={{ backgroundColor: buttonColor }}
-          >
-            Add Class / Category
-          </button>
-        ) : null}
-      </div>
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: "Name",
+        render: (row) => (
+          <>
+            <div className="epc-cell__primary">{row.name || "—"}</div>
+            {row.description ? (
+              <div className="epc-cell__secondary">{row.description}</div>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        key: "productFields",
+        header: "Product fields",
+        render: (row) =>
+          Array.isArray(row.productFields) ? row.productFields.length : 0,
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (row) =>
+          canUpdate ? (
+            <div className="flex items-center gap-2">
+              <ToggleSwitch
+                isOn={row.status === "Active"}
+                handleToggle={() => handleToggleStatus(row)}
+                disabled={loading}
+              />
+              <StatusPill status={row.status || "—"} />
+            </div>
+          ) : (
+            <StatusPill status={row.status || "—"} />
+          ),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        align: "right",
+        render: (row) => (
+          <ActionButtons
+            items={[
+              ...(canUpdate
+                ? [
+                    {
+                      action: ACTION_BUTTON_TYPES.EDIT,
+                      title: "Edit",
+                      onClick: () => openEdit(row),
+                    },
+                  ]
+                : []),
+              ...(canDelete
+                ? [
+                    {
+                      action: ACTION_BUTTON_TYPES.DELETE,
+                      title: "Delete",
+                      onClick: () => openDeleteModal(row),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canUpdate, canDelete, loading],
+  );
 
+  return (
+    <EpcPage
+      title="Class / Category"
+      subtitle="Manage application class/categories and their product fields shown on the Product Details step in certification and inspection applications (admin and customer portal)."
+      action={
+        canAdd ? (
+          <Button onClick={openCreate}>
+            <PlusIcon size={15} />
+            Add Class / Category
+          </Button>
+        ) : null
+      }
+    >
       <SummaryCards cards={summaryCardsData} columnsCount={4} />
 
-      <DataTable
-        onSearch={(value) => {
+      <FilterBar
+        subtitle="Narrow by business, status or name."
+        searchPlaceholder="Search by name…"
+        searchValue={searchTerm}
+        onSearchChange={(value) => {
           setSearchTerm(value);
           setCurrentPage(1);
         }}
-        searchValue={searchTerm}
-        searchPlaceholder="Search by name…"
-        filters={filters}
-        headers={headers}
-        headersToHide={[]}
-        data={rows}
-        totalRecords={total}
-        loading={loading}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        recordsPerPage={recordsPerPage}
-        onPageChange={setCurrentPage}
-        onRecordsPerPageChange={(perPage) => {
-          setRecordsPerPage(perPage);
-          setCurrentPage(1);
+        values={{
+          business: businessId || "",
+          status: statusFilter === "all" ? "" : statusFilter,
         }}
-        emptyMessage="No class/categories found"
-        isCollapsible={false}
-        renderRow={(row) => (
-          <tr key={row._id} className="border-b">
-            <td className="py-2 px-4">
-              <div className="font-medium text-gray-900">{row.name || "-"}</div>
-              {row.description ? (
-                <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                  {row.description}
-                </div>
-              ) : null}
-            </td>
-            <td className="py-2 px-4 whitespace-nowrap text-sm text-gray-600">
-              {Array.isArray(row.productFields) ? row.productFields.length : 0}
-            </td>
-            <td className="py-2 px-4 whitespace-nowrap">
-              {canUpdate ? (
-                <div className="flex items-center gap-2">
-                  <ToggleSwitch
-                    isOn={row.status === "Active"}
-                    handleToggle={() => handleToggleStatus(row)}
-                    disabled={loading}
-                  />
-                  <span className="text-sm text-gray-600">
-                    {row.status || "-"}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-sm text-gray-600">
-                  {row.status || "-"}
-                </span>
-              )}
-            </td>
-            <td className="py-2 px-4" style={{ width: "fit-content" }}>
-              <ActionButtons
-                items={[
-                  ...(canUpdate
-                    ? [
-                        {
-                          action: ACTION_BUTTON_TYPES.EDIT,
-                          title: "Edit",
-                          onClick: () => openEdit(row),
-                        },
-                      ]
-                    : []),
-                  ...(canDelete
-                    ? [
-                        {
-                          action: ACTION_BUTTON_TYPES.DELETE,
-                          title: "Delete",
-                          onClick: () => openDeleteModal(row),
-                        },
-                      ]
-                    : []),
-                ]}
-              />
-            </td>
-          </tr>
-        )}
+        onChange={(key, value) => {
+          if (key === "business") {
+            setBusinessId(value || "");
+            setCurrentPage(1);
+            return;
+          }
+          if (key === "status") {
+            setStatusFilter(value || "all");
+            setCurrentPage(1);
+          }
+        }}
+        onReset={clearAllFilters}
+        filters={portalFilters}
       />
+
+      <Card>
+        <CardHeader
+          title="Class / Category"
+          subtitle={loading ? "Loading…" : `${total} total`}
+          action={
+            <span className="epc-chip">
+              {stats.active} active · {stats.withFields} with fields
+            </span>
+          }
+        />
+        <PortalDataTable
+          columns={columns}
+          rows={loading ? [] : rows}
+          rowKey="_id"
+          emptyMessage={
+            loading ? "Loading…" : "No class/categories found"
+          }
+        />
+        {!loading && total > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={recordsPerPage}
+            total={total}
+            itemLabel="categories"
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(perPage) => {
+              setRecordsPerPage(perPage);
+              setCurrentPage(1);
+            }}
+          />
+        ) : null}
+      </Card>
 
       <CustomModal
         open={modalOpen}
@@ -600,6 +626,6 @@ export default function TabClassCategories() {
           Applications using this class may need to be updated.
         </p>
       </CustomModal>
-    </div>
+    </EpcPage>
   );
 }

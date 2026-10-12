@@ -1,16 +1,19 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { AdminContext } from "@/context/AdminContext";
 import ToggleSwitch from "@/components/toggle/ToggleSwitch";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { useSettingsCrudPermissions } from "@/hooks/useSettingsCrudPermissions";
-import { DataTable, ActionButtons, Loader } from "@/page-layouts";
+import { ActionButtons, Loader } from "@/page-layouts";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
+import EpcListPage from "@/components/Epc/EpcListPage";
+import Button from "@/customer/components/ui/Button";
+import { PlusIcon } from "@/customer/components/ui/icons";
 
 const BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
@@ -470,144 +473,179 @@ const ChannelsSettings = () => {
     }
   };
 
-  const filters = [
-    {
-      value: statusFilter || "",
-      onChange: (value) => {
-        setStatusFilter(value || "");
-        setCurrentPage(1);
-      },
-      placeholder: t("accountsSettings.channels.selectStatus", "Select Status"),
-      options: [
-        { value: "", label: t("accountsSettings.channels.allStatuses", "All Statuses") },
-        { value: "Active", label: t("common.active") },
-        { value: "Inactive", label: t("common.inactive") },
-      ],
-    },
-  ];
-
   const paginatedItems = items.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage
   );
 
-  return (
-    <>
-      {!isOrgLoaded && !organization ? (
-        <div className="fixed inset-0 flex items-center justify-center bg-white">
-          <Loader fullContainer={true} />
-        </div>
-      ) : error ? (
-        <div>Error: {error}</div>
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-6">
-          <div className="flex justify-between items-center w-full mb-6">
-            <div className="text-lg font-semibold text-gray-700 flex items-center">
-              {t("accountsSettings.channels.activeTitle", "Active channels")}
-            </div>
-            <div className="flex space-x-4">
-              {canAdd && (
-                <button
-                  onClick={handleSeedMalaysianDefaults}
-                  disabled={seedingDefaults}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 text-sm font-medium"
-                >
-                  {seedingDefaults ? t("accountsSettings.channels.seeding", "Seeding...") : t("accountsSettings.channels.seedMalaysian", "Seed Malaysian Channels")}
-                </button>
-              )}
-              {canAdd && (
-                <button
-                  onClick={handleAddNew}
-                  className="flex items-center px-4 py-2 bg-[#A6C437] text-white rounded-lg hover:bg-opacity-90 transition-colors text-sm font-medium"
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  {t("accountsSettings.channels.addNew", "Add New")}
-                </button>
-              )}
-            </div>
-          </div>
+  const columns = useMemo(
+    () => [
+      {
+        key: "order",
+        header: t("accountsSettings.channels.order"),
+        width: "8%",
+        render: (item) => item.displayOrder || 0,
+      },
+      {
+        key: "name",
+        header: t("common.name"),
+        render: (item) => (
+          <span className="epc-cell__primary">{item.name}</span>
+        ),
+      },
+      {
+        key: "code",
+        header: t("common.code"),
+        render: (item) => item.code || "—",
+      },
+      {
+        key: "paymentMethods",
+        header: t("accountsSettings.channels.paymentMethodsLabel"),
+        render: (item) =>
+          item.paymentMethods && item.paymentMethods.length > 0 ? (
+            <span>
+              {t("accountsSettings.channels.methodsCount", {
+                count: item.paymentMethods.length,
+                defaultValue: "{{count}} methods",
+              })}
+            </span>
+          ) : (
+            <span className="epc-cell__secondary">
+              {t("accountsSettings.channels.none", "None")}
+            </span>
+          ),
+      },
+      {
+        key: "status",
+        header: t("common.status"),
+        render: (item) => (
+          <ToggleSwitch
+            isOn={item.status === "Active"}
+            handleToggle={() => handleToggleStatus(item)}
+            disabled={!canUpdate}
+          />
+        ),
+      },
+      {
+        key: "actions",
+        header: t("common.actions"),
+        align: "right",
+        render: (item) => (
+          <ActionButtons
+            rbac={{ canUpdate, canDelete }}
+            items={[
+              {
+                tooltip: t("common.edit"),
+                action: ACTION_BUTTON_TYPES.EDIT,
+                onClick: () => handleEdit(item),
+              },
+              {
+                tooltip: t("common.delete"),
+                action: ACTION_BUTTON_TYPES.DELETE,
+                onClick: () => handleDelete(item._id),
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, canUpdate, canDelete]
+  );
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-w-0 max-w-full overflow-hidden">
-            <DataTable
-              loading={loading}
-              searchValue={searchTerm}
-              onSearch={(value) => {
-                setSearchTerm(value ? value.trim() : "");
-                setCurrentPage(1);
-              }}
-              searchPlaceholder={t("accountsSettings.channels.searchPlaceholder", "Search channels...")}
-              filters={filters}
-              totalRecords={items.length}
-              recordsPerPage={recordsPerPage}
-              onRecordsPerPageChange={(perPage) => {
-                setRecordsPerPage(perPage);
-                setCurrentPage(1);
-              }}
-              totalPages={Math.ceil(items.length / recordsPerPage)}
-              currentPage={currentPage}
-              onPageChange={(page) => setCurrentPage(page)}
-              emptyMessage={t("No data available")}
-              headers={[
-                t("accountsSettings.channels.order"),
-                t("common.name"),
-                t("common.code"),
-                t("accountsSettings.channels.paymentMethodsLabel"),
-                t("common.status"),
-                t("common.actions"),
-              ]}
-              data={paginatedItems}
-              renderRow={(item) => (
-                <tr key={item._id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2 text-sm">{item.displayOrder || 0}</td>
-                  <td className="px-4 py-2 text-sm">{item.name}</td>
-                  <td className="px-4 py-2 text-sm">{item.code}</td>
-                  <td className="px-4 py-2 text-sm">
-                    {item.paymentMethods && item.paymentMethods.length > 0 ? (
-                      <span className="text-gray-600">
-                        {t("accountsSettings.channels.methodsCount", {
-                          count: item.paymentMethods.length,
-                          defaultValue: "{{count}} methods",
-                        })}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">{t("accountsSettings.channels.none", "None")}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2 text-sm">
-                    <ToggleSwitch
-                      isOn={item.status === "Active"}
-                      handleToggle={() => handleToggleStatus(item)}
-                      disabled={!canUpdate}
-                    />
-                  </td>
-                  <td className="px-4 py-2 text-sm font-medium">
-                    <div className="flex space-x-2 items-center">
-                      <ActionButtons
-                        rbac={{
-                          canUpdate,
-                          canDelete,
-                        }}
-                        items={[
-                          {
-                            tooltip: t("common.edit"),
-                            action: ACTION_BUTTON_TYPES.EDIT,
-                            onClick: () => handleEdit(item),
-                          },
-                          {
-                            tooltip: t("common.delete"),
-                            action: ACTION_BUTTON_TYPES.DELETE,
-                            onClick: () => handleDelete(item._id),
-                          },
-                        ]}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              )}
-            />
+  if (!isOrgLoaded && !organization) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <Loader fullContainer={true} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  return (
+    <EpcListPage
+      flush
+      title={t("accountsSettings.channels.activeTitle", "Active channels")}
+      action={
+        canAdd ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleSeedMalaysianDefaults}
+              disabled={seedingDefaults}
+              loading={seedingDefaults}
+            >
+              {seedingDefaults
+                ? t("accountsSettings.channels.seeding", "Seeding...")
+                : t(
+                    "accountsSettings.channels.seedMalaysian",
+                    "Seed Malaysian Channels"
+                  )}
+            </Button>
+            <Button size="sm" onClick={handleAddNew}>
+              <PlusIcon size={15} />
+              {t("accountsSettings.channels.addNew", "Add New")}
+            </Button>
           </div>
-        </div>
+        ) : null
+      }
+      searchValue={searchTerm}
+      searchPlaceholder={t(
+        "accountsSettings.channels.searchPlaceholder",
+        "Search channels..."
       )}
+      onSearchChange={(value) => {
+        setSearchTerm(value ? value.trim() : "");
+        setCurrentPage(1);
+      }}
+      filterSubtitle={t(
+        "accountsSettings.channels.filterSubtitle",
+        "Filter by status or search by name."
+      )}
+      filters={[
+        {
+          key: "status",
+          placeholder: t(
+            "accountsSettings.channels.selectStatus",
+            "Select Status"
+          ),
+          options: [
+            { value: "Active", label: t("common.active") },
+            { value: "Inactive", label: t("common.inactive") },
+          ],
+        },
+      ]}
+      filterValues={{ status: statusFilter }}
+      onFilterChange={(key, value) => {
+        if (key === "status") {
+          setStatusFilter(value || "");
+          setCurrentPage(1);
+        }
+      }}
+      onFilterReset={() => {
+        setSearchTerm("");
+        setStatusFilter("");
+        setCurrentPage(1);
+      }}
+      tableTitle={t("accountsSettings.channels.activeTitle", "Active channels")}
+      columns={columns}
+      rows={paginatedItems}
+      loading={loading}
+      emptyMessage={t("No data available")}
+      page={currentPage}
+      pageSize={recordsPerPage}
+      total={items.length}
+      itemLabel="channels"
+      onPageChange={setCurrentPage}
+      onPageSizeChange={(perPage) => {
+        setRecordsPerPage(perPage);
+        setCurrentPage(1);
+      }}
+    >
       <AddEditModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -622,7 +660,7 @@ const ChannelsSettings = () => {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDeleteClick}
       />
-    </>
+    </EpcListPage>
   );
 };
 

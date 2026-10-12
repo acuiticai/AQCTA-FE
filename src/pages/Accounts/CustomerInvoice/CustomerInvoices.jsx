@@ -10,16 +10,8 @@ import {
 } from "react";
 import {
   X,
-  Search,
   Calendar,
   ChevronDown,
-  ChevronRight,
-  ChevronLeft,
-  ChevronsRight,
-  Plus,
-  Building,
-  User,
-  Package,
   FileText,
   DollarSign,
   Clock,
@@ -41,12 +33,19 @@ import * as XLSX from "xlsx";
 import { useHistory, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
-  DataTable,
   SummaryCards,
   DateRangeComponent,
   CustomDatePicker,
   ActionButtons,
 } from "@/page-layouts/index";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import {
   formatDate,
   formatAmount,
@@ -62,7 +61,6 @@ import { useRouteModulePermissions } from "@/utils/permissionUtils";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import CompletedSvg from "@/assets/img/completed.svg";
 import InProgressSvg from "@/assets/img/in-progress.svg";
-import PendingApprovalSvg from "@/assets/img/pending-approval.svg";
 import DelayedSvg from "@/assets/img/delayed.svg";
 import SummarySvg from "@/assets/img/summary.svg";
 import DollarSvg from "../../../assets/img/icons/stats-1.png";
@@ -136,27 +134,26 @@ function LhdnStatusBadge({ status }) {
   );
 }
 
+const INVOICE_STATUS_TONES = {
+  paid: "success",
+  "partially paid": "info",
+  pending: "warning",
+  draft: "neutral",
+  sent: "info",
+  "request sent": "info",
+  "collection scheduled": "info",
+};
+
 /** Payment / workflow status for the invoice (separate from LHDN e-invoice status). */
 function InvoiceStatusBadge({ status }) {
   const raw = status != null ? String(status).trim() : "";
-  const key = raw.toLowerCase();
-  let cls = "bg-gray-100 text-gray-800";
-  if (key === "paid") cls = "bg-emerald-100 text-emerald-800";
-  else if (key === "partially paid") cls = "bg-sky-100 text-sky-800";
-  else if (key === "pending") cls = "bg-amber-100 text-amber-800";
-  else if (key === "draft") cls = "bg-slate-100 text-slate-700";
-  else if (key === "sent" || key === "request sent")
-    cls = "bg-blue-100 text-blue-800";
-  else if (key === "collection scheduled")
-    cls = "bg-indigo-100 text-indigo-800";
   const label = raw ? ciText(raw) : "—";
+  if (!raw) return <span className="epc-cell__secondary">—</span>;
   return (
-    <span
-      className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}
-      title={label}
-    >
-      {label}
-    </span>
+    <StatusPill
+      status={label}
+      tone={INVOICE_STATUS_TONES[raw.toLowerCase()] || "neutral"}
+    />
   );
 }
 
@@ -360,7 +357,9 @@ export default function CustomerInvoices() {
 
   // Clear all filters function
   const clearAllFilters = () => {
-    setSelectedBusinessFilter("");
+    setSelectedBusinessFilter(
+      businesses.length === 1 ? businesses[0]._id : "",
+    );
     setSelectedCustomerFilter("");
     setSelectedInvoiceTypeFilter("All");
     setSelectedEInvoiceDocumentTypeFilter("All");
@@ -375,216 +374,140 @@ export default function CustomerInvoices() {
     setCurrentPage(1);
   };
 
-  const baseFilters = [
-    {
-      isClearButton: true,
-      buttonProps: {
-        onClick: () => {
-          clearAllFilters();
-          setCurrentPage(1);
-        },
-      },
-    },
-    ...(!isSingleAssignedBusiness()
-      ? [
-          {
-            label: ciText("Business"),
-            value: selectedBusinessFilter,
-            onChange: (value) => {
-              setSelectedBusinessFilter(value ?? "");
-              setCurrentPage(1);
-            },
-            options: businesses.map((b) => ({
-              value: b._id,
-              label: b.name,
-            })),
-            placeholder: ciText("Select Business"),
-            icon: Building,
-          },
-        ]
-      : []),
-    {
-      label: ciText("Customer"),
-      value: selectedCustomerFilter,
-      onChange: (value) => {
-        setSelectedCustomerFilter(value ?? "");
-        setCurrentPage(1);
-      },
-      options: customers.map((c) => ({
-        value: c._id,
-        label:
-          c.basicInformation?.customerDisplayName ??
-          c.basicInformation?.companyName ??
-          "—",
-      })),
-      placeholder: ciText("Select Customer"),
-      icon: User,
-    },
-    // {
-    //   label: ciText("Invoice Type"),
-    //   value: selectedInvoiceTypeFilter,
-    //   onChange: (value) => {
-    //     setSelectedInvoiceTypeFilter(toAllDefault(value));
-    //     setCurrentPage(1);
-    //   },
-    //   options: [
-    //     { value: "All", label: ciText("All Types") },
-    //     { value: "Commercial", label: ciText("Commercial") },
-    //     { value: "Proforma", label: ciText("Proforma") },
-    //   ],
-    //   placeholder: "Invoice Type: All",
-    //   icon: Package,
-    // },
-    ...(isEInvoiceHubRoute && eInvoiceHubTab === "invoices"
-      ? [
-          {
-            label: ciText("Document type"),
-            value: selectedEInvoiceDocumentTypeFilter,
-            onChange: (value) => {
-              setSelectedEInvoiceDocumentTypeFilter(toAllDefault(value));
-              setCurrentPage(1);
-            },
-            options: [
-              { value: "All", label: ciText("All types") },
-              { value: "e-invoice", label: ciText("E-Invoice") },
-              { value: "consolidated", label: ciText("Consolidated") },
-            ],
-            placeholder: ciText("Document type: All"),
-            icon: FileText,
-          },
-        ]
-      : [
-          {
-            label: ciText("Invoice Status"),
-            value: selectedInvoiceStatusFilter,
-            onChange: (value) => {
-              setSelectedInvoiceStatusFilter(toAllDefault(value));
-              setCurrentPage(1);
-            },
-            options: [
-              { value: "All", label: ciText("All Statuses") },
-              { value: "Draft", label: ciText("Draft") },
-              { value: "Pending", label: ciText("Pending") },
-              { value: "Request Sent", label: ciText("Request Sent") },
-              { value: "Sent", label: ciText("Sent") },
-              { value: "Collection Scheduled", label: ciText("Collection Scheduled") },
-              { value: "Partially Paid", label: ciText("Partially Paid") },
-              { value: "Paid", label: ciText("Paid") },
-            ],
-            placeholder: ciText("Invoice Status: All"),
-            icon: FileText,
-          },
-        ]),
-    {
-      id: "lhdnStatus",
-      label: ciText("LHDN Status"),
-      value: selectedLhdnStatusFilter,
-      onChange: (value) => {
-        setSelectedLhdnStatusFilter(toAllDefault(value));
-        setCurrentPage(1);
-      },
-      options: [
-        { value: "All", label: ciText("All LHDN Statuses") },
-        { value: "Pending", label: ciText("Pending") },
-        { value: "Submitted", label: ciText("Submitted") },
-        { value: "Valid", label: ciText("Valid") },
-        { value: "Invalid", label: ciText("Invalid") },
-        { value: "Rejected", label: ciText("Rejected") },
-        { value: "Cancelled", label: ciText("Cancelled") },
-        { value: "Consolidated Submit", label: ciText("Consolidated Submit") },
-      ],
-      placeholder: ciText("LHDN Status: All"),
-      icon: Send,
-    },
-    {
-      label: ciText("Date Created"),
-      value: selectedDateCreatedFilter,
-      onChange: (val) => {
-        setSelectedDateCreatedFilter(val);
-        setCurrentPage(1);
-      },
-      isDatePicker: true,
-      placeholder: ciText("Date Created"),
-      icon: Calendar,
-    },
-    // {
-    //   label: ciText("Sales Contracts"),
-    //   value: selectedSalesContractsFilter,
-    //   onChange: (value) => {
-    //     setSelectedSalesContractsFilter(value);
-    //     setCurrentPage(1);
-    //   },
-    //   options: [
-    //     { value: "All", label: ciText("All Contracts") },
-    //     ...salesContracts.map((c) => ({
-    //       value: c._id,
-    //       label: c.contractNo,
-    //     })),
-    //   ],
-    //   placeholder: "Sales Contracts: All",
-    //   icon: FileText,
-    // },
-  ];
+  const portalFilterValues = {
+    business: selectedBusinessFilter || "",
+    customer: selectedCustomerFilter || "",
+    documentType:
+      selectedEInvoiceDocumentTypeFilter === "All"
+        ? ""
+        : selectedEInvoiceDocumentTypeFilter,
+    invoiceStatus:
+      selectedInvoiceStatusFilter === "All" ? "" : selectedInvoiceStatusFilter,
+    lhdnStatus:
+      selectedLhdnStatusFilter === "All" ? "" : selectedLhdnStatusFilter,
+  };
 
-  const filters = anyAssignedBusinessHasEInvoice
-    ? baseFilters
-    : baseFilters.filter((f) => f.id !== "lhdnStatus");
-
-  const invoiceTableHeaders = useMemo(
-    () =>
-      anyAssignedBusinessHasEInvoice
+  const portalFilters = useMemo(() => {
+    const list = [
+      ...(!isSingleAssignedBusiness()
         ? [
-            ciText("Select"),
-            ciText("Invoice No"),
-            ciText("Customer"),
-            ciText("Business"),
-            ciText("Type / Status"),
-            ciText("LHDN"),
-            ciText("Dates"),
-            ciText("Amount"),
-            ciText("Actions"),
+            {
+              key: "business",
+              placeholder: ciText("Select Business"),
+              options: [
+                { value: "", label: ciText("Select Business") },
+                ...businesses.map((b) => ({
+                  value: b._id,
+                  label: b.name,
+                })),
+              ],
+            },
+          ]
+        : []),
+      {
+        key: "customer",
+        placeholder: ciText("Select Customer"),
+        options: [
+          { value: "", label: ciText("Select Customer") },
+          ...customers.map((c) => ({
+            value: c._id,
+            label:
+              c.basicInformation?.customerDisplayName ??
+              c.basicInformation?.companyName ??
+              "—",
+          })),
+        ],
+      },
+      ...(isEInvoiceHubRoute && eInvoiceHubTab === "invoices"
+        ? [
+            {
+              key: "documentType",
+              placeholder: ciText("Document type: All"),
+              options: [
+                { value: "", label: ciText("All types") },
+                { value: "e-invoice", label: ciText("E-Invoice") },
+                { value: "consolidated", label: ciText("Consolidated") },
+              ],
+            },
           ]
         : [
-            ciText("Select"),
-            ciText("Invoice No"),
-            ciText("Customer"),
-            ciText("Business"),
-            ciText("Type / Status"),
-            ciText("Dates"),
-            ciText("Amount"),
-            ciText("Actions"),
-          ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [anyAssignedBusinessHasEInvoice, i18n.language],
-  );
+            {
+              key: "invoiceStatus",
+              placeholder: ciText("Invoice Status: All"),
+              options: [
+                { value: "", label: ciText("All Statuses") },
+                { value: "Draft", label: ciText("Draft") },
+                { value: "Pending", label: ciText("Pending") },
+                { value: "Request Sent", label: ciText("Request Sent") },
+                { value: "Sent", label: ciText("Sent") },
+                {
+                  value: "Collection Scheduled",
+                  label: ciText("Collection Scheduled"),
+                },
+                { value: "Partially Paid", label: ciText("Partially Paid") },
+                { value: "Paid", label: ciText("Paid") },
+              ],
+            },
+          ]),
+    ];
 
-  /** Base column widths; wide tables can scroll horizontally inside the table container. */
-  const invoiceTableColWidths = useMemo(() => {
     if (anyAssignedBusinessHasEInvoice) {
-      return {
-        [ciText("Select")]: "44px",
-        [ciText("Invoice No")]: "8%",
-        [ciText("Customer")]: "12%",
-        [ciText("Business")]: "150px",
-        [ciText("Type / Status")]: "12%",
-        [ciText("LHDN")]: "8%",
-        [ciText("Dates")]: "11%",
-        [ciText("Amount")]: "8%",
-        [ciText("Actions")]: "max-content",
-      };
+      list.push({
+        key: "lhdnStatus",
+        placeholder: ciText("LHDN Status: All"),
+        options: [
+          { value: "", label: ciText("All LHDN Statuses") },
+          { value: "Pending", label: ciText("Pending") },
+          { value: "Submitted", label: ciText("Submitted") },
+          { value: "Valid", label: ciText("Valid") },
+          { value: "Invalid", label: ciText("Invalid") },
+          { value: "Rejected", label: ciText("Rejected") },
+          { value: "Cancelled", label: ciText("Cancelled") },
+          {
+            value: "Consolidated Submit",
+            label: ciText("Consolidated Submit"),
+          },
+        ],
+      });
     }
-    return {
-      [ciText("Select")]: "44px",
-      [ciText("Invoice No")]: "9%",
-      [ciText("Customer")]: "13%",
-      [ciText("Business")]: "150px",
-      [ciText("Type / Status")]: "13%",
-      [ciText("Dates")]: "12%",
-      [ciText("Amount")]: "10%",
-      [ciText("Actions")]: "max-content",
-    };
+
+    return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anyAssignedBusinessHasEInvoice, i18n.language]);
+  }, [
+    anyAssignedBusinessHasEInvoice,
+    businesses,
+    customers,
+    eInvoiceHubTab,
+    isEInvoiceHubRoute,
+    i18n.language,
+  ]);
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "business") {
+      setSelectedBusinessFilter(value ?? "");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "customer") {
+      setSelectedCustomerFilter(value ?? "");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "documentType") {
+      setSelectedEInvoiceDocumentTypeFilter(toAllDefault(value));
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "invoiceStatus") {
+      setSelectedInvoiceStatusFilter(toAllDefault(value));
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "lhdnStatus") {
+      setSelectedLhdnStatusFilter(toAllDefault(value));
+      setCurrentPage(1);
+    }
+  };
 
   const fetchInvoices = async () => {
     const skipInvoiceFetch =
@@ -2135,619 +2058,697 @@ export default function CustomerInvoices() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEInvoiceHubRoute, eInvoiceHubTab, eInvoiceStats, overallStats, i18n.language]);
 
-  return (
-    <div className="bg-gray-50 min-h-screen w-full max-w-full overflow-x-hidden">
-      <div className="w-full max-w-full mx-auto px-6 py-8 min-w-0 overflow-x-hidden">
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {isEInvoiceHubRoute
-                  ? ciText("E-Invoices")
-                  : ciText("Customer Invoices")}
-              </h1>
-              <p className="text-gray-600 mt-2">
-                {!isEInvoiceHubRoute
-                  ? ciText("Manage and track all customer invoices")
-                  : eInvoiceHubTab === "invoices"
-                    ? ciText(
-                        "Submitted e-invoices and consolidated documents for LHDN.",
-                      )
-                    : eInvoiceHubTab === "consolidated"
-                      ? ciText(
-                          "Combine eligible source invoices into one B2C consolidated e-invoice for LHDN.",
-                        )
-                      : ""}
-              </p>
+  const filteredInvoices = useMemo(() => {
+    if (!selectedLhdnStatusFilter || selectedLhdnStatusFilter === "All") {
+      return invoices;
+    }
+    return invoices.filter((inv) => {
+      const s = (inv?.lhdn_status || "Pending").toString();
+      return (
+        s.toLowerCase() === String(selectedLhdnStatusFilter).toLowerCase()
+      );
+    });
+  }, [invoices, selectedLhdnStatusFilter]);
+
+  const buildInvoiceActionItems = useCallback(
+    (invoice) => {
+      const statusLower = (invoice?.status || "").toLowerCase();
+      const lhdnForEdit = invoice?.lhdn_status || "Pending";
+      const isPaidOrPartial =
+        statusLower === "paid" || statusLower === "partially paid";
+      const canEditRow =
+        canUpdate && !isPaidOrPartial && lhdnForEdit !== "Valid";
+
+      const actionItems = [];
+      if (canViewInvoice) {
+        actionItems.push({
+          action: ACTION_BUTTON_TYPES.VIEW,
+          title: ciText("View"),
+          onClick: () =>
+            history.push(`/view-customer-invoice/${invoice._id}`),
+        });
+      }
+      if (canEditRow) {
+        actionItems.push({
+          action: ACTION_BUTTON_TYPES.EDIT,
+          title: ciText("Edit"),
+          onClick: () =>
+            history.push(`/update-customer-invoice/${invoice._id}`),
+        });
+      }
+      if (canDelete) {
+        actionItems.push({
+          action: ACTION_BUTTON_TYPES.DELETE,
+          title: ciText("Delete"),
+          onClick: () => handleDeleteInvoice(invoice),
+        });
+      }
+
+      if (rowShowsLhdn(invoice)) {
+        const lhdn = invoice?.lhdn_status || "Pending";
+        const busy = eInvoiceBusyId === invoice._id;
+        const inConsolidation = Boolean(invoice?.consolidatedInvoiceId);
+        const canSubmit = lhdn === "Pending" && !inConsolidation;
+        const canRetry =
+          (lhdn === "Rejected" || lhdn === "Invalid") && !inConsolidation;
+        const isSubmitted = lhdn === "Submitted" && !inConsolidation;
+        const isValid = lhdn === "Valid" && !inConsolidation;
+        const downloadingThis = eInvoiceDownloadId === invoice._id;
+
+        actionItems.push({
+          action: ACTION_BUTTON_TYPES.VIEW_PDF,
+          title: ciText("View E-Invoice details"),
+          onClick: () => handleViewEInvoice(invoice),
+        });
+        if (canSubmit && canUpdate) {
+          actionItems.push({
+            action: ACTION_BUTTON_TYPES.SEND_EMAIL,
+            title: ciText("Submit to LHDN"),
+            onClick: () => handleSubmitToLHDN(invoice),
+            disabled: busy,
+          });
+        }
+        if (canRetry && canUpdate) {
+          actionItems.push({
+            action: ACTION_BUTTON_TYPES.CHANGE_STATUS,
+            title: ciText("Retry submission to LHDN"),
+            onClick: () => handleRetryLHDN(invoice),
+            disabled: busy,
+          });
+        }
+        if (isSubmitted) {
+          actionItems.push({
+            action: ACTION_BUTTON_TYPES.HISTORY,
+            title: ciText("Refresh LHDN status"),
+            onClick: () => handleRefreshLHDN(invoice),
+            disabled: busy,
+          });
+        }
+        if (isValid) {
+          actionItems.push({
+            action: ACTION_BUTTON_TYPES.DOWNLOAD,
+            title: ciText("Download e-invoice PDF"),
+            onClick: () => handleDownloadEInvoicePDF(invoice),
+            disabled: downloadingThis,
+          });
+        }
+      }
+
+      return actionItems;
+    },
+    [
+      canDelete,
+      canUpdate,
+      canViewInvoice,
+      eInvoiceBusyId,
+      eInvoiceDownloadId,
+      history,
+      rowShowsLhdn,
+    ],
+  );
+
+  const invoiceColumns = useMemo(() => {
+    const cols = [
+      {
+        key: "select",
+        header: ciText("Select"),
+        width: "44px",
+        render: (invoice) => {
+          const isSelected = selectedInvoices.some(
+            (selected) => selected._id === invoice._id,
+          );
+          const canBeSelected =
+            CustomerInvoiceServices.canInvoiceBeSelected(invoice);
+          return (
+            <div className="flex items-center justify-center">
+              {canBeSelected ? (
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => handleSelectInvoice(invoice)}
+                  className="h-4 w-4 text-[var(--p-blue)] focus:ring-[var(--p-blue)] border-gray-300 rounded"
+                />
+              ) : (
+                <div
+                  className="h-4 w-4 bg-gray-100 border border-gray-300 rounded"
+                  title={ciText("Cannot select this invoice")}
+                />
+              )}
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              {(isEInvoiceHubRoute ? eInvoiceHubTab : "invoices") !==
-                "consolidated" && (
-                <>
-                  <DateRangeComponent
-                    startDate={dateRangeStart}
-                    endDate={dateRangeEnd}
-                    onApply={handleDateRangeApply}
-                    onClear={handleDateRangeClear}
-                    placeholder={ciText("Filter by date range")}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleExportExcel}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={ciText("Export to Excel")}
-                  >
-                    <ExcelIcon size={18} />
-                    {loading ? "..." : ""}
-                  </button>
-                </>
-              )}
-              {!isEInvoiceHubRoute && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    history.push(
-                      "/customer-statement",
-                      selectedBusinessFilter
-                        ? { businessId: selectedBusinessFilter }
-                        : undefined,
-                    )
-                  }
-                  className="flex items-center gap-2 px-4 py-3 text-white rounded-lg transition-colors"
-                  style={{ backgroundColor: "#10468D" }}
-                >
-                  <FileText size={18} />
-                  {ciText("Customer Statement")}
-                </button>
-              )}
-              {canAdd &&
-                (!isEInvoiceHubRoute || eInvoiceHubTab === "invoices") && (
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 px-6 py-3 bg-[var(--p-blue)] text-white rounded-lg hover:bg-[var(--p-blue-dark)] transition-colors shadow-sm"
-                    onClick={() => history.push("/create-customer-invoice")}
-                  >
-                    <Plus size={20} />
-                    {ciText("Create Invoice")}
-                  </button>
+          );
+        },
+      },
+      {
+        key: "invoiceNo",
+        header: ciText("Invoice No"),
+        width: "10%",
+        render: (invoice) =>
+          canViewInvoice && invoice._id ? (
+            <button
+              type="button"
+              className="epc-cell__link"
+              title={`#${invoice.invoice_number}`}
+              onClick={() =>
+                history.push(`/view-customer-invoice/${invoice._id}`)
+              }
+            >
+              #{invoice.invoice_number}
+            </button>
+          ) : (
+            <span className="epc-cell__primary">
+              #{invoice.invoice_number}
+            </span>
+          ),
+      },
+      {
+        key: "customer",
+        header: ciText("Customer"),
+        width: "14%",
+        render: (invoice) => (
+          <>
+            <div className="epc-cell__primary">
+              {invoice?.isConsolidated
+                ? ciText("General Public")
+                : invoice?.customer_id?.basicInformation
+                    ?.customerDisplayName ||
+                  invoice?.customer_id?.basicInformation?.companyName ||
+                  invoice?.customer_name ||
+                  "—"}
+            </div>
+            {invoice?.business_id?.name ? (
+              <div className="epc-cell__secondary">
+                {invoice.business_id.name}
+              </div>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        key: "business",
+        header: ciText("Business"),
+        width: "12%",
+        render: (invoice) => (
+          <div className="epc-cell__primary">
+            {invoice?.business_id?.name || "—"}
+          </div>
+        ),
+      },
+      {
+        key: "typeStatus",
+        header: ciText("Type / Status"),
+        width: "12%",
+        render: (invoice) => (
+          <div className="flex flex-col items-start gap-1">
+            <StatusPill
+              status={
+                invoice?.isConsolidated
+                  ? ciText("Consolidated")
+                  : ciText("E-Invoice")
+              }
+              tone={invoice?.isConsolidated ? "danger-soft" : "info"}
+            />
+            <InvoiceStatusBadge status={invoice?.status} />
+          </div>
+        ),
+      },
+    ];
+
+    if (anyAssignedBusinessHasEInvoice) {
+      cols.push({
+        key: "lhdn",
+        header: ciText("LHDN"),
+        width: "10%",
+        render: (invoice) =>
+          rowShowsLhdn(invoice) ? (
+            <LhdnStatusBadge status={invoice?.lhdn_status} />
+          ) : (
+            <span className="epc-cell__secondary">—</span>
+          ),
+      });
+    }
+
+    cols.push(
+      {
+        key: "dates",
+        header: ciText("Dates"),
+        width: "12%",
+        render: (invoice) => (
+          <>
+            <div className="epc-cell__primary">
+              {formatDate(invoice?.invoice_date)}
+            </div>
+            <div className="epc-cell__secondary">
+              {ciText("Due:")} {formatDate(invoice?.due_date)}
+            </div>
+          </>
+        ),
+      },
+      {
+        key: "amount",
+        header: ciText("Amount"),
+        width: "12%",
+        render: (invoice) => {
+          const invoiceDisplayAmount =
+            invoice?.grandTotal ?? invoice?.subTotal ?? 0;
+          return (
+            <>
+              <div className="epc-cell__primary">
+                {formatCurrencyAmount(
+                  invoice.currency || "MYR",
+                  invoiceDisplayAmount,
                 )}
+              </div>
+              {invoice?.invoiceType === "Proforma" &&
+              (invoice?.advanceDepositAmount > 0 ||
+                invoice?.depositAmount > 0) ? (
+                <div className="epc-cell__secondary text-blue-600">
+                  {formatCurrencyAmount(
+                    invoice.currency || "MYR",
+                    invoice.advanceDepositAmount || invoice.depositAmount,
+                  )}{" "}
+                  {ciText("Advance")}
+                </div>
+              ) : null}
+            </>
+          );
+        },
+      },
+      {
+        key: "actions",
+        header: ciText("Actions"),
+        width: "10%",
+        align: "right",
+        render: (invoice) => (
+          <ActionButtons
+            maxVisibleActions={2}
+            items={buildInvoiceActionItems(invoice)}
+          />
+        ),
+      },
+    );
+
+    return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    anyAssignedBusinessHasEInvoice,
+    buildInvoiceActionItems,
+    canViewInvoice,
+    history,
+    i18n.language,
+    rowShowsLhdn,
+    selectedInvoices,
+  ]);
+
+  const pageTitle = isEInvoiceHubRoute
+    ? ciText("E-Invoices")
+    : ciText("Customer Invoices");
+  const pageSubtitle = !isEInvoiceHubRoute
+    ? ciText("Manage and track all customer invoices")
+    : eInvoiceHubTab === "invoices"
+      ? ciText("Submitted e-invoices and consolidated documents for LHDN.")
+      : eInvoiceHubTab === "consolidated"
+        ? ciText(
+            "Combine eligible source invoices into one B2C consolidated e-invoice for LHDN.",
+          )
+        : "";
+
+  const selectionToolbar =
+    CustomerInvoiceServices.getSelectableInvoices(invoices).length > 0 ? (
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {(() => {
+          const counts = getStatusCounts();
+          const selectionButtons = [];
+
+          if (counts.draft > 0) {
+            selectionButtons.push(
+              <button
+                key="draft"
+                type="button"
+                onClick={() => handleSelectAllByStatus("draft")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                  areAllStatusSelected("draft")
+                    ? "border-gray-400 bg-white text-gray-800"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {areAllStatusSelected("draft") ? (
+                  <CheckSquare size={14} />
+                ) : (
+                  <Square size={14} />
+                )}
+                {ciText("Select All ({{count}}) Draft", {
+                  count: counts.draft,
+                })}
+              </button>,
+            );
+          }
+
+          if (counts.generated > 0) {
+            selectionButtons.push(
+              <button
+                key="generated"
+                type="button"
+                onClick={() => handleSelectAllByStatus("Generated")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                  areAllStatusSelected("Generated")
+                    ? "border-blue-400 bg-blue-50 text-blue-800"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {areAllStatusSelected("Generated") ? (
+                  <CheckSquare size={14} />
+                ) : (
+                  <Square size={14} />
+                )}
+                {ciText("Select All ({{count}}) Generated", {
+                  count: counts.generated,
+                })}
+              </button>,
+            );
+          }
+
+          if (counts.requestSent > 0) {
+            selectionButtons.push(
+              <button
+                key="requestSent"
+                type="button"
+                onClick={() => handleSelectAllByStatus("Request Sent")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                  areAllStatusSelected("Request Sent")
+                    ? "border-amber-400 bg-amber-50 text-amber-800"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {areAllStatusSelected("Request Sent") ? (
+                  <CheckSquare size={14} />
+                ) : (
+                  <Square size={14} />
+                )}
+                {ciText("Select All ({{count}}) Sent", {
+                  count: counts.requestSent,
+                })}
+              </button>,
+            );
+          }
+
+          if (counts.collectionScheduled > 0) {
+            selectionButtons.push(
+              <button
+                key="collectionScheduled"
+                type="button"
+                onClick={() => handleSelectAllByStatus("Collection Scheduled")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                  areAllStatusSelected("Collection Scheduled")
+                    ? "border-orange-400 bg-orange-50 text-orange-800"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {areAllStatusSelected("Collection Scheduled") ? (
+                  <CheckSquare size={14} />
+                ) : (
+                  <Square size={14} />
+                )}
+                {ciText("Select All ({{count}}) Scheduled", {
+                  count: counts.collectionScheduled,
+                })}
+              </button>,
+            );
+          }
+
+          if (counts.partiallyPaid > 0) {
+            selectionButtons.push(
+              <button
+                key="partiallyPaid"
+                type="button"
+                onClick={() => handleSelectAllByStatus("Partially Paid")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                  areAllStatusSelected("Partially Paid")
+                    ? "border-sky-400 bg-sky-50 text-sky-800"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {areAllStatusSelected("Partially Paid") ? (
+                  <CheckSquare size={14} />
+                ) : (
+                  <Square size={14} />
+                )}
+                {ciText("Select All ({{count}}) Partially Paid", {
+                  count: counts.partiallyPaid,
+                })}
+              </button>,
+            );
+          }
+
+          if (counts.paid > 0) {
+            selectionButtons.push(
+              <button
+                key="paid"
+                type="button"
+                onClick={() => handleSelectAllByStatus("Paid")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                  areAllStatusSelected("Paid")
+                    ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {areAllStatusSelected("Paid") ? (
+                  <CheckSquare size={14} />
+                ) : (
+                  <Square size={14} />
+                )}
+                {ciText("Select All ({{count}}) Paid", {
+                  count: counts.paid,
+                })}
+              </button>,
+            );
+          }
+
+          if (counts.total > 0) {
+            selectionButtons.push(
+              <button
+                key="all"
+                type="button"
+                onClick={handleSelectAll}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                  selectAll
+                    ? "border-gray-400 bg-white text-gray-800"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {selectAll ? <CheckSquare size={14} /> : <Square size={14} />}
+                {selectAll ? ciText("Deselect All") : ciText("Select All")} (
+                {ciText("{{count}} eligible", { count: counts.total })})
+              </button>,
+            );
+          }
+
+          return selectionButtons;
+        })()}
+
+        {selectedInvoices.length > 0 && (
+          <>
+            <span className="text-sm text-gray-600 ml-auto">
+              {selectedInvoices.length === 1
+                ? ciText("{{count}} invoice selected", {
+                    count: selectedInvoices.length,
+                  })
+                : ciText("{{count}} invoices selected", {
+                    count: selectedInvoices.length,
+                  })}
+            </span>
+            <Button
+              size="sm"
+              onClick={handleOpenProfessionalBulkPayment}
+              disabled={bulkPaymentLoading}
+            >
+              <DollarSign size={14} />
+              {bulkPaymentLoading
+                ? ciText("Loading...")
+                : ciText("Bulk Payment ({{count}})", {
+                    count: selectedInvoices.length,
+                  })}
+            </Button>
+          </>
+        )}
+      </div>
+    ) : null;
+
+  return (
+    <EpcPage
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      action={
+        <div className="flex flex-wrap items-center gap-3">
+          {(isEInvoiceHubRoute ? eInvoiceHubTab : "invoices") !==
+            "consolidated" && (
+            <>
+              <DateRangeComponent
+                startDate={dateRangeStart}
+                endDate={dateRangeEnd}
+                onApply={handleDateRangeApply}
+                onClear={handleDateRangeClear}
+                placeholder={ciText("Filter by date range")}
+              />
+              <Button
+                variant="secondary"
+                onClick={handleExportExcel}
+                disabled={loading}
+                title={ciText("Export to Excel")}
+              >
+                <ExcelIcon size={15} />
+                {loading ? "..." : ciText("Export")}
+              </Button>
+            </>
+          )}
+          {!isEInvoiceHubRoute && (
+            <Button
+              variant="secondary"
+              onClick={() =>
+                history.push(
+                  "/customer-statement",
+                  selectedBusinessFilter
+                    ? { businessId: selectedBusinessFilter }
+                    : undefined,
+                )
+              }
+            >
+              <FileText size={15} />
+              {ciText("Customer Statement")}
+            </Button>
+          )}
+          {canAdd &&
+            (!isEInvoiceHubRoute || eInvoiceHubTab === "invoices") && (
+              <Button onClick={() => history.push("/create-customer-invoice")}>
+                <PlusIcon size={15} />
+                {ciText("Create Invoice")}
+              </Button>
+            )}
+        </div>
+      }
+    >
+      {isEInvoiceHubRoute && (
+        <nav
+          className="mb-4 flex flex-wrap gap-1 border-b border-gray-200"
+          aria-label={ciText("E-invoice and documents")}
+        >
+          {eInvoiceHubTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setEInvoiceHubTabAndUrl(tab.id)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                eInvoiceHubTab === tab.id
+                  ? "border-[var(--p-blue)] text-[var(--p-blue)]"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      )}
+
+      {(!isEInvoiceHubRoute || eInvoiceHubTab === "invoices") && (
+        <>
+          <SummaryCards
+            cards={summaryCardsData}
+            columnsCount={4}
+            loading={loading && invoices.length === 0}
+          />
+
+          <FilterBar
+            subtitle={ciText("Narrow by business, customer or status.")}
+            searchPlaceholder={
+              isEInvoiceHubRoute && eInvoiceHubTab === "invoices"
+                ? ciText("Search submitted e-invoices...")
+                : ciText("Search invoices...")
+            }
+            searchValue={searchTerm}
+            onSearchChange={(value) => {
+              setSearchTerm(value);
+              setCurrentPage(1);
+            }}
+            values={portalFilterValues}
+            onChange={handlePortalFilterChange}
+            onReset={clearAllFilters}
+            filters={portalFilters}
+          />
+
+          <div className="flex flex-wrap items-end gap-3 mb-1">
+            <div className="min-w-[180px]">
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {ciText("Date Created")}
+              </label>
+              <CustomDatePicker
+                value={selectedDateCreatedFilter}
+                onChange={(val) => {
+                  setSelectedDateCreatedFilter(val || "");
+                  setCurrentPage(1);
+                }}
+                placeholder={ciText("Date Created")}
+                clearable
+              />
             </div>
           </div>
 
-          {isEInvoiceHubRoute && (
-            <nav
-              className="mt-6 flex flex-wrap gap-1 border-b border-gray-200"
-              aria-label={ciText("E-invoice and documents")}
-            >
-              {eInvoiceHubTabs.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setEInvoiceHubTabAndUrl(t.id)}
-                  className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                    eInvoiceHubTab === t.id
-                      ? "border-[var(--p-blue)] text-[var(--p-blue)]"
-                      : "border-transparent text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </nav>
-          )}
-        </div>
+          {selectionToolbar}
 
-        {(!isEInvoiceHubRoute || eInvoiceHubTab === "invoices") && (
-          <div className="w-full max-w-full min-w-0 overflow-x-hidden">
-            <SummaryCards cards={summaryCardsData} columnsCount={4} />
-
-            {CustomerInvoiceServices.getSelectableInvoices(invoices).length >
-              0 && (
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                {(() => {
-                  const counts = getStatusCounts();
-                  const selectionButtons = [];
-
-                  if (counts.draft > 0) {
-                    selectionButtons.push(
-                      <button
-                        key="draft"
-                        type="button"
-                        onClick={() => handleSelectAllByStatus("draft")}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                          areAllStatusSelected("draft")
-                            ? "border-gray-400 bg-white text-gray-800"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {areAllStatusSelected("draft") ? (
-                          <CheckSquare size={14} />
-                        ) : (
-                          <Square size={14} />
-                        )}
-                        {ciText("Select All ({{count}}) Draft", {
-                          count: counts.draft,
-                        })}
-                      </button>,
-                    );
-                  }
-
-                  if (counts.generated > 0) {
-                    selectionButtons.push(
-                      <button
-                        key="generated"
-                        type="button"
-                        onClick={() => handleSelectAllByStatus("Generated")}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                          areAllStatusSelected("Generated")
-                            ? "border-blue-400 bg-blue-50 text-blue-800"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {areAllStatusSelected("Generated") ? (
-                          <CheckSquare size={14} />
-                        ) : (
-                          <Square size={14} />
-                        )}
-                        {ciText("Select All ({{count}}) Generated", {
-                          count: counts.generated,
-                        })}
-                      </button>,
-                    );
-                  }
-
-                  if (counts.requestSent > 0) {
-                    selectionButtons.push(
-                      <button
-                        key="requestSent"
-                        type="button"
-                        onClick={() => handleSelectAllByStatus("Request Sent")}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                          areAllStatusSelected("Request Sent")
-                            ? "border-amber-400 bg-amber-50 text-amber-800"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {areAllStatusSelected("Request Sent") ? (
-                          <CheckSquare size={14} />
-                        ) : (
-                          <Square size={14} />
-                        )}
-                        {ciText("Select All ({{count}}) Sent", {
-                          count: counts.requestSent,
-                        })}
-                      </button>,
-                    );
-                  }
-
-                  if (counts.collectionScheduled > 0) {
-                    selectionButtons.push(
-                      <button
-                        key="collectionScheduled"
-                        type="button"
-                        onClick={() =>
-                          handleSelectAllByStatus("Collection Scheduled")
-                        }
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                          areAllStatusSelected("Collection Scheduled")
-                            ? "border-orange-400 bg-orange-50 text-orange-800"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {areAllStatusSelected("Collection Scheduled") ? (
-                          <CheckSquare size={14} />
-                        ) : (
-                          <Square size={14} />
-                        )}
-                        {ciText("Select All ({{count}}) Scheduled", {
-                          count: counts.collectionScheduled,
-                        })}
-                      </button>,
-                    );
-                  }
-
-                  if (counts.partiallyPaid > 0) {
-                    selectionButtons.push(
-                      <button
-                        key="partiallyPaid"
-                        type="button"
-                        onClick={() =>
-                          handleSelectAllByStatus("Partially Paid")
-                        }
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                          areAllStatusSelected("Partially Paid")
-                            ? "border-sky-400 bg-sky-50 text-sky-800"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {areAllStatusSelected("Partially Paid") ? (
-                          <CheckSquare size={14} />
-                        ) : (
-                          <Square size={14} />
-                        )}
-                        {ciText("Select All ({{count}}) Partially Paid", {
-                          count: counts.partiallyPaid,
-                        })}
-                      </button>,
-                    );
-                  }
-
-                  if (counts.paid > 0) {
-                    selectionButtons.push(
-                      <button
-                        key="paid"
-                        type="button"
-                        onClick={() => handleSelectAllByStatus("Paid")}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                          areAllStatusSelected("Paid")
-                            ? "border-emerald-400 bg-emerald-50 text-emerald-800"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {areAllStatusSelected("Paid") ? (
-                          <CheckSquare size={14} />
-                        ) : (
-                          <Square size={14} />
-                        )}
-                        {ciText("Select All ({{count}}) Paid", {
-                          count: counts.paid,
-                        })}
-                      </button>,
-                    );
-                  }
-
-                  if (counts.total > 0) {
-                    selectionButtons.push(
-                      <button
-                        key="all"
-                        type="button"
-                        onClick={handleSelectAll}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                          selectAll
-                            ? "border-gray-400 bg-white text-gray-800"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {selectAll ? (
-                          <CheckSquare size={14} />
-                        ) : (
-                          <Square size={14} />
-                        )}
-                        {selectAll
-                          ? ciText("Deselect All")
-                          : ciText("Select All")}{" "}
-                        (
-                        {ciText("{{count}} eligible", {
-                          count: counts.total,
-                        })}
-                        )
-                      </button>,
-                    );
-                  }
-
-                  return selectionButtons;
-                })()}
-
-                {selectedInvoices.length > 0 && (
-                  <>
-                    <span className="text-sm text-gray-600 ml-auto">
-                      {selectedInvoices.length === 1
-                        ? ciText("{{count}} invoice selected", {
-                            count: selectedInvoices.length,
-                          })
-                        : ciText("{{count}} invoices selected", {
-                            count: selectedInvoices.length,
-                          })}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleOpenProfessionalBulkPayment}
-                      disabled={bulkPaymentLoading}
-                      className="inline-flex items-center gap-2 px-4 py-1.5 text-sm bg-[var(--p-blue)] text-white rounded-lg hover:bg-[var(--p-blue-dark)] transition-colors disabled:opacity-50"
-                    >
-                      <DollarSign size={14} />
-                      {bulkPaymentLoading
-                        ? ciText("Loading...")
-                        : ciText("Bulk Payment ({{count}})", {
-                            count: selectedInvoices.length,
-                          })}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-
-            <DataTable
-                filters={filters}
-                colWidths={invoiceTableColWidths}
-                wideTable
-                skipDynamicColumnWidths
-                headersWithoutCellTooltip={[ciText("Actions")]}
-                actionColumnHeaderLabel={ciText("Actions")}
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalRecords={overallStats.totalInvoices}
-                onPageChange={(page) => setCurrentPage(page)}
-                recordsPerPage={entriesPerPage}
-                onRecordsPerPageChange={(num) => {
-                  setEntriesPerPage(num);
+          <Card>
+            <CardHeader
+              title={pageTitle}
+              subtitle={
+                loading
+                  ? "Loading…"
+                  : `${overallStats.totalInvoices || 0} total invoices`
+              }
+            />
+            <PortalDataTable
+              columns={invoiceColumns}
+              rows={loading ? [] : filteredInvoices}
+              rowKey="_id"
+              emptyMessage={
+                loading
+                  ? "Loading invoices…"
+                  : ciText("No invoices found.")
+              }
+            />
+            {!loading && (overallStats.totalInvoices || 0) > 0 ? (
+              <Pagination
+                page={currentPage}
+                pageSize={entriesPerPage}
+                total={overallStats.totalInvoices || 0}
+                itemLabel="invoices"
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(perPage) => {
+                  setEntriesPerPage(perPage);
                   setCurrentPage(1);
-                }}
-                searchValue={searchTerm}
-                onSearch={(val) => {
-                  setSearchTerm(val);
-                  setCurrentPage(1);
-                }}
-                searchPlaceholder={
-                  isEInvoiceHubRoute && eInvoiceHubTab === "invoices"
-                    ? ciText("Search submitted e-invoices...")
-                    : ciText("Search invoices...")
-                }
-                headers={invoiceTableHeaders}
-                data={
-                  !selectedLhdnStatusFilter ||
-                  selectedLhdnStatusFilter === "All"
-                    ? invoices
-                    : invoices.filter((inv) => {
-                        const s = (inv?.lhdn_status || "Pending").toString();
-                        return (
-                          s.toLowerCase() ===
-                          String(selectedLhdnStatusFilter).toLowerCase()
-                        );
-                      })
-                }
-                loading={loading}
-                renderRow={(invoice) => {
-                  const isSelected = selectedInvoices.some(
-                    (selected) => selected._id === invoice._id,
-                  );
-                  const canBeSelected =
-                    CustomerInvoiceServices.canInvoiceBeSelected(invoice);
-                  const invoiceDisplayAmount =
-                    invoice?.grandTotal ?? invoice?.subTotal ?? 0;
-                  const statusLower = (invoice?.status || "").toLowerCase();
-                  const lhdnForEdit = invoice?.lhdn_status || "Pending";
-                  const isPaidOrPartial =
-                    statusLower === "paid" ||
-                    statusLower === "partially paid";
-                  const canEditRow =
-                    canUpdate &&
-                    !isPaidOrPartial &&
-                    lhdnForEdit !== "Valid";
-
-                  const actionItems = [];
-                  if (canViewInvoice) {
-                    actionItems.push({
-                      action: ACTION_BUTTON_TYPES.VIEW,
-                      title: ciText("View"),
-                      onClick: () =>
-                        history.push(
-                          `/view-customer-invoice/${invoice._id}`,
-                        ),
-                    });
-                  }
-                  if (canEditRow) {
-                    actionItems.push({
-                      action: ACTION_BUTTON_TYPES.EDIT,
-                      title: ciText("Edit"),
-                      onClick: () =>
-                        history.push(
-                          `/update-customer-invoice/${invoice._id}`,
-                        ),
-                    });
-                  }
-                  if (canDelete) {
-                    actionItems.push({
-                      action: ACTION_BUTTON_TYPES.DELETE,
-                      title: ciText("Delete"),
-                      onClick: () => handleDeleteInvoice(invoice),
-                    });
-                  }
-
-                  if (rowShowsLhdn(invoice)) {
-                    const lhdn = invoice?.lhdn_status || "Pending";
-                    const busy = eInvoiceBusyId === invoice._id;
-                    const inConsolidation = Boolean(
-                      invoice?.consolidatedInvoiceId,
-                    );
-                    const canSubmit =
-                      lhdn === "Pending" && !inConsolidation;
-                    const canRetry =
-                      (lhdn === "Rejected" || lhdn === "Invalid") &&
-                      !inConsolidation;
-                    const isSubmitted =
-                      lhdn === "Submitted" && !inConsolidation;
-                    const isValid = lhdn === "Valid" && !inConsolidation;
-                    const downloadingThis =
-                      eInvoiceDownloadId === invoice._id;
-
-                    actionItems.push({
-                      action: ACTION_BUTTON_TYPES.VIEW_PDF,
-                      title: ciText("View E-Invoice details"),
-                      onClick: () => handleViewEInvoice(invoice),
-                    });
-                    if (canSubmit && canUpdate) {
-                      actionItems.push({
-                        action: ACTION_BUTTON_TYPES.SEND_EMAIL,
-                        title: ciText("Submit to LHDN"),
-                        onClick: () => handleSubmitToLHDN(invoice),
-                        disabled: busy,
-                      });
-                    }
-                    if (canRetry && canUpdate) {
-                      actionItems.push({
-                        action: ACTION_BUTTON_TYPES.CHANGE_STATUS,
-                        title: ciText("Retry submission to LHDN"),
-                        onClick: () => handleRetryLHDN(invoice),
-                        disabled: busy,
-                      });
-                    }
-                    if (isSubmitted) {
-                      actionItems.push({
-                        action: ACTION_BUTTON_TYPES.HISTORY,
-                        title: ciText("Refresh LHDN status"),
-                        onClick: () => handleRefreshLHDN(invoice),
-                        disabled: busy,
-                      });
-                    }
-                    if (isValid) {
-                      actionItems.push({
-                        action: ACTION_BUTTON_TYPES.DOWNLOAD,
-                        title: ciText("Download e-invoice PDF"),
-                        onClick: () => handleDownloadEInvoicePDF(invoice),
-                        disabled: downloadingThis,
-                      });
-                    }
-                  }
-
-                  return (
-                    <tr
-                      key={invoice._id}
-                      className={`border-b ${isSelected ? "bg-blue-50" : ""}`}
-                    >
-                      <td className="py-2 px-4 whitespace-nowrap">
-                        <div className="flex items-center justify-center">
-                          {canBeSelected ? (
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleSelectInvoice(invoice)}
-                              className="h-4 w-4 text-[var(--p-blue)] focus:ring-[var(--p-blue)] border-gray-300 rounded"
-                            />
-                          ) : (
-                            <div
-                              className="h-4 w-4 bg-gray-100 border border-gray-300 rounded"
-                              title={ciText("Cannot select this invoice")}
-                            />
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-2 px-4 whitespace-nowrap">
-                        {canViewInvoice && invoice._id ? (
-                          <button
-                            type="button"
-                            className="text-[var(--p-blue)] hover:underline font-medium text-left whitespace-nowrap"
-                            title={`#${invoice.invoice_number}`}
-                            onClick={() =>
-                              history.push(
-                                `/view-customer-invoice/${invoice._id}`,
-                              )
-                            }
-                          >
-                            #{invoice.invoice_number}
-                          </button>
-                        ) : (
-                          <span className="whitespace-nowrap">
-                            #{invoice.invoice_number}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2 px-4">
-                        <div className="font-medium text-gray-900">
-                          {invoice?.isConsolidated
-                            ? ciText("General Public")
-                            : invoice?.customer_id?.basicInformation
-                                ?.customerDisplayName ||
-                              invoice?.customer_id?.basicInformation
-                                ?.companyName ||
-                              invoice?.customer_name ||
-                              "—"}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {invoice?.business_id?.name || ""}
-                        </div>
-                      </td>
-                      <td className="py-2 px-4 min-w-0">
-                        {invoice?.business_id?.name || "—"}
-                      </td>
-                      <td className="py-2 px-4 whitespace-nowrap">
-                        <div className="flex flex-col items-start gap-1">
-                          <span
-                            className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                              invoice?.isConsolidated
-                                ? "bg-violet-100 text-violet-800"
-                                : "bg-blue-100 text-blue-800"
-                            }`}
-                          >
-                            {invoice?.isConsolidated
-                              ? ciText("Consolidated")
-                              : ciText("E-Invoice")}
-                          </span>
-                          <InvoiceStatusBadge status={invoice?.status} />
-                        </div>
-                      </td>
-                      {anyAssignedBusinessHasEInvoice && (
-                        <td className="py-2 px-4 whitespace-nowrap">
-                          {rowShowsLhdn(invoice) ? (
-                            <LhdnStatusBadge status={invoice?.lhdn_status} />
-                          ) : (
-                            <span className="text-sm text-gray-400">—</span>
-                          )}
-                        </td>
-                      )}
-                      <td className="py-2 px-4 whitespace-nowrap">
-                        <div className="text-sm">
-                          {formatDate(invoice?.invoice_date)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {ciText("Due:")} {formatDate(invoice?.due_date)}
-                        </div>
-                      </td>
-                      <td className="py-2 px-4 whitespace-nowrap text-sm">
-                        <div className="font-medium text-gray-900">
-                          {formatCurrencyAmount(
-                            invoice.currency || "MYR",
-                            invoiceDisplayAmount,
-                          )}
-                        </div>
-                        {invoice?.invoiceType === "Proforma" &&
-                        (invoice?.advanceDepositAmount > 0 ||
-                          invoice?.depositAmount > 0) ? (
-                          <div className="text-xs text-blue-600">
-                            {formatCurrencyAmount(
-                              invoice.currency || "MYR",
-                              invoice.advanceDepositAmount ||
-                                invoice.depositAmount,
-                            )}{" "}
-                            {ciText("Advance")}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="py-2 px-4">
-                        <ActionButtons
-                          maxVisibleActions={2}
-                          items={actionItems}
-                        />
-                      </td>
-                    </tr>
-                  );
                 }}
               />
+            ) : null}
+          </Card>
 
-            {/* Customer Statement Modal */}
-            {showStatementModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-                  <div className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-xl font-semibold">
-                        {ciText("Customer Statement")}
-                      </h2>
-                      <button
-                        onClick={closeStatementModal}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
+          {showStatementModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                <div className="p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">
+                      {ciText("Customer Statement")}
+                    </h2>
+                    <button
+                      onClick={closeStatementModal}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
 
-                    <p className="text-gray-600 mb-6">
-                      {ciText("Enter the details below to retrieve statements.")}
-                    </p>
+                  <p className="text-gray-600 mb-6">
+                    {ciText("Enter the details below to retrieve statements.")}
+                  </p>
 
-                    <div className="space-y-4">
-                      {!isSingleAssignedBusiness() && (
+                  <div className="space-y-4">
+                    {!isSingleAssignedBusiness() && (
                       <div>
                         <label className="block text-sm text-gray-600 mb-1">
                           {ciText("Business")}
@@ -2770,132 +2771,136 @@ export default function CustomerInvoices() {
                           <ChevronDown className="absolute right-1 top-2.5 h-4 w-4 pointer-events-none" />
                         </div>
                       </div>
-                      )}
+                    )}
 
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">
-                          {ciText("Customer")}
-                        </label>
-                        <div className="relative">
-                          <select
-                            className="w-full appearance-none px-4 py-2 pr-10 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)]"
-                            value={statementCustomer}
-                            onChange={(e) =>
-                              setStatementCustomer(e.target.value)
-                            }
-                          >
-                            <option value="">{ciText("Select Customer")}</option>
-                            {customers?.map((customer) => (
-                              <option key={customer._id} value={customer._id}>
-                                {customer.basicInformation.customerDisplayName}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown className="absolute right-1 top-2.5 h-4 w-4 pointer-events-none" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">
-                          Currency{" "}
-                          <span className="text-gray-500 text-xs">
-                            (Optional)
-                          </span>
-                        </label>
-                        <div className="relative">
-                          <select
-                            className="w-full appearance-none px-4 py-2 pr-10 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)]"
-                            value={statementCurrency}
-                            onChange={(e) =>
-                              setStatementCurrency(e.target.value)
-                            }
-                            disabled={!statementBusiness && !isSingleAssignedBusiness()}
-                          >
-                            <option value="">{ciText("Select Currency")}</option>
-                            {statementCurrencies?.map((currency) => (
-                              <option key={currency._id} value={currency._id}>
-                                {currency.symbol} - {currency.name}
-                                {currency.is_base ? " (Base)" : ""}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown className="absolute right-1 top-2.5 h-4 w-4 pointer-events-none" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">
-                          {ciText("Date From")}
-                        </label>
-                        <div className="relative">
-                          <CustomDatePicker
-                            type="text"
-                            placeholder={ciText("DD-MM-YYYY")}
-                            className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)]"
-                            value={dateFrom}
-                            onChange={(value) => setDateFrom(value)}
-                          />
-                          <Calendar className="absolute right-1 top-2.5 h-4 w-4 text-gray-400" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">
-                          {ciText("Date To")}
-                        </label>
-                        <div className="relative">
-                          <CustomDatePicker
-                            type="text"
-                            placeholder={ciText("DD-MM-YYYY")}
-                            className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)]"
-                            value={dateTo}
-                            onChange={(value) => setDateTo(value)}
-                          />
-                          <Calendar className="absolute right-1 top-2.5 h-4 w-4 text-gray-400" />
-                        </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        {ciText("Customer")}
+                      </label>
+                      <div className="relative">
+                        <select
+                          className="w-full appearance-none px-4 py-2 pr-10 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)]"
+                          value={statementCustomer}
+                          onChange={(e) =>
+                            setStatementCustomer(e.target.value)
+                          }
+                        >
+                          <option value="">{ciText("Select Customer")}</option>
+                          {customers?.map((customer) => (
+                            <option key={customer._id} value={customer._id}>
+                              {customer.basicInformation.customerDisplayName}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-1 top-2.5 h-4 w-4 pointer-events-none" />
                       </div>
                     </div>
 
-                    <div className="flex gap-3 mt-6">
-                      <button
-                        onClick={handleRetrieveStatement}
-                        disabled={loading}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-[var(--p-blue)] text-white font-medium rounded-lg hover:bg-[#9CBA33] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Download size={18} />
-                        {loading ? ciText("Generating...") : ciText("PDF Statement")}
-                      </button>
-                      <button
-                        onClick={handleRetrieveStatementCSV}
-                        disabled={loading}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <FileSpreadsheet size={18} />
-                        {loading ? ciText("Exporting...") : ciText("CSV Export")}
-                      </button>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Currency{" "}
+                        <span className="text-gray-500 text-xs">
+                          (Optional)
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          className="w-full appearance-none px-4 py-2 pr-10 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)]"
+                          value={statementCurrency}
+                          onChange={(e) =>
+                            setStatementCurrency(e.target.value)
+                          }
+                          disabled={
+                            !statementBusiness && !isSingleAssignedBusiness()
+                          }
+                        >
+                          <option value="">{ciText("Select Currency")}</option>
+                          {statementCurrencies?.map((currency) => (
+                            <option key={currency._id} value={currency._id}>
+                              {currency.symbol} - {currency.name}
+                              {currency.is_base ? " (Base)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-1 top-2.5 h-4 w-4 pointer-events-none" />
+                      </div>
                     </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        {ciText("Date From")}
+                      </label>
+                      <div className="relative">
+                        <CustomDatePicker
+                          type="text"
+                          placeholder={ciText("DD-MM-YYYY")}
+                          className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)]"
+                          value={dateFrom}
+                          onChange={(value) => setDateFrom(value)}
+                        />
+                        <Calendar className="absolute right-1 top-2.5 h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        {ciText("Date To")}
+                      </label>
+                      <div className="relative">
+                        <CustomDatePicker
+                          type="text"
+                          placeholder={ciText("DD-MM-YYYY")}
+                          className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--p-blue)]"
+                          value={dateTo}
+                          onChange={(value) => setDateTo(value)}
+                        />
+                        <Calendar className="absolute right-1 top-2.5 h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={handleRetrieveStatement}
+                      disabled={loading}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-[var(--p-blue)] text-white font-medium rounded-lg hover:bg-[#9CBA33] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Download size={18} />
+                      {loading
+                        ? ciText("Generating...")
+                        : ciText("PDF Statement")}
+                    </button>
+                    <button
+                      onClick={handleRetrieveStatementCSV}
+                      disabled={loading}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <FileSpreadsheet size={18} />
+                      {loading ? ciText("Exporting...") : ciText("CSV Export")}
+                    </button>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </>
+      )}
 
-        {isEInvoiceHubRoute && eInvoiceHubTab === "consolidated" && (
-          <div className="mb-8 w-full min-w-0 max-w-full">
-            <ConsolidatedEInvoiceFromInvoicesPanel
-              businesses={businesses}
-              selectedBusinessFilter={selectedBusinessFilter}
-              onBusinessChange={(value) => {
-                setSelectedBusinessFilter(value);
-                setCurrentPage(1);
-              }}
-              onConsolidationCreated={fetchInvoices}
-            />
-          </div>
-        )}
+      {isEInvoiceHubRoute && eInvoiceHubTab === "consolidated" && (
+        <div className="mb-8 w-full min-w-0 max-w-full">
+          <ConsolidatedEInvoiceFromInvoicesPanel
+            businesses={businesses}
+            selectedBusinessFilter={selectedBusinessFilter}
+            onBusinessChange={(value) => {
+              setSelectedBusinessFilter(value);
+              setCurrentPage(1);
+            }}
+            onConsolidationCreated={fetchInvoices}
+          />
+        </div>
+      )}
 
-        {eInvoiceActionConfirm && (
+      {eInvoiceActionConfirm && (
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4 sm:p-6"
             onClick={() => setEInvoiceActionConfirm(null)}
@@ -3126,7 +3131,6 @@ export default function CustomerInvoices() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </EpcPage>
   );
 }

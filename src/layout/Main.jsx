@@ -22,7 +22,7 @@ const Main = ({ children }) => {
         className={`min-w-0 w-full max-w-full ${
           fullBleed
             ? "h-full px-0"
-            : "mx-auto px-[var(--acu-portal-gutter)] py-1"
+            : "mx-auto px-[var(--acu-portal-gutter)] py-5"
         }`}
       >
         {children}

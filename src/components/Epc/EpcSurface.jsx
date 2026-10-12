@@ -48,15 +48,16 @@ export function EpcBack({ label = "Back", onClick }) {
  * The page shell: the way back, a heading, optional actions, and the portal's
  * own page padding — matching what a customer sees on their own screens.
  *
- * `flush` drops the outer padding for a page already sitting inside a padded
- * frame, which the Settings screens do.
+ * Admin list pages already sit inside the layout's padded frame, so `flush`
+ * is the default — matching /applications side gaps. Pass `flush={false}`
+ * only when the page needs its own max-width + side padding.
  */
 export function EpcPage({
   title,
   subtitle,
   action,
   back,
-  flush = false,
+  flush = true,
   children,
 }) {
   return (

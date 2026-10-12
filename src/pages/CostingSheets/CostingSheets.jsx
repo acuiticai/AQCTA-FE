@@ -1,32 +1,24 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
-import { FileText } from "lucide-react";
-import {
-  DataTable,
-  ActionButtons,
-  SummaryCards,
-} from "@/page-layouts";
+import { ActionButtons } from "@/page-layouts";
+import EpcListPage from "@/components/Epc/EpcListPage";
 import QuotationDetail from "@/components/Certification/QuotationDetail";
+import StatusPill from "@/customer/components/ui/StatusPill";
+import {
+  CheckCircleIcon,
+  ClockIcon,
+  DocumentIcon,
+  FileIcon,
+} from "@/customer/components/ui/icons";
 import { notifyError } from "@/utils/toast";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import { AdminContext } from "@/context/AdminContext";
 import useCheckTokenExpired from "@/hooks/useCheckTokenExpired";
 import ApplicationServices from "@/services/ApplicationServices";
-import SummarySvg from "@/assets/img/summary.svg";
-import CompletedSvg from "@/assets/img/completed.svg";
-import InProgressSvg from "@/assets/img/in-progress.svg";
-import PendingApprovalSvg from "@/assets/img/pending-approval.svg";
 
 const FORM_KEY = "costing";
 
 const STATUS_OPTIONS = ["Draft", "Pending Approval", "Approved", "Rejected"];
-
-const STATUS_STYLES = {
-  Draft: "bg-gray-100 text-gray-800",
-  "Pending Approval": "bg-amber-100 text-amber-800",
-  Approved: "bg-emerald-100 text-emerald-800",
-  Rejected: "bg-rose-100 text-rose-800",
-};
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -74,9 +66,8 @@ const CostingSheets = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [detailRow, setDetailRow] = useState(null);
 
@@ -87,28 +78,6 @@ const CostingSheets = () => {
     }),
     [adminInfo?.token],
   );
-
-  const headers = [
-    "Application",
-    "Customer / Product",
-    "Prepared by",
-    "Approved by",
-    "Grand total",
-    "Status",
-    "Updated",
-    "Actions",
-  ];
-
-  const colWidths = {
-    Application: "180px",
-    "Customer / Product": "220px",
-    "Prepared by": "140px",
-    "Approved by": "140px",
-    "Grand total": "140px",
-    Status: "140px",
-    Updated: "120px",
-    Actions: "140px",
-  };
 
   const fetchCostingSheets = async () => {
     if (!adminInfo?.token) {
@@ -126,7 +95,7 @@ const CostingSheets = () => {
           page: currentPage,
           limit: recordsPerPage,
           search: searchTerm || undefined,
-          status: statusFilter !== "all" ? statusFilter : undefined,
+          status: statusFilter || undefined,
         },
         {
           headers: authHeaders,
@@ -136,18 +105,13 @@ const CostingSheets = () => {
       if (checkTokenExpired(response)) return;
 
       setRows(Array.isArray(response.data?.data) ? response.data.data : []);
-      const metaTotal = response.data?.meta?.total || 0;
-      setTotal(metaTotal);
-      setTotalPages(
-        Math.max(1, Math.ceil(metaTotal / (Number(recordsPerPage) || 10))),
-      );
+      setTotal(response.data?.meta?.total || 0);
     } catch (error) {
       notifyError(
         error?.response?.data?.message || "Failed to load costing sheets",
       );
       setRows([]);
       setTotal(0);
-      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -169,218 +133,213 @@ const CostingSheets = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
-  const getStatusBadge = (status) => (
-    <span
-      className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
-        STATUS_STYLES[status] || "bg-gray-100 text-gray-800"
-      }`}
-    >
-      {status || "—"}
-    </span>
-  );
+  const countOf = (status) => rows.filter((r) => r.status === status).length;
 
-  const clearAllFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setCurrentPage(1);
-  };
-
-  const filters = [
+  const stats = [
     {
-      isClearButton: true,
-      buttonProps: { onClick: clearAllFilters },
+      icon: DocumentIcon,
+      label: "Costing sheets",
+      value: String(total || 0),
+      tone: "brand",
     },
     {
-      label: "Status",
-      value: statusFilter,
-      onChange: (value) => {
-        setStatusFilter(value);
-        setCurrentPage(1);
-      },
-      options: [
-        { value: "all", label: "All Statuses" },
-        ...STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
-      ],
-      placeholder: "Select Status",
-      icon: FileText,
+      icon: ClockIcon,
+      label: "Pending approval",
+      value: String(countOf("Pending Approval")),
+      tone: "warning",
+    },
+    {
+      icon: CheckCircleIcon,
+      label: "Approved",
+      value: String(countOf("Approved")),
+      tone: "success",
+    },
+    {
+      icon: FileIcon,
+      label: "Returned",
+      value: String(countOf("Rejected")),
+      tone: "info",
     },
   ];
 
-  const countOf = (status) => rows.filter((r) => r.status === status).length;
-
-  const summaryCardsData = [
+  const columns = [
     {
-      title: "Total Costing Sheets",
-      value: total || 0,
-      backgroundColor: "summary-light",
-      iconColor: "summary-dark",
-      Icon: SummarySvg,
+      key: "application",
+      header: "Application",
+      width: "16%",
+      render: (row) => (
+        <>
+          {row.application ? (
+            <button
+              type="button"
+              className="epc-cell__link"
+              title={row.applicationNumber || ""}
+              onClick={() =>
+                history.push(`/applications/actions/${row.application}`)
+              }
+            >
+              {row.applicationNumber || "—"}
+            </button>
+          ) : (
+            <span className="epc-cell__primary">
+              {row.applicationNumber || "—"}
+            </span>
+          )}
+          {row.quotationRef ? (
+            <button
+              type="button"
+              className="epc-cell__link"
+              style={{ display: "block", fontSize: 12, marginTop: 2 }}
+              onClick={() => setDetailRow(row)}
+            >
+              {row.quotationRef}
+            </button>
+          ) : null}
+        </>
+      ),
     },
     {
-      title: "Pending Approval",
-      value: countOf("Pending Approval"),
-      backgroundColor: "processing-light",
-      iconColor: "processing-dark",
-      Icon: PendingApprovalSvg,
+      key: "customer",
+      header: "Customer / Product",
+      width: "18%",
+      render: (row) => (
+        <>
+          <div className="epc-cell__primary">{row.companyName || "—"}</div>
+          {row.productName ? (
+            <div className="epc-cell__secondary">{row.productName}</div>
+          ) : null}
+        </>
+      ),
     },
     {
-      title: "Approved",
-      value: countOf("Approved"),
-      backgroundColor: "completed-light",
-      iconColor: "completed-dark",
-      Icon: CompletedSvg,
+      key: "preparedBy",
+      header: "Prepared by",
+      width: "12%",
+      render: (row) => row.preparedByName || "—",
     },
     {
-      title: "Returned",
-      value: countOf("Rejected"),
-      backgroundColor: "processing-light",
-      iconColor: "processing-dark",
-      Icon: InProgressSvg,
+      key: "approvedBy",
+      header: "Approved by",
+      width: "12%",
+      render: (row) => row.approvedByName || "—",
+    },
+    {
+      key: "grandTotal",
+      header: "Grand total",
+      width: "12%",
+      render: (row) => (
+        <>
+          <div className="epc-cell__primary">
+            {money(
+              row.grandTotalValue != null ? row.grandTotalValue : row.grandTotal,
+            )}
+          </div>
+          {row.discountValue ? (
+            <div className="epc-cell__secondary">
+              after {money(row.discountValue)} discount
+            </div>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "12%",
+      render: (row) => <StatusPill status={row.status || "—"} />,
+    },
+    {
+      key: "updated",
+      header: "Updated",
+      width: "10%",
+      render: (row) => formatDate(row.updatedAt),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      width: "10%",
+      align: "right",
+      render: (row) => (
+        <ActionButtons
+          maxVisibleActions={2}
+          items={[
+            ...(row.quotationRef
+              ? [
+                  {
+                    action: ACTION_BUTTON_TYPES.VIEW,
+                    title: "View quotation",
+                    onClick: () => setDetailRow(row),
+                  },
+                ]
+              : []),
+            {
+              action: ACTION_BUTTON_TYPES.WORKFLOW,
+              title: "Open actions",
+              onClick: () =>
+                history.push(`/applications/actions/${row.application}`),
+            },
+          ]}
+        />
+      ),
     },
   ];
 
   return (
-    <div className="bg-gray-50 min-h-screen w-full max-w-full overflow-x-hidden">
-      <div className="w-full max-w-full mx-auto px-6 py-8 min-w-0 overflow-x-hidden">
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Costing Sheet
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Certification (AQCTA-FOR-01-06) and inspection
-                (AQCTA-FOR-06-02) costing sheets. One system user prices
-                the work, another approves it, which issues the quotation.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <SummaryCards cards={summaryCardsData} columnsCount={4} />
-
-        <DataTable
-          onSearch={(value) => {
-            setSearchTerm(value);
-            setCurrentPage(1);
-          }}
-          searchValue={searchTerm}
-          searchPlaceholder="Search by application, customer or product…"
-          filters={filters}
-          headers={headers}
-          headersToHide={[]}
-          colWidths={colWidths}
-          wideTable
-          skipDynamicColumnWidths
-          data={rows}
-          totalRecords={total}
-          loading={loading}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          recordsPerPage={recordsPerPage}
-          onPageChange={setCurrentPage}
-          onRecordsPerPageChange={(perPage) => {
-            setRecordsPerPage(perPage);
-            setCurrentPage(1);
-          }}
-          renderRow={(row) => (
-            <tr key={row._id || row.application} className="border-b">
-              <td className="py-2 px-4 whitespace-nowrap">
-                {row.application ? (
-                  <button
-                    type="button"
-                    className="text-[var(--p-blue)] hover:underline font-medium text-left whitespace-nowrap"
-                    title={row.applicationNumber || ""}
-                    onClick={() =>
-                      history.push(`/applications/actions/${row.application}`)
-                    }
-                  >
-                    {row.applicationNumber || "—"}
-                  </button>
-                ) : (
-                  <span className="whitespace-nowrap">
-                    {row.applicationNumber || "—"}
-                  </span>
-                )}
-                {row.quotationRef ? (
-                  <button
-                    type="button"
-                    className="block text-xs text-[var(--p-blue)] hover:underline mt-0.5"
-                    onClick={() => setDetailRow(row)}
-                  >
-                    {row.quotationRef}
-                  </button>
-                ) : null}
-              </td>
-              <td className="py-2 px-4">
-                <div className="font-medium text-gray-900">
-                  {row.companyName || "—"}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {row.productName || ""}
-                </div>
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap text-sm">
-                {row.preparedByName || "—"}
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap text-sm">
-                {row.approvedByName || "—"}
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {money(
-                    row.grandTotalValue != null
-                      ? row.grandTotalValue
-                      : row.grandTotal,
-                  )}
-                </div>
-                {row.discountValue ? (
-                  <div className="text-xs text-gray-500">
-                    after {money(row.discountValue)} discount
-                  </div>
-                ) : null}
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap">
-                {getStatusBadge(row.status)}
-              </td>
-              <td className="py-2 px-4 whitespace-nowrap text-sm">
-                {formatDate(row.updatedAt)}
-              </td>
-              <td className="py-2 px-4">
-                <ActionButtons
-                  maxVisibleActions={2}
-                  items={[
-                    ...(row.quotationRef
-                      ? [
-                          {
-                            action: ACTION_BUTTON_TYPES.VIEW,
-                            title: "View quotation",
-                            onClick: () => setDetailRow(row),
-                          },
-                        ]
-                      : []),
-                    {
-                      action: ACTION_BUTTON_TYPES.WORKFLOW,
-                      title: "Open actions",
-                      onClick: () =>
-                        history.push(
-                          `/applications/actions/${row.application}`,
-                        ),
-                    },
-                  ]}
-                />
-              </td>
-            </tr>
-          )}
-        />
-      </div>
-
+    <EpcListPage
+      title="Costing Sheet"
+      subtitle="Certification (AQCTA-FOR-01-06) and inspection (AQCTA-FOR-06-02) costing sheets. One system user prices the work, another approves it, which issues the quotation."
+      stats={stats}
+      searchValue={searchTerm}
+      searchPlaceholder="Search by application, customer or product…"
+      onSearchChange={(value) => {
+        setSearchTerm(value);
+        setCurrentPage(1);
+      }}
+      filterSubtitle="Narrow by status or search reference."
+      filters={[
+        {
+          key: "status",
+          placeholder: "All Statuses",
+          options: STATUS_OPTIONS,
+        },
+      ]}
+      filterValues={{ status: statusFilter }}
+      onFilterChange={(key, value) => {
+        if (key === "status") {
+          setStatusFilter(value || "");
+          setCurrentPage(1);
+        }
+      }}
+      onFilterReset={() => {
+        setSearchTerm("");
+        setStatusFilter("");
+        setCurrentPage(1);
+      }}
+      tableTitle="Costing sheets"
+      tableSubtitle={
+        loading ? "Loading…" : `${total} total costing sheets`
+      }
+      columns={columns}
+      rows={rows}
+      rowKey={(row) => row._id || row.application}
+      loading={loading}
+      emptyMessage="No costing sheets match these filters."
+      page={currentPage}
+      pageSize={recordsPerPage}
+      total={total}
+      itemLabel="costing sheets"
+      onPageChange={setCurrentPage}
+      onPageSizeChange={(perPage) => {
+        setRecordsPerPage(perPage);
+        setCurrentPage(1);
+      }}
+    >
       <QuotationDetail
         row={detailRow}
         open={Boolean(detailRow)}
         onClose={() => setDetailRow(null)}
       />
-    </div>
+    </EpcListPage>
   );
 };
 

@@ -23,16 +23,20 @@ export default function EpcListPage({
   title,
   subtitle,
   action,
+  flush = true,
   stats = [],
   searchValue,
   searchPlaceholder,
   onSearchChange,
+  filterTitle = "Filters",
+  filterSubtitle,
   filters = [],
   filterValues = {},
   onFilterChange,
   onFilterReset,
   tableTitle,
   tableSubtitle,
+  tableAction,
   columns,
   rows,
   rowKey = "_id",
@@ -47,7 +51,7 @@ export default function EpcListPage({
   children,
 }) {
   return (
-    <EpcPage title={title} subtitle={subtitle} action={action}>
+    <EpcPage title={title} subtitle={subtitle} action={action} flush={flush}>
       <div className="epc-stack">
         {stats.length ? (
           <div className="epc-statgrid">
@@ -59,7 +63,8 @@ export default function EpcListPage({
 
         {filters.length || onSearchChange ? (
           <FilterBar
-            title="Find"
+            title={filterTitle}
+            subtitle={filterSubtitle}
             searchValue={searchValue}
             searchPlaceholder={searchPlaceholder}
             onSearchChange={onSearchChange}
@@ -79,18 +84,17 @@ export default function EpcListPage({
                 : tableSubtitle ||
                   `${total} ${total === 1 ? itemLabel.replace(/s$/, "") : itemLabel}`
             }
+            action={tableAction}
           />
 
-          {loading ? (
-            <p className="epc-table-empty">Loading…</p>
-          ) : (
-            <DataTable
-              columns={columns}
-              rows={rows}
-              rowKey={rowKey}
-              emptyMessage={emptyMessage}
-            />
-          )}
+          <DataTable
+            columns={columns}
+            rows={loading ? [] : rows}
+            rowKey={rowKey}
+            emptyMessage={
+              loading ? "Loading…" : emptyMessage
+            }
+          />
 
           {!loading && total > 0 ? (
             <Pagination

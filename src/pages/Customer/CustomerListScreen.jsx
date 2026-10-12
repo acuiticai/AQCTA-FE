@@ -2,18 +2,24 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 import { FiEye, FiKey, FiTrash2 } from "react-icons/fi";
-import { Plus } from "lucide-react";
 import { useHistory } from "react-router-dom";
 import { notifyError, notifySuccess } from "@/utils/toast";
-import { DataTable, ToggleSwitch, CustomModal, SummaryCards } from "@/page-layouts";
+import { ToggleSwitch, CustomModal, SummaryCards } from "@/page-layouts";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import { PlusIcon } from "@/customer/components/ui/icons";
 import { groupCustomersByEmail } from "@/utils/groupByEntity";
 import { useRouteModulePermissions } from "@/utils/permissionUtils";
-import CompletedSvg from "@/assets/img/completed.svg";
-import InProgressSvg from "@/assets/img/in-progress.svg";
-import SummarySvg from "@/assets/img/summary.svg";
-import DelayedSvg from "@/assets/img/delayed.svg";
 import { isSingleAssignedBusiness } from "@/utils/sessionAssignedBusinesses";
 import { getCountryOptions } from "@/utils/locationCascade";
+import SummarySvg from "@/assets/img/summary.svg";
+import CompletedSvg from "@/assets/img/completed.svg";
+import InProgressSvg from "@/assets/img/in-progress.svg";
+import DelayedSvg from "@/assets/img/delayed.svg";
 
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
@@ -34,7 +40,6 @@ const CustomerListScreen = () => {
   const [customerToUpdateStatus, setCustomerToUpdateStatus] = useState(null);
   const [newStatus, setNewStatus] = useState("");
   const [totalResults, setTotalResults] = useState(0);
-  // Use same default as DataTable config (table_entries_per_page) to avoid duplicate API call on load
   const [recordsPerPage, setRecordsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
   const currentPageRef = useRef(1);
@@ -63,23 +68,6 @@ const CustomerListScreen = () => {
       })),
     []
   );
-
-  const headers = useMemo(() => {
-    const cols = [
-      t("customer.companyName"),
-      t("customer.companyRegistrationNumber"),
-      t("customer.email"),
-      t("customer.country"),
-      t("customer.stateProvince"),
-      t("customer.city"),
-      t("customer.website"),
-    ];
-    if (!isSingleAssignedBusiness()) {
-      cols.push(t("customer.businesses"));
-    }
-    cols.push(t("Status"), t("common.action"));
-    return cols;
-  }, [t]);
 
   const handleAddNew = () => {
     history.push("/New Customer");
@@ -146,7 +134,9 @@ const CustomerListScreen = () => {
     } catch (err) {
       console.error(err);
       notifyError(
-        err?.response?.data?.message || err?.response?.data?.error || t("customer.deleteFailed")
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          t("customer.deleteFailed")
       );
     } finally {
       setDeleteLoading(false);
@@ -156,7 +146,6 @@ const CustomerListScreen = () => {
   useEffect(() => {
     const fetchBusinessesAndCustomers = async () => {
       try {
-        // Resolve initial limit from config (same as DataTable) so we make only one customers API call
         let initialLimit = 5;
         try {
           const cached = localStorage.getItem("configurations");
@@ -171,15 +160,19 @@ const CustomerListScreen = () => {
             const res = await fetch(`${Base_URL}/configuration`);
             if (res.ok) {
               const data = await res.json();
-              const cfg = Array.isArray(data) && data.length > 0 ? data[0] : data;
+              const cfg =
+                Array.isArray(data) && data.length > 0 ? data[0] : data;
               const stored = cfg?.table_entries_per_page;
               if (Number.isFinite(stored) && stored > 0) {
                 initialLimit = Number(stored);
                 setRecordsPerPage(initialLimit);
               }
               try {
-                localStorage.setItem("configurations", JSON.stringify(cfg || {}));
-              } catch (e) { }
+                localStorage.setItem(
+                  "configurations",
+                  JSON.stringify(cfg || {})
+                );
+              } catch (e) {}
             }
           }
         } catch (e) {
@@ -200,7 +193,6 @@ const CustomerListScreen = () => {
           if (defaultBusinessId) {
             setSelectedBusiness(defaultBusinessId);
           }
-          // Single fetch with configured limit (no duplicate call with limit=10)
           fetchCustomers(defaultBusinessId, 1, initialLimit, "");
         }
       } catch (err) {
@@ -226,14 +218,15 @@ const CustomerListScreen = () => {
 
       const hasSearch = search && search.trim();
       const storedBusinesses = localStorage.getItem("businesses");
-      const parsedBusinesses = storedBusinesses ? JSON.parse(storedBusinesses) : [];
+      const parsedBusinesses = storedBusinesses
+        ? JSON.parse(storedBusinesses)
+        : [];
       const isMultipleBusinesses = !businessId && parsedBusinesses.length > 1;
 
-      // Fetch all when searching OR when multiple businesses (for grouping)
       const needFetchAll = hasSearch || isMultipleBusinesses;
       const params = {
         page: needFetchAll ? 1 : page,
-        limit: needFetchAll ? 9999 : (limit || recordsPerPage),
+        limit: needFetchAll ? 9999 : limit || recordsPerPage,
       };
 
       if (businessId) {
@@ -260,7 +253,6 @@ const CustomerListScreen = () => {
         ? response.data.customers
         : [];
 
-      // Client-side search covers extra fields / multi-business grouping cases
       if (hasSearch) {
         const searchValue = search.trim().toLowerCase();
         customersData = customersData.filter((customer) => {
@@ -341,7 +333,9 @@ const CustomerListScreen = () => {
     overrides = {}
   ) => {
     fetchCustomers(
-      overrides.businessId !== undefined ? overrides.businessId : selectedBusiness,
+      overrides.businessId !== undefined
+        ? overrides.businessId
+        : selectedBusiness,
       page,
       limit,
       overrides.search !== undefined ? overrides.search : searchTerm,
@@ -437,264 +431,375 @@ const CustomerListScreen = () => {
     fetchCustomers("", 1, recordsPerPage, "", "", "");
   };
 
-  const filters = [
-    {
-      isClearButton: true,
-      buttonProps: {
-        onClick: () => {
-          clearAllFilters();
-        },
+  const portalFilters = useMemo(() => {
+    const list = [];
+    if (!isSingleAssignedBusiness()) {
+      list.push({
+        key: "business",
+        placeholder: t("customer.selectBusiness"),
+        options: [
+          { value: "", label: t("common.allBusinesses") },
+          ...businesses.map((business) => ({
+            value: business._id,
+            label: business.name,
+          })),
+        ],
+      });
+    }
+    list.push(
+      {
+        key: "status",
+        placeholder: t("Status"),
+        options: [
+          { value: "", label: t("common.allStatuses") },
+          { value: "Active", label: t("common.active") },
+          { value: "Inactive", label: t("common.inactive") },
+        ],
       },
-    },
-    ...(!isSingleAssignedBusiness()
-      ? [
-          {
-            label: t("Business"),
-            value: selectedBusiness,
-            placeholder: t("customer.selectBusiness"),
-            onChange: (value) => {
-              handleBusinessChange(value);
-            },
-            options: [
-              { value: "", label: t("common.allBusinesses") },
-              ...businesses.map((business) => ({
-                value: business._id,
-                label: business.name,
-              })),
-            ],
-          },
-        ]
-      : []),
+      {
+        key: "country",
+        placeholder: t("customer.country"),
+        options: [
+          { value: "", label: t("customer.allCountries") },
+          ...countryFilterOptions,
+        ],
+      }
+    );
+    return list;
+  }, [t, businesses, countryFilterOptions]);
+
+  const portalFilterValues = {
+    business: selectedBusiness || "",
+    status: selectedStatus || "",
+    country: selectedCountry || "",
+  };
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "business") {
+      handleBusinessChange(value || "");
+      return;
+    }
+    if (key === "status") {
+      handleStatusFilterChange(value || "");
+      return;
+    }
+    if (key === "country") {
+      handleCountryChange(value || "");
+    }
+  };
+
+  const summaryCardsData = [
     {
-      value: selectedStatus,
-      onChange: handleStatusFilterChange,
-      placeholder: t("Status"),
-      isClearable: true,
-      options: [
-        { value: "", label: t("common.allStatuses") },
-        { value: "Active", label: t("common.active") },
-        { value: "Inactive", label: t("common.inactive") },
-      ],
+      title: t("customer.totalCustomers"),
+      value: overallStats.totalCustomers || totalResults || 0,
+      backgroundColor: "summary-light",
+      iconColor: "summary-dark",
+      Icon: SummarySvg,
     },
     {
-      value: selectedCountry,
-      onChange: handleCountryChange,
-      placeholder: t("customer.country"),
-      isClearable: true,
-      options: [
-        { value: "", label: t("customer.allCountries") },
-        ...countryFilterOptions,
-      ],
+      title: t("common.active"),
+      value: overallStats.activeCustomers || 0,
+      backgroundColor: "completed-light",
+      iconColor: "completed-dark",
+      Icon: CompletedSvg,
+    },
+    {
+      title: t("common.inactive"),
+      value: overallStats.inactiveCustomers || 0,
+      backgroundColor: "processing-light",
+      iconColor: "processing-dark",
+      Icon: InProgressSvg,
+    },
+    {
+      title: t("customer.companies"),
+      value: overallStats.companyCustomers || 0,
+      backgroundColor: "completed-light",
+      iconColor: "overdue-dark",
+      Icon: DelayedSvg,
     },
   ];
 
+  const showBusinesses = !isSingleAssignedBusiness();
 
-  // Calculate total pages based on filtered results
-  const totalPages = Math.ceil(totalResults / recordsPerPage) || 1;
+  const columns = useMemo(() => {
+    const cell = (value) => {
+      const text = value != null ? String(value).trim() : "";
+      return text || "—";
+    };
 
-  const summaryCardsData = useMemo(
-    () => [
+    const cols = [
       {
-        title: t("customer.totalCustomers"),
-        value: overallStats.totalCustomers || totalResults || 0,
-        backgroundColor: "summary-light",
-        iconColor: "summary-dark",
-        Icon: SummarySvg,
+        key: "companyName",
+        header: t("customer.companyName"),
+        width: "14%",
+        render: (customer) => {
+          const bi = customer.basicInformation || {};
+          return (
+            <span className="epc-cell__primary">
+              {cell(bi.companyName || bi.customerDisplayName)}
+            </span>
+          );
+        },
       },
       {
-        title: t("common.active"),
-        value: overallStats.activeCustomers || 0,
-        backgroundColor: "completed-light",
-        iconColor: "completed-dark",
-        Icon: CompletedSvg,
+        key: "regNo",
+        header: t("customer.companyRegistrationNumber"),
+        width: "12%",
+        render: (customer) =>
+          cell(customer.basicInformation?.companyRegistrationNumber),
       },
       {
-        title: t("common.inactive"),
-        value: overallStats.inactiveCustomers || 0,
-        backgroundColor: "processing-light",
-        iconColor: "processing-dark",
-        Icon: InProgressSvg,
+        key: "email",
+        header: t("customer.email"),
+        width: "14%",
+        render: (customer) =>
+          cell(customer.basicInformation?.customerEmail),
       },
       {
-        title: t("customer.companies"),
-        value: overallStats.companyCustomers || 0,
-        backgroundColor: "completed-light",
-        iconColor: "overdue-dark",
-        Icon: DelayedSvg,
-      },
-    ],
-    [overallStats, totalResults, t],
-  );
-
-  return (
-    <div className="bg-gray-50 min-h-screen w-full max-w-full overflow-x-hidden">
-      <div className="w-full max-w-full mx-auto px-6 py-8 min-w-0 overflow-x-hidden">
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{t("customer.title")}</h1>
-              <p className="text-gray-600 mt-2">
-                {!selectedBusiness
-                  ? t("customer.showingFromAllBusinesses")
-                  : t("customer.manageSubtitle")}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 lg:gap-4">
-              {canAdd && (
-                <button
-                  type="button"
-                  onClick={handleAddNew}
-                  className="flex items-center gap-2 px-6 py-3 bg-[var(--p-blue)] text-white rounded-lg hover:bg-[var(--p-blue-dark)] transition-colors shadow-sm"
-                >
-                  <Plus size={20} />
-                  {t("Add New")}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-8 w-full max-w-full min-w-0 overflow-x-hidden">
-          <SummaryCards cards={summaryCardsData} columnsCount={4} />
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-w-0 max-w-full overflow-hidden">
-      <DataTable
-        //for filters
-        onSearch={handleSearch}
-        searchValue={searchTerm}
-        searchPlaceholder={t("Search")}
-        filters={filters}
-        //for table
-        headers={headers}
-        data={filteredCustomers}
-        loading={loading || businessesLoading}
-        totalRecords={totalResults}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        recordsPerPage={recordsPerPage}
-        onPageChange={handlePageChange}
-        onRecordsPerPageChange={(perPage) => {
-          setRecordsPerPage(perPage);
-          currentPageRef.current = 1;
-          setCurrentPage(1);
-          refetchCustomers(1, perPage);
-        }}
-        renderRow={(customer) => {
+        key: "country",
+        header: t("customer.country"),
+        width: "10%",
+        render: (customer) => {
           const bi = customer.basicInformation || {};
           const addr = Array.isArray(customer.addresses)
             ? customer.addresses[0] || {}
             : {};
-          const showBusinesses = !isSingleAssignedBusiness();
-          const cell = (value) => {
-            const text = value != null ? String(value).trim() : "";
-            return text || "—";
-          };
+          return cell(bi.country || addr.country);
+        },
+      },
+      {
+        key: "state",
+        header: t("customer.stateProvince"),
+        width: "10%",
+        render: (customer) => {
+          const bi = customer.basicInformation || {};
+          const addr = Array.isArray(customer.addresses)
+            ? customer.addresses[0] || {}
+            : {};
+          return cell(bi.stateProvince || addr.state);
+        },
+      },
+      {
+        key: "city",
+        header: t("customer.city"),
+        width: "10%",
+        render: (customer) => {
+          const bi = customer.basicInformation || {};
+          const addr = Array.isArray(customer.addresses)
+            ? customer.addresses[0] || {}
+            : {};
+          return cell(bi.city || addr.city);
+        },
+      },
+      {
+        key: "website",
+        header: t("customer.website"),
+        width: "10%",
+        render: (customer) => {
+          const website = customer.basicInformation?.website;
           return (
-          <tr key={customer._id} className="border-b">
-            <td className="py-2 px-4">
-              {cell(bi.companyName || bi.customerDisplayName)}
-            </td>
-            <td className="py-2 px-4">
-              {cell(bi.companyRegistrationNumber)}
-            </td>
-            <td className="py-2 px-4">
-              {cell(bi.customerEmail)}
-            </td>
-            <td className="py-2 px-4">
-              {cell(bi.country || addr.country)}
-            </td>
-            <td className="py-2 px-4">
-              {cell(bi.stateProvince || addr.state)}
-            </td>
-            <td className="py-2 px-4">
-              {cell(bi.city || addr.city)}
-            </td>
-            <td className="py-2 px-4 max-w-[180px] truncate" title={bi.website || ""}>
-              {cell(bi.website)}
-            </td>
-            {showBusinesses && (
-            <td className="py-2 px-4">
-              {(() => {
-                const filterBusinessName = selectedBusiness
-                  ? (businesses.find((b) => (b._id || b.id)?.toString() === String(selectedBusiness))?.name)
-                  : null;
-                if (selectedBusiness) return filterBusinessName || customer?.business?.name || "-";
-                return customer.businessesDisplay ?? (() => {
-                  const names = new Set();
-                  const primary = customer?.business?.name;
-                  if (primary) names.add(primary);
-                  if (Array.isArray(customer.businesses)) {
-                    customer.businesses.forEach((b) => {
-                      const id = (b?._id || b)?.toString();
-                      const found = businesses.find((x) => (x._id || x.id)?.toString() === id);
-                      if (found?.name) names.add(found.name);
-                    });
-                  }
-                  return Array.from(names).filter(Boolean).join(", ") || "-";
-                })();
-              })()}
-            </td>
-            )}
-            <td className="py-2 px-4">
-              {canUpdate ? (
-                <ToggleSwitch
-                  isOn={customer.status === "Active"}
-                  handleToggle={() => handleStatusClick(customer)}
-                  disabled={loading}
-                />
-              ) : (
-                <span className="text-sm text-gray-600">
-                  {customer.status === "Active"
-                    ? t("common.active")
-                    : customer.status === "Inactive"
-                      ? t("common.inactive")
-                      : customer.status}
-                </span>
-              )}
-            </td>
-            <td className="py-2 px-4">
-              <div className="flex items-center gap-1 flex-wrap">
-                {(canView || canViewDetails || canUpdate) && (
-                  <button
-                    type="button"
-                    className="p-1.5 text-gray-500 hover:text-[var(--p-blue)] hover:bg-[var(--p-blue)]/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    onClick={() => handleViewCustomer(customer._id)}
-                    title={t("common.view") || "View"}
-                  >
-                    <FiEye size={14} />
-                  </button>
-                )}
-                {canUpdate && (
-                  <button
-                    type="button"
-                    className="p-1.5 text-gray-500 hover:text-[var(--p-blue)] hover:bg-[var(--p-blue)]/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    onClick={() => openResetPassword(customer)}
-                    title={t("customer.resetPassword") || "Reset password"}
-                    disabled={resetPasswordLoading}
-                  >
-                    <FiKey size={14} />
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    type="button"
-                    className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    onClick={() => openDeleteCustomer(customer)}
-                    title={t("common.delete") || "Delete"}
-                  >
-                    <FiTrash2 size={14} />
-                  </button>
-                )}
-              </div>
-            </td>
-          </tr>
+            <span className="epc-cell__secondary" title={website || ""}>
+              {cell(website)}
+            </span>
           );
-        }}
-      />
-        </div>
+        },
+      },
+    ];
 
-      {/* Status Update Modal */}
+    if (showBusinesses) {
+      cols.push({
+        key: "businesses",
+        header: t("customer.businesses"),
+        width: "12%",
+        render: (customer) => {
+          const filterBusinessName = selectedBusiness
+            ? businesses.find(
+                (b) =>
+                  (b._id || b.id)?.toString() === String(selectedBusiness)
+              )?.name
+            : null;
+          if (selectedBusiness)
+            return filterBusinessName || customer?.business?.name || "—";
+          if (customer.businessesDisplay) return customer.businessesDisplay;
+          const names = new Set();
+          const primary = customer?.business?.name;
+          if (primary) names.add(primary);
+          if (Array.isArray(customer.businesses)) {
+            customer.businesses.forEach((b) => {
+              const id = (b?._id || b)?.toString();
+              const found = businesses.find(
+                (x) => (x._id || x.id)?.toString() === id
+              );
+              if (found?.name) names.add(found.name);
+            });
+          }
+          return Array.from(names).filter(Boolean).join(", ") || "—";
+        },
+      });
+    }
+
+    cols.push(
+      {
+        key: "status",
+        header: t("Status"),
+        width: "8%",
+        render: (customer) =>
+          canUpdate ? (
+            <ToggleSwitch
+              isOn={customer.status === "Active"}
+              handleToggle={() => handleStatusClick(customer)}
+              disabled={loading}
+            />
+          ) : (
+            <span className="epc-cell__secondary">
+              {customer.status === "Active"
+                ? t("common.active")
+                : customer.status === "Inactive"
+                  ? t("common.inactive")
+                  : customer.status}
+            </span>
+          ),
+      },
+      {
+        key: "actions",
+        header: t("common.action"),
+        width: "10%",
+        align: "right",
+        render: (customer) => (
+          <div className="flex items-center gap-1 flex-wrap justify-end">
+            {(canView || canViewDetails || canUpdate) && (
+              <button
+                type="button"
+                className="p-1.5 text-gray-500 hover:text-[var(--p-blue)] hover:bg-[var(--p-blue)]/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => handleViewCustomer(customer._id)}
+                title={t("common.view") || "View"}
+              >
+                <FiEye size={14} />
+              </button>
+            )}
+            {canUpdate && (
+              <button
+                type="button"
+                className="p-1.5 text-gray-500 hover:text-[var(--p-blue)] hover:bg-[var(--p-blue)]/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => openResetPassword(customer)}
+                title={t("customer.resetPassword") || "Reset password"}
+                disabled={resetPasswordLoading}
+              >
+                <FiKey size={14} />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => openDeleteCustomer(customer)}
+                title={t("common.delete") || "Delete"}
+              >
+                <FiTrash2 size={14} />
+              </button>
+            )}
+          </div>
+        ),
+      }
+    );
+
+    return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    t,
+    showBusinesses,
+    selectedBusiness,
+    businesses,
+    canUpdate,
+    canView,
+    canViewDetails,
+    canDelete,
+    loading,
+    resetPasswordLoading,
+  ]);
+
+  const isLoading = loading || businessesLoading;
+
+  return (
+    <EpcPage
+      title={t("customer.title")}
+      subtitle={
+        !selectedBusiness
+          ? t("customer.showingFromAllBusinesses")
+          : t("customer.manageSubtitle")
+      }
+      action={
+        canAdd ? (
+          <Button onClick={handleAddNew}>
+            <PlusIcon size={15} />
+            {t("Add New")}
+          </Button>
+        ) : null
+      }
+    >
+      <SummaryCards
+        cards={summaryCardsData}
+        columnsCount={4}
+        loading={isLoading && filteredCustomers.length === 0}
+      />
+
+      <FilterBar
+        subtitle={t("customer.manageSubtitle")}
+        searchPlaceholder={t("Search")}
+        searchValue={searchTerm}
+        onSearchChange={handleSearch}
+        filters={portalFilters}
+        values={portalFilterValues}
+        onChange={handlePortalFilterChange}
+        onReset={clearAllFilters}
+      />
+
+      <Card>
+        <CardHeader
+          title={t("customer.title")}
+          subtitle={
+            isLoading
+              ? "Loading…"
+              : `${totalResults} ${
+                  totalResults === 1 ? "customer" : "customers"
+                }`
+          }
+          action={
+            <span className="epc-chip">
+              {overallStats.activeCustomers || 0} active ·{" "}
+              {overallStats.inactiveCustomers || 0} inactive
+            </span>
+          }
+        />
+
+        <PortalDataTable
+          columns={columns}
+          rows={isLoading ? [] : filteredCustomers}
+          rowKey="_id"
+          emptyMessage={
+            isLoading
+              ? "Loading…"
+              : error || "No customers match these filters."
+          }
+        />
+
+        {!isLoading && totalResults > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={recordsPerPage}
+            total={totalResults}
+            itemLabel="customers"
+            onPageChange={handlePageChange}
+            onPageSizeChange={(perPage) => {
+              setRecordsPerPage(perPage);
+              currentPageRef.current = 1;
+              setCurrentPage(1);
+              refetchCustomers(1, perPage);
+            }}
+          />
+        ) : null}
+      </Card>
+
       <CustomModal
         open={statusModalOpen}
         onClose={closeStatusModal}
@@ -743,9 +848,7 @@ const CustomerListScreen = () => {
         ]}
       >
         {customerToDelete && (
-          <p className="text-sm text-gray-700">
-            {t("customer.deleteConfirm")}
-          </p>
+          <p className="text-sm text-gray-700">{t("customer.deleteConfirm")}</p>
         )}
       </CustomModal>
 
@@ -780,8 +883,7 @@ const CustomerListScreen = () => {
           </p>
         )}
       </CustomModal>
-      </div>
-    </div>
+    </EpcPage>
   );
 };
 

@@ -31,9 +31,10 @@ import notificationService from "@/services/notificationService.jsx";
 import { toast } from "react-toastify";
 import DropdownBasic from "@/page-layouts/components/DropdownBasic";
 import { logoutUser } from "@/utils/generic";
-
-const DEFAULT_AVATAR_URL =
-  "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
+import {
+  DEFAULT_ADMIN_AVATAR_URL,
+  getAdminAvatarUrl,
+} from "@/utils/adminAvatar";
 
 /**
  * Header component, responsible for rendering the top navigation bar
@@ -172,13 +173,6 @@ const Header = () => {
   useEffect(() => {
     setCurrentLanguage(i18n.language || "en");
   }, [i18n.language]);
-
-  const getUserAvatar = () => {
-    if (adminInfo?.image && adminInfo.image.trim() !== "") {
-      return adminInfo.image;
-    }
-    return DEFAULT_AVATAR_URL;
-  };
 
   const handleProfileOpen = () => {
     setProfileOpen(!profileOpen);
@@ -833,42 +827,22 @@ const Header = () => {
             <button
               type="button"
               onClick={handleProfileOpen}
-              className="admin-iconbtn admin-iconbtn--pill"
+              className="admin-iconbtn admin-iconbtn--pill admin-topbar__profile"
               aria-expanded={profileOpen}
+              aria-label={adminInfo?.role?.name || "Admin profile"}
             >
               <img
-                src={getUserAvatar() || "/placeholder.svg"}
-                alt="User Avatar"
-                className="h-7 w-7 flex-shrink-0 rounded-full object-cover"
+                src={getAdminAvatarUrl(adminInfo)}
+                alt=""
+                className="admin-topbar__profile-photo"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = DEFAULT_AVATAR_URL;
+                  e.target.src = DEFAULT_ADMIN_AVATAR_URL;
                 }}
               />
-              <div className="hidden min-w-0 flex-col items-start sm:flex">
-                <span className="max-w-[120px] truncate text-sm font-semibold leading-tight text-[#0a0a0a]">
-                  {adminInfo?.name || "User"}
-                </span>
-                <span className="mt-0.5 max-w-[120px] truncate text-xs leading-tight text-[#5a5a5a]">
-                  {adminInfo?.role?.name || "Admin"}
-                </span>
-              </div>
-              <svg
-                className={`h-4 w-4 flex-shrink-0 text-[#5a5a5a] transition-transform duration-200 ${
-                  profileOpen ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              <span className="admin-topbar__profile-role hidden max-w-[140px] truncate sm:inline">
+                {adminInfo?.role?.name || "Admin"}
+              </span>
             </button>
 
             {profileOpen && (

@@ -1,29 +1,28 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo, useCallback } from "react";
 import { useHistory } from "react-router-dom";
 import axios from "axios";
 import { AdminContext } from "@/context/AdminContext";
 import { useRouteModulePermissions } from "@/utils/permissionUtils";
 import {
-  DataTable,
   SummaryCards,
   DateRangeComponent,
+  CustomDatePicker,
 } from "@/page-layouts/index";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import StatusPill from "@/customer/components/ui/StatusPill";
 import { formatDate, formatAmount, formatCurrencyAmount } from "@/components/formatAmount";
 import { useTranslation } from "react-i18next";
 import {
   Eye,
   Download,
-  Search,
-  Calendar,
-  ChevronDown,
-  Building,
-  User,
-  CreditCard,
-  DollarSign,
-  TrendingUp,
-  FileSpreadsheet as ExcelIcon,
   Loader2,
   Trash2,
+  FileSpreadsheet as ExcelIcon,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { notifyError, notifySuccess } from "@/utils/toast";
@@ -34,12 +33,18 @@ import PaymentDetailsModal from "./components/PaymentDetailsModal";
 import CustomerInvoiceServices from "@/services/CustomerInvoiceServices";
 import CompletedSvg from "@/assets/img/completed.svg";
 import InProgressSvg from "@/assets/img/in-progress.svg";
-import PendingApprovalSvg from "@/assets/img/pending-approval.svg";
-import DelayedSvg from "@/assets/img/delayed.svg";
 import SummarySvg from "@/assets/img/summary.svg";
 import DollarSvg from "../../../assets/img/icons/stats-1.png";
 
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
+
+const PAYMENT_TYPE_TONES = {
+  "Bank Transfer": "info",
+  "Money Changer": "success",
+  Cash: "warning",
+  Check: "danger-soft",
+  "Customer Credit": "info",
+};
 
 const CustomerPayments = () => {
   const { t } = useTranslation();
@@ -57,7 +62,6 @@ const CustomerPayments = () => {
   };
 
   const [payments, setPayments] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,7 +80,6 @@ const CustomerPayments = () => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeletePayment, setPendingDeletePayment] = useState(null);
   const [businessesLoading, setBusinessesLoading] = useState(true);
-  const [customersLoading, setCustomersLoading] = useState(true);
   const [downloadingReceiptId, setDownloadingReceiptId] = useState(null);
   const [overallStats, setOverallStats] = useState({
     totalPayments: 0,
@@ -86,9 +89,8 @@ const CustomerPayments = () => {
     moneyChangerOverpaymentAmount: 0,
   });
 
-  // Clear all filters function
-  const clearAllFilters = () => {
-    setSelectedBusinessFilter("");
+  const clearAllFilters = useCallback(() => {
+    setSelectedBusinessFilter(businesses.length === 1 ? businesses[0]._id : "");
     setSelectedCustomerFilter("");
     setSelectedPaymentTypeFilter("All");
     setSelectedDateFilter("");
@@ -96,98 +98,12 @@ const CustomerPayments = () => {
     setDateRangeEnd("");
     setSearchTerm("");
     setCurrentPage(1);
-  };
-
-  const filters = [
-    {
-      isClearButton: true,
-      buttonProps: {
-        onClick: () => {
-          clearAllFilters();
-          setCurrentPage(1);
-        },
-      },
-    },
-    ...(!isSingleAssignedBusiness()
-      ? [
-          {
-            label: t("accounts.customerPayments.business"),
-            value: selectedBusinessFilter,
-            onChange: (val) => {
-              setSelectedBusinessFilter(val);
-              setCurrentPage(1);
-            },
-            options: businesses.map((b) => ({
-              value: b._id,
-              label: b.name,
-            })),
-            placeholder: t("accounts.customerPayments.selectBusiness"),
-            icon: Building,
-          },
-        ]
-      : []),
-    {
-      label: t("accounts.customerPayments.customer"),
-      value: selectedCustomerFilter,
-      onChange: (val) => {
-        setSelectedCustomerFilter(val);
-        setCurrentPage(1);
-      },
-      options: customers.map((c) => ({
-        value: c._id,
-        label:
-          c.basicInformation?.customerDisplayName ??
-          c.basicInformation?.companyName ??
-          "—",
-      })),
-      placeholder: t("accounts.customerPayments.selectCustomer"),
-      icon: User,
-    },
-    {
-      label: t("accounts.customerPayments.paymentType"),
-      value: selectedPaymentTypeFilter,
-      onChange: (val) => {
-        setSelectedPaymentTypeFilter(val);
-        setCurrentPage(1);
-      },
-      options: [
-        { value: "All", label: t("accounts.customerPayments.allTypes") },
-        {
-          value: "Bank Transfer",
-          label: t("accounts.customerPayments.bankTransfer"),
-        },
-        {
-          value: "Money Changer",
-          label: t("accounts.customerPayments.moneyChanger"),
-        },
-        { value: "Cash", label: t("accounts.customerPayments.cash") },
-        { value: "Check", label: t("accounts.customerPayments.check") },
-        {
-          value: "Customer Credit",
-          label: t("accounts.customerPayments.customerCredit"),
-        },
-      ],
-      placeholder: `${t("accounts.customerPayments.paymentType")}: ${t("accounts.customerPayments.allTypes")}`,
-      icon: CreditCard,
-    },
-    {
-      label: t("accounts.customerPayments.paymentDate"),
-      value: selectedDateFilter,
-      onChange: (val) => {
-        setSelectedDateFilter(val);
-        setCurrentPage(1);
-      },
-      isDatePicker: true,
-      placeholder: t("accounts.customerPayments.paymentDate"),
-      icon: Calendar,
-    },
-  ];
+  }, [businesses]);
 
   const fetchPayments = async () => {
     if (businesses.length === 0) {
       setLoading(false);
       setPayments([]);
-      setTotalPages(1);
       setOverallStats({
         totalPayments: 0,
         totalAmount: 0,
@@ -216,12 +132,10 @@ const CustomerPayments = () => {
         search: searchTerm,
         page: currentPage,
         limit: entriesPerPage,
-        // Add date range parameters
         ...(dateRangeStart && { dateFrom: dateRangeStart }),
         ...(dateRangeEnd && { dateTo: dateRangeEnd }),
       };
 
-      // Remove undefined values
       Object.keys(params).forEach(
         (key) => params[key] === undefined && delete params[key],
       );
@@ -250,7 +164,6 @@ const CustomerPayments = () => {
           list = [];
         }
         setPayments(list);
-        setTotalPages(response.data.totalPages || 1);
         setOverallStats(
           response.data.overallStats || {
             totalPayments: 0,
@@ -312,7 +225,6 @@ const CustomerPayments = () => {
           : [];
         setCustomers(list);
         setSelectedCustomerFilter("");
-        setCustomersLoading(false);
       } catch (error) {
         console.error("Error fetching customers for business:", error);
         setCustomers([]);
@@ -342,7 +254,7 @@ const CustomerPayments = () => {
   const handleDateRangeApply = (startDate, endDate) => {
     setDateRangeStart(startDate);
     setDateRangeEnd(endDate);
-    setCurrentPage(1); // Reset to first page when filter changes
+    setCurrentPage(1);
   };
 
   const handleDateRangeClear = () => {
@@ -376,12 +288,11 @@ const CustomerPayments = () => {
         paymentDate: selectedDateFilter,
         search: searchTerm,
         page: 1,
-        limit: 999999, // Get all records
+        limit: 999999,
         ...(dateRangeStart && { dateFrom: dateRangeStart }),
         ...(dateRangeEnd && { dateTo: dateRangeEnd }),
       };
 
-      // Remove undefined values
       Object.keys(params).forEach(
         (key) => params[key] === undefined && delete params[key],
       );
@@ -413,7 +324,6 @@ const CustomerPayments = () => {
         return;
       }
 
-      // Prepare Excel data
       const exportData = allPayments.map((payment) => ({
         "Payment Number":
           payment.paymentNumber || payment.customerPaymentNumber || "",
@@ -436,7 +346,6 @@ const CustomerPayments = () => {
         "Created At": payment.createdAt ? formatDate(payment.createdAt) : "",
       }));
 
-      // Create summary rows
       const summaryRows = [
         {
           "Payment Number": "Customer Payments Report",
@@ -520,31 +429,23 @@ const CustomerPayments = () => {
         },
       ];
 
-      // Create worksheet
       const worksheet = XLSX.utils.json_to_sheet([]);
-
-      // Add summary rows
       XLSX.utils.sheet_add_json(worksheet, summaryRows, {
         skipHeader: true,
         origin: "A1",
       });
-
-      // Add data rows
       XLSX.utils.sheet_add_json(worksheet, exportData, {
         skipHeader: false,
-        origin: "A6", // Start after summary rows
+        origin: "A6",
       });
 
-      // Create workbook
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Payments");
 
-      // Generate filename
       const filename = `Customer_Payments_${
         new Date().toISOString().split("T")[0]
       }.xlsx`;
 
-      // Download file
       XLSX.writeFile(workbook, filename);
 
       notifySuccess("Customer payments exported to Excel successfully!");
@@ -645,16 +546,310 @@ const CustomerPayments = () => {
     }
   };
 
-  const getPaymentTypeColor = (type) => {
-    const colors = {
-      "Bank Transfer": "bg-blue-100 text-blue-800",
-      "Money Changer": "bg-green-100 text-green-800",
-      Cash: "bg-yellow-100 text-yellow-800",
-      Check: "bg-purple-100 text-purple-800",
-      "Customer Credit": "bg-indigo-100 text-indigo-800",
-    };
-    return colors[type] || "bg-gray-100 text-gray-800";
+  const portalFilterValues = {
+    business: selectedBusinessFilter || "",
+    customer: selectedCustomerFilter || "",
+    paymentType:
+      selectedPaymentTypeFilter === "All" ? "" : selectedPaymentTypeFilter,
   };
+
+  const portalFilters = useMemo(
+    () => [
+      ...(!isSingleAssignedBusiness()
+        ? [
+            {
+              key: "business",
+              placeholder: t("accounts.customerPayments.selectBusiness"),
+              options: [
+                { value: "", label: t("accounts.customerPayments.selectBusiness") },
+                ...businesses.map((b) => ({
+                  value: b._id,
+                  label: b.name,
+                })),
+              ],
+            },
+          ]
+        : []),
+      {
+        key: "customer",
+        placeholder: t("accounts.customerPayments.selectCustomer"),
+        options: [
+          { value: "", label: t("accounts.customerPayments.selectCustomer") },
+          ...customers.map((c) => ({
+            value: c._id,
+            label:
+              c.basicInformation?.customerDisplayName ??
+              c.basicInformation?.companyName ??
+              "—",
+          })),
+        ],
+      },
+      {
+        key: "paymentType",
+        placeholder: `${t("accounts.customerPayments.paymentType")}: ${t("accounts.customerPayments.allTypes")}`,
+        options: [
+          { value: "", label: t("accounts.customerPayments.allTypes") },
+          {
+            value: "Bank Transfer",
+            label: t("accounts.customerPayments.bankTransfer"),
+          },
+          {
+            value: "Money Changer",
+            label: t("accounts.customerPayments.moneyChanger"),
+          },
+          { value: "Cash", label: t("accounts.customerPayments.cash") },
+          { value: "Check", label: t("accounts.customerPayments.check") },
+          {
+            value: "Customer Credit",
+            label: t("accounts.customerPayments.customerCredit"),
+          },
+        ],
+      },
+    ],
+    [businesses, customers, t],
+  );
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "business") {
+      setSelectedBusinessFilter(value || "");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "customer") {
+      setSelectedCustomerFilter(value || "");
+      setCurrentPage(1);
+      return;
+    }
+    if (key === "paymentType") {
+      setSelectedPaymentTypeFilter(value || "All");
+      setCurrentPage(1);
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "paymentNumber",
+        header: "Payment #",
+        width: "12%",
+        render: (payment) =>
+          payment.paymentNumber ? (
+            <button
+              type="button"
+              className="epc-cell__link"
+              onClick={() => handleViewPaymentDetails(payment)}
+            >
+              {payment.paymentNumber}
+            </button>
+          ) : (
+            <span className="epc-cell__secondary">—</span>
+          ),
+      },
+      {
+        key: "invoice",
+        header: "Invoice No",
+        width: "14%",
+        render: (payment) => {
+          const invoiceRecordId =
+            payment?.invoice_id?._id ||
+            payment?.invoice_id ||
+            payment?.invoiceId ||
+            payment?.invoice?._id ||
+            payment?.invoice ||
+            payment?.proformaInvoiceId ||
+            payment?.proforma_invoice_id ||
+            payment?.invoiceRef?._id ||
+            payment?.invoice_ref?._id;
+          return (
+            <>
+              {invoiceRecordId && canViewPayment ? (
+                <button
+                  type="button"
+                  className="epc-cell__link"
+                  onClick={() =>
+                    history.push(`/view-customer-invoice/${invoiceRecordId}`)
+                  }
+                >
+                  #{payment.invoice_number}
+                </button>
+              ) : (
+                <div className="epc-cell__primary">
+                  #{payment.invoice_number}
+                </div>
+              )}
+              {payment.contract_no ? (
+                <div className="epc-cell__secondary">
+                  Contract: {payment.contract_no}
+                </div>
+              ) : null}
+            </>
+          );
+        },
+      },
+      {
+        key: "customer",
+        header: t("accounts.customerPayments.customer"),
+        width: "18%",
+        render: (payment) => (
+          <>
+            <div className="epc-cell__primary">
+              {payment.customer_id?.basicInformation?.companyName ||
+                payment.customer_id?.basicInformation?.customerDisplayName ||
+                "—"}
+            </div>
+            <div className="epc-cell__secondary">Customer</div>
+          </>
+        ),
+      },
+      {
+        key: "details",
+        header: t("accounts.customerPayments.viewDetails"),
+        width: "16%",
+        render: (payment) => (
+          <>
+            <div className="epc-cell__secondary">
+              {formatDate(payment.paymentDate)}
+            </div>
+            {payment.paymentMode ? (
+              <div className="mt-1">
+                <StatusPill
+                  status={payment.paymentMode}
+                  tone={PAYMENT_TYPE_TONES[payment.paymentMode] || "neutral"}
+                />
+              </div>
+            ) : null}
+            {payment.moneyChangerName ? (
+              <div className="epc-cell__secondary">
+                MC: {payment.moneyChangerName}
+              </div>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        key: "amount",
+        header: "Amount",
+        width: "18%",
+        render: (payment) => {
+          const conversionDisplayLine = getCurrencyConversionDisplayLine(
+            payment.conversionDetails,
+          );
+          return (
+            <>
+              <div className="epc-cell__primary whitespace-nowrap">
+                {formatCurrencyAmount(payment.currency, payment.amount)}
+              </div>
+              {payment.overpaymentAmount > 0 ? (
+                <>
+                  <div className="epc-cell__secondary">Payment</div>
+                  <div className="text-sm font-semibold text-green-600 mt-1">
+                    Overpayment:{" "}
+                    {formatCurrencyAmount(
+                      payment.overpaymentCurrency ||
+                        payment.invoiceCurrency ||
+                        payment.currency,
+                      payment.overpaymentAmount,
+                    )}
+                  </div>
+                  {payment.overpaymentDetails &&
+                    payment.overpaymentDetails.paymentCurrency !==
+                      payment.overpaymentDetails.invoiceCurrency && (
+                      <div className="epc-cell__secondary">
+                        (from {payment.overpaymentDetails.paymentCurrency}{" "}
+                        {formatAmount(
+                          payment.overpaymentDetails.paymentCurrencyAmount,
+                        )}
+                        )
+                      </div>
+                    )}
+                </>
+              ) : (
+                <div className="epc-cell__secondary">Payment</div>
+              )}
+              {payment.underpaymentAmount > 0 && (
+                <div className="text-xs text-orange-600">
+                  Underpayment:{" "}
+                  {formatCurrencyAmount(
+                    payment.underpaymentCurrency ||
+                      payment.invoiceCurrency ||
+                      payment.currency,
+                    payment.underpaymentAmount,
+                  )}
+                </div>
+              )}
+              {conversionDisplayLine ? (
+                <div className="text-xs text-blue-600">{conversionDisplayLine}</div>
+              ) : null}
+            </>
+          );
+        },
+      },
+      {
+        key: "actions",
+        header: t("Actions"),
+        width: "12%",
+        align: "right",
+        render: (payment) => {
+          if (!canViewPayment) return null;
+          const rowIndex = payments.findIndex((p) => p._id === payment._id);
+          const receiptKey = payment?._id || `${rowIndex >= 0 ? rowIndex : 0}`;
+          return (
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  handleDownloadReceipt(
+                    payment,
+                    rowIndex >= 0 ? rowIndex : undefined,
+                  )
+                }
+                disabled={downloadingReceiptId === receiptKey}
+                className="p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50"
+                title={
+                  downloadingReceiptId === receiptKey
+                    ? "Preparing receipt..."
+                    : "Download receipt (PDF)"
+                }
+                aria-label="Download receipt (PDF)"
+              >
+                {downloadingReceiptId === receiptKey ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Download size={18} />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleViewPaymentDetails(payment)}
+                className="p-2 text-gray-500 hover:text-[var(--p-blue)] hover:bg-[var(--p-blue)]/10 rounded-lg transition-colors"
+                title="View Payment Details"
+              >
+                <Eye size={16} />
+              </button>
+              {canDelete && payment?.source === "proforma" && payment?._id ? (
+                <button
+                  type="button"
+                  onClick={() => handleDeletePayment(payment)}
+                  className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Delete Payment"
+                >
+                  <Trash2 size={16} />
+                </button>
+              ) : null}
+            </div>
+          );
+        },
+      },
+    ],
+    [
+      canDelete,
+      canViewPayment,
+      downloadingReceiptId,
+      history,
+      payments,
+      t,
+    ],
+  );
 
   const summaryCardsData = [
     {
@@ -699,307 +894,100 @@ const CustomerPayments = () => {
     },
   ];
 
+  const totalPayments = overallStats.totalPayments || 0;
+
   return (
-    <div className="bg-gray-50 min-h-screen w-full max-w-full overflow-x-hidden">
-      <div className="w-full max-w-full mx-auto px-6 py-8 min-w-0 overflow-x-hidden">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {t("accounts.customerPayments.title")}
-              </h1>
-              <p className="text-gray-600 mt-2">
-                {t("accounts.customerPayments.title")}
-              </p>
-            </div>
-            <div className="flex items-center gap-4 relative z-10">
-              <DateRangeComponent
-                startDate={dateRangeStart}
-                endDate={dateRangeEnd}
-                onApply={handleDateRangeApply}
-                onClear={handleDateRangeClear}
-                placeholder="Filter by date range"
-                // className="flex-shrink-0"
-              />
-              <button
-                onClick={handleExportExcel}
-                disabled={loading}
-                className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ExcelIcon size={18} />
-                {loading
-                  ? t("Loading") + "..."
-                  : t("accounts.customerPayments.exportToExcel")}
-              </button>
-            </div>
-          </div>
+    <EpcPage
+      title={t("accounts.customerPayments.title")}
+      subtitle={t("accounts.customerPayments.title")}
+      action={
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangeComponent
+            startDate={dateRangeStart}
+            endDate={dateRangeEnd}
+            onApply={handleDateRangeApply}
+            onClear={handleDateRangeClear}
+            placeholder="Filter by date range"
+          />
+          <Button
+            variant="secondary"
+            onClick={handleExportExcel}
+            disabled={loading}
+          >
+            <ExcelIcon size={15} />
+            {loading
+              ? t("Loading") + "..."
+              : t("accounts.customerPayments.exportToExcel")}
+          </Button>
         </div>
+      }
+    >
+      <SummaryCards
+        cards={summaryCardsData}
+        columnsCount={4}
+        loading={loading && payments.length === 0}
+      />
 
-        {/* Stats Cards */}
-        <div className="mb-8">
-          <SummaryCards cards={summaryCardsData} columnsCount={4} />
-        </div>
+      <FilterBar
+        subtitle="Narrow by business, customer or payment type."
+        searchPlaceholder={t("accounts.customerPayments.searchPlaceholder")}
+        searchValue={searchTerm}
+        onSearchChange={(value) => {
+          setSearchTerm(value);
+          setCurrentPage(1);
+        }}
+        values={portalFilterValues}
+        onChange={handlePortalFilterChange}
+        onReset={clearAllFilters}
+        filters={portalFilters}
+      />
 
-        {/* Table Container */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 relative min-w-0 max-w-full overflow-hidden">
-          <DataTable
-            filters={filters}
-            headersWithoutCellTooltip={["Amount"]}
-            colWidths={{
-              "Payment #": "150px",
-              "Invoice No": "160px",
-              [t("accounts.customerPayments.customer")]: "240px",
-              [t("accounts.customerPayments.viewDetails")]: "220px",
-              Amount: "240px",
-              [t("Actions")]: "140px",
-            }}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalRecords={overallStats.totalPayments}
-            onPageChange={(page) => setCurrentPage(page)}
-            recordsPerPage={entriesPerPage}
-            onRecordsPerPageChange={(num) => {
-              setEntriesPerPage(num);
+      <div className="flex flex-wrap items-end gap-3 mb-1">
+        <div className="min-w-[180px]">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            {t("accounts.customerPayments.paymentDate")}
+          </label>
+          <CustomDatePicker
+            value={selectedDateFilter}
+            onChange={(val) => {
+              setSelectedDateFilter(val || "");
               setCurrentPage(1);
             }}
-            searchValue={searchTerm}
-            onSearch={(val) => {
-              setSearchTerm(val);
-              setCurrentPage(1);
-            }}
-            searchPlaceholder={t("accounts.customerPayments.searchPlaceholder")}
-            headers={[
-              "Payment #",
-              "Invoice No",
-              t("accounts.customerPayments.customer"),
-              t("accounts.customerPayments.viewDetails"),
-              "Amount",
-              t("Actions"),
-            ]}
-            data={payments}
-            loading={loading}
-            renderRow={(payment, rowIndex) => {
-              const conversionDisplayLine = getCurrencyConversionDisplayLine(
-                payment.conversionDetails,
-              );
-              const invoiceRecordId =
-                payment?.invoice_id?._id ||
-                payment?.invoice_id ||
-                payment?.invoiceId ||
-                payment?.invoice?._id ||
-                payment?.invoice ||
-                payment?.proformaInvoiceId ||
-                payment?.proforma_invoice_id ||
-                payment?.invoiceRef?._id ||
-                payment?.invoice_ref?._id;
-              return (
-                <tr
-                  key={payment._id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                >
-                  {/* Payment # */}
-                  <td className="py-4 px-4">
-                    {payment.paymentNumber ? (
-                      <button
-                        type="button"
-                        onClick={() => handleViewPaymentDetails(payment)}
-                        className="inline-block font-mono text-sm font-semibold text-[var(--p-blue)] bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded"
-                      >
-                        {payment.paymentNumber}
-                      </button>
-                    ) : (
-                      <span className="text-xs text-gray-400">—</span>
-                    )}
-                  </td>
-
-                  {/* Invoice No */}
-                  <td className="py-4 px-4">
-                    <div>
-                      {invoiceRecordId && canViewPayment ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            history.push(
-                              `/view-customer-invoice/${invoiceRecordId}`,
-                            )
-                          }
-                          className="font-semibold text-[var(--p-blue)] hover:underline"
-                        >
-                          #{payment.invoice_number}
-                        </button>
-                      ) : (
-                        <p className="font-semibold text-gray-900">
-                          #{payment.invoice_number}
-                        </p>
-                      )}
-                      {payment.contract_no && (
-                        <p className="text-sm text-gray-500">
-                          Contract: {payment.contract_no}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Customer */}
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <User size={16} className="text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 truncate">
-                          {payment.customer_id?.basicInformation?.companyName ||
-                            payment.customer_id?.basicInformation
-                              ?.customerDisplayName}
-                        </p>
-                        <p className="text-sm text-gray-500">Customer</p>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Payment Details */}
-                  <td className="py-4 px-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {formatDate(payment.paymentDate)}
-                        </span>
-                      </div>
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeColor(
-                          payment.paymentMode,
-                        )}`}
-                      >
-                        {payment.paymentMode}
-                      </span>
-                      {payment.moneyChangerName && (
-                        <p className="text-xs text-gray-500">
-                          MC: {payment.moneyChangerName}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Amount */}
-                  <td className="py-4 px-4">
-                    <div>
-                      <p className="text-lg font-bold text-gray-900 whitespace-nowrap">
-                        {formatCurrencyAmount(payment.currency, payment.amount)}
-                      </p>
-                      {payment.overpaymentAmount > 0 ? (
-                        <div>
-                          <p className="text-xs text-gray-500">Payment</p>
-                          <p className="text-sm font-semibold text-green-600 mt-1">
-                            Overpayment:{" "}
-                            {formatCurrencyAmount(
-                              payment.overpaymentCurrency ||
-                                payment.invoiceCurrency ||
-                                payment.currency,
-                              payment.overpaymentAmount,
-                            )}
-                          </p>
-                          {payment.overpaymentDetails &&
-                            payment.overpaymentDetails.paymentCurrency !==
-                              payment.overpaymentDetails.invoiceCurrency && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                (from{" "}
-                                {payment.overpaymentDetails.paymentCurrency}{" "}
-                                {formatAmount(
-                                  payment.overpaymentDetails
-                                    .paymentCurrencyAmount,
-                                )}
-                                )
-                              </p>
-                            )}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-500">Payment</p>
-                      )}
-                      {payment.underpaymentAmount > 0 && (
-                        <p className="text-xs text-orange-600">
-                          Underpayment:{" "}
-                          {formatCurrencyAmount(
-                            payment.underpaymentCurrency ||
-                              payment.invoiceCurrency ||
-                              payment.currency,
-                            payment.underpaymentAmount,
-                          )}
-                        </p>
-                      )}
-                      {conversionDisplayLine && (
-                        <p className="text-xs text-blue-600">
-                          {conversionDisplayLine}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-2">
-                      {canViewPayment && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDownloadReceipt(
-                                payment,
-                                typeof rowIndex === "number"
-                                  ? rowIndex
-                                  : undefined,
-                              )
-                            }
-                            disabled={
-                              downloadingReceiptId ===
-                              (payment?._id || `${rowIndex ?? 0}`)
-                            }
-                            className="p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50"
-                            title={
-                              downloadingReceiptId ===
-                              (payment?._id || `${rowIndex ?? 0}`)
-                                ? "Preparing receipt..."
-                                : "Download receipt (PDF)"
-                            }
-                            aria-label="Download receipt (PDF)"
-                          >
-                            {downloadingReceiptId ===
-                            (payment?._id || `${rowIndex ?? 0}`) ? (
-                              <Loader2 size={18} className="animate-spin" />
-                            ) : (
-                              <Download size={18} />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleViewPaymentDetails(payment)}
-                            className="p-2 text-gray-500 hover:text-[var(--p-blue)] hover:bg-[var(--p-blue)]/10 rounded-lg transition-colors"
-                            title="View Payment Details"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          {canDelete &&
-                            (payment?.source === "proforma" && payment?._id ? (
-                              <button
-                                type="button"
-                                onClick={() => handleDeletePayment(payment)}
-                                className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete Payment"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            ) : null)}
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            }}
+            placeholder={t("accounts.customerPayments.paymentDate")}
+            clearable
           />
         </div>
       </div>
+
+      <Card>
+        <CardHeader
+          title={t("accounts.customerPayments.title")}
+          subtitle={
+            loading ? "Loading…" : `${totalPayments} total payments`
+          }
+        />
+        <PortalDataTable
+          columns={columns}
+          rows={loading ? [] : payments}
+          rowKey="_id"
+          emptyMessage={
+            loading ? "Loading payments…" : "No payments found."
+          }
+        />
+        {!loading && totalPayments > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageSize={entriesPerPage}
+            total={totalPayments}
+            itemLabel="payments"
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(perPage) => {
+              setEntriesPerPage(perPage);
+              setCurrentPage(1);
+            }}
+          />
+        ) : null}
+      </Card>
 
       {showPaymentDetails && selectedPayment && (
         <PaymentDetailsModal
@@ -1053,7 +1041,7 @@ const CustomerPayments = () => {
           </div>
         </div>
       )}
-    </div>
+    </EpcPage>
   );
 };
 

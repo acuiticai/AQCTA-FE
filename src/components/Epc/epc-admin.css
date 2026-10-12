@@ -963,10 +963,113 @@
   white-space: nowrap;
 }
 
+.epc-root .epc-table td .action-buttons-container {
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+}
+
 /* Cards holding a table read better without doubled padding under the head. */
 
 .epc-root .epc-card-panel > .epc-table-wrap:last-child {
   margin-bottom: -4px;
+}
+
+/* Admin DataTable when embedded in portal-style list cards */
+.epc-root.epc-admin-surface .data-table-layout--portal {
+  padding: 0;
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal .admin-table-shell {
+  margin-top: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal table thead tr {
+  background: var(--epc-surface-muted, #faf6f7);
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal table thead th {
+  color: var(--epc-text-muted, #5a5a5a) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: none !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal table thead th:first-child {
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal table thead th:last-child {
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal table tbody td {
+  border-bottom: 1px solid var(--epc-border, #e0d6d8);
+  color: var(--epc-text, #1a1a1a);
+  font-size: 13px;
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal .data-table-layout__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 4px 8px;
+  font-size: 13px;
+  color: var(--epc-text-muted, #5a5a5a);
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal .data-table-layout__pagination select {
+  appearance: none;
+  background: var(--epc-surface-muted, #faf6f7);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 6px 32px 6px 12px;
+  font-size: 13px;
+  color: var(--epc-text-strong, #0a0a0a);
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal .data-table-layout__pagebtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--epc-border, #e0d6d8);
+  border-radius: 10px;
+  background: var(--epc-surface, #fff);
+  color: var(--epc-text, #1a1a1a);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.epc-root.epc-admin-surface .data-table-layout--portal .data-table-layout__pagebtn.is-active {
+  background: var(--epc-nav-active-bg, rgba(197, 6, 26, 0.12));
+  border-color: var(--epc-primary, #c5061a);
+  color: var(--epc-primary, #c5061a);
+}
+
+.epc-root.epc-admin-surface .epc-statgrid--list-spacer {
+  margin-bottom: var(--epc-panel-gap, 20px);
 }
 
 /* Search box sitting inside a card header rather than a filter bar. */

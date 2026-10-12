@@ -165,13 +165,14 @@ const LeaveRequestsPage = () => {
         }}
       />
 
-      <div className="bg-[#F9F9FA] rounded-2xl mt-8">
+      <div className="mt-8">
         <LeavesList
           leaves={leaves}
           updateLeaveStatus={updateLeaveStatus}
           currentPage={currentPage}
           recordsPerPage={recordsPerPage}
           totalPages={totalPages}
+          totalResults={totalResults}
           onPageChange={handlePageChange}
           loading={loading}
           onRecordsPerPageChange={handleRecordsPerPageChange}

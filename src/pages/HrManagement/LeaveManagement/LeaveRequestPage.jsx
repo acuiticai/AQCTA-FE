@@ -6,7 +6,6 @@ import HrListStatsSummaryCards from "../components/HrListStatsSummaryCards";
 import {
   HR_PAGE_INNER,
   HR_PAGE_SHELL,
-  HR_TABLE_CARD,
 } from "../components/hrPageHeaderStyles";
 import axios from "axios";
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
@@ -166,13 +165,14 @@ const LeaveRequestsPage = () => {
         }}
       />
 
-      <div className={`${HR_TABLE_CARD} mt-6`}>
+      <div className="mt-6">
         <LeavesList
           leaves={leaves}
           updateLeaveStatus={updateLeaveStatus}
           currentPage={currentPage}
           recordsPerPage={recordsPerPage}
           totalPages={totalPages}
+          totalResults={totalResults}
           onPageChange={handlePageChange}
           loading={loading}
           onRecordsPerPageChange={handleRecordsPerPageChange}

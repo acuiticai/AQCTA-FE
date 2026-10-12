@@ -15,10 +15,10 @@ import * as FaIcons from "react-icons/fa";
 import * as Fa6Icons from "react-icons/fa6";
 import * as MdIcons from "react-icons/md";
 import * as TbIcons from "react-icons/tb";
+import { FiLogOut } from "react-icons/fi";
 
 import { AdminContext } from "@/context/AdminContext";
 import { SidebarContext } from "@/context/SidebarContext";
-import { WindmillContext } from "@windmill/react-ui";
 import SidebarSubMenu from "@/components/sidebar/SidebarSubMenu";
 import { Link } from "react-router-dom";
 import {
@@ -31,13 +31,17 @@ import {
   buildProductSidebar,
   getProductNavDisplayName,
 } from "@/utils/hiddenSidebarPaths";
-import {
-  BRANDING_PLACEHOLDER_LOGO,
-  fetchBrandingLogo,
-  readCachedBrandingLogo,
-  writeCachedBrandingLogo,
-} from "@/utils/brandingLogo";
+import { BRANDING_PLACEHOLDER_LOGO } from "@/utils/brandingLogo";
 import { AQCTA_IDENTITY } from "@/config/aqctaIdentity";
+import { logoutUser } from "@/utils/generic";
+import { groupAdminSidebarRoutes } from "@/utils/adminSidebarSections";
+import {
+  DEFAULT_ADMIN_AVATAR_URL,
+  getAdminAvatarUrl,
+} from "@/utils/adminAvatar";
+
+/** White TECHNICAL wordmark on dark sidebar (customer portal uses the same asset). */
+const ADMIN_SIDEBAR_LOGO = AQCTA_IDENTITY.logoDarkPath;
 
 const normalizeModulePath = (value = "") => {
   const raw = String(value || "").trim().toLowerCase();
@@ -96,17 +100,10 @@ const StaffRoute = {
 
 const SidebarContent = () => {
   const { t } = useTranslation();
-  const { mode } = useContext(WindmillContext);
   const { dispatch, state } = useContext(AdminContext);
   const { isSidebarCollapsed } = useContext(SidebarContext);
   const [sidebar, setSidebar] = useState([]);
   const location = useLocation();
-  const [logo, setLogo] = useState(
-    () =>
-      readCachedBrandingLogo() ||
-      AQCTA_IDENTITY.logoDarkPath ||
-      BRANDING_PLACEHOLDER_LOGO
-  );
   const history = useHistory();
   const { getModuleLabel } = useModuleLabels();
 
@@ -170,6 +167,91 @@ const SidebarContent = () => {
     [sidebar, getModuleLabel]
   );
 
+  const sidebarSections = useMemo(
+    () => groupAdminSidebarRoutes(finalSidebar),
+    [finalSidebar]
+  );
+
+  const adminName =
+    state?.adminInfo?.name ||
+    state?.adminInfo?.username ||
+    state?.adminInfo?.email ||
+    "Admin";
+  const adminEmail = state?.adminInfo?.email || "";
+  const adminAvatarUrl = getAdminAvatarUrl(state?.adminInfo);
+
+  const handleLogout = () => {
+    logoutUser();
+    history.push("/login");
+  };
+
+  const isRouteActive = (route, loc) => {
+    const currentPath = loc.pathname;
+
+    if (route.path === "/") {
+      if (currentPath === "/") return true;
+      if (route.routes && route.routes.length > 0) {
+        return route.routes.some((subRoute) => {
+          const subPath = subRoute.path;
+          return (
+            currentPath === subPath ||
+            currentPath.startsWith(subPath + "/") ||
+            currentPath.startsWith(subPath + ":")
+          );
+        });
+      }
+      return false;
+    }
+
+    if (currentPath === route.path) return true;
+
+    return (
+      currentPath.startsWith(route.path + "/") ||
+      currentPath.startsWith(route.path + ":")
+    );
+  };
+
+  const renderNavRoute = (route) => {
+    if (route.routes && route.routes.length > 0) {
+      return (
+        <SidebarSubMenu
+          sidebar={finalSidebar}
+          route={route}
+          key={route.productKey || route._id || route.name}
+          isCollapsed={isSidebarCollapsed}
+        />
+      );
+    }
+
+    return (
+      <li key={route.productKey || route._id || route.name}>
+        <NavLink
+          to={route.path}
+          target={route?.outside ? "_blank" : "_self"}
+          exact={route.path === "/"}
+          isActive={(match, loc) => isRouteActive(route, loc)}
+          className={`admin-navitem ${
+            isSidebarCollapsed ? "admin-navitem--collapsed" : ""
+          }`}
+          activeClassName="is-active"
+          rel="noreferrer"
+          title={isSidebarCollapsed ? t(`${route.name}`) : ""}
+        >
+          {route.icon && (
+            <span className="admin-navitem__icon" aria-hidden="true">
+              {React.createElement(route.icon, {
+                className: "h-[18px] w-[18px] flex-shrink-0",
+              })}
+            </span>
+          )}
+          {!isSidebarCollapsed && (
+            <span className="admin-navitem__label">{t(`${route.name}`)}</span>
+          )}
+        </NavLink>
+      </li>
+    );
+  };
+
   useEffect(() => {
     const fetchAndProcessModules = async () => {
       try {
@@ -229,30 +311,7 @@ const SidebarContent = () => {
         return;
       }
       try {
-        const headers = {
-          "Content-Type": "application/json",
-          authorization: `Bearer ${state?.adminInfo?.token}`,
-        };
-        const response = await getCachedConfigurationResponse(
-          state?.adminInfo?.token,
-        );
-        if (!response) return;
-        const configuration = response.data[0];
-
-        if (configuration) {
-          try {
-            const headers = {
-              "Content-Type": "application/json",
-              authorization: `Bearer ${state?.adminInfo?.token}`,
-            };
-            const nextLogo = await fetchBrandingLogo({ headers });
-            setLogo(nextLogo || BRANDING_PLACEHOLDER_LOGO);
-            writeCachedBrandingLogo(nextLogo);
-          } catch (_) {
-            const cached = readCachedBrandingLogo();
-            setLogo(cached || BRANDING_PLACEHOLDER_LOGO);
-          }
-        }
+        await getCachedConfigurationResponse(state?.adminInfo?.token);
       } catch (error) {
         console.error("Failed to fetch configuration:", error);
       }
@@ -263,104 +322,82 @@ const SidebarContent = () => {
     }
   }, [state.adminInfo?.token, dispatch, history]);
 
-  const sidebarLogo =
-    logo ||
-    AQCTA_IDENTITY.logoDarkPath ||
-    (mode === "dark"
-      ? "/fallback-dark-logo.png"
-      : AQCTA_IDENTITY.logoLightPath);
-
   return (
     <div className="admin-sidebar">
-      <div className="admin-sidebar__brand">
-        <Link
-          to="/home"
-          className={`flex items-center justify-center transition-all duration-300 ${
-            isSidebarCollapsed ? "px-1" : "px-2"
-          }`}
-        >
+      <div
+        className={`admin-sidebar__brand${
+          isSidebarCollapsed ? " admin-sidebar__brand--collapsed" : ""
+        }`}
+      >
+        <Link to="/home" className="admin-sidebar__brand-link">
           <img
-            src={sidebarLogo}
-            alt="Logo"
-            width={isSidebarCollapsed ? "40" : "168"}
-            height="40"
-            className={`object-contain transition-all duration-300 ${
-              isSidebarCollapsed ? "h-9 w-9" : "h-10 max-w-[168px]"
-            }`}
+            src={ADMIN_SIDEBAR_LOGO}
+            alt="Technical Assessors"
+            className="admin-sidebar__logo"
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src =
-                AQCTA_IDENTITY.logoDarkPath || BRANDING_PLACEHOLDER_LOGO;
+              e.target.src = ADMIN_SIDEBAR_LOGO || BRANDING_PLACEHOLDER_LOGO;
             }}
           />
         </Link>
       </div>
 
-      <div className="admin-sidebar__nav">
-        <ul>
-          {finalSidebar.map((route) =>
-            route.routes && route.routes.length > 0 ? (
-              <SidebarSubMenu
-                sidebar={finalSidebar}
-                route={route}
-                key={route.productKey || route._id || route.name}
-                isCollapsed={isSidebarCollapsed}
-              />
-            ) : (
-              <li
-                className="relative mb-0.5"
-                key={route.productKey || route._id || route.name}
-              >
-                <NavLink
-                  to={route.path}
-                  target={route?.outside ? "_blank" : "_self"}
-                  exact={route.path === "/"}
-                  isActive={(match, loc) => {
-                    const currentPath = loc.pathname;
+      <nav className="admin-sidebar__nav" aria-label="Admin sections">
+        {sidebarSections.map((section) => (
+          <div className="admin-navgroup" key={section.id}>
+            {!isSidebarCollapsed && (
+              <p className="admin-navgroup__label">{section.label}</p>
+            )}
+            <ul className="admin-navgroup__list">
+              {section.routes.map((route) => renderNavRoute(route))}
+            </ul>
+          </div>
+        ))}
+      </nav>
 
-                    if (route.path === "/") {
-                      if (currentPath === "/") return true;
-                      if (route.routes && route.routes.length > 0) {
-                        return route.routes.some((subRoute) => {
-                          const subPath = subRoute.path;
-                          return (
-                            currentPath === subPath ||
-                            currentPath.startsWith(subPath + "/") ||
-                            currentPath.startsWith(subPath + ":")
-                          );
-                        });
-                      }
-                      return false;
-                    }
-
-                    if (currentPath === route.path) return true;
-
-                    return (
-                      currentPath.startsWith(route.path + "/") ||
-                      currentPath.startsWith(route.path + ":")
-                    );
-                  }}
-                  className={`admin-navitem ${
-                    isSidebarCollapsed ? "admin-navitem--collapsed" : ""
-                  }`}
-                  activeClassName="is-active"
-                  rel="noreferrer"
-                  title={isSidebarCollapsed ? t(`${route.name}`) : ""}
-                >
-                  {route.icon &&
-                    React.createElement(route.icon, {
-                      className: "h-[18px] w-[18px] flex-shrink-0",
-                    })}
-                  {!isSidebarCollapsed && (
-                    <span className="min-w-0 flex-1 truncate">
-                      {t(`${route.name}`)}
-                    </span>
-                  )}
-                </NavLink>
-              </li>
-            )
+      <div
+        className={`admin-sidebar__foot${
+          isSidebarCollapsed ? " admin-sidebar__foot--collapsed" : ""
+        }`}
+      >
+        <button
+          type="button"
+          className="admin-navitem admin-navitem--quiet"
+          onClick={handleLogout}
+          title={isSidebarCollapsed ? "Logout" : ""}
+        >
+          <span className="admin-navitem__icon" aria-hidden="true">
+            <FiLogOut className="h-[18px] w-[18px]" />
+          </span>
+          {!isSidebarCollapsed && (
+            <span className="admin-navitem__label">Logout</span>
           )}
-        </ul>
+        </button>
+
+        <div
+          className="admin-account"
+          title={
+            isSidebarCollapsed ? `${adminName}${adminEmail ? ` · ${adminEmail}` : ""}` : ""
+          }
+        >
+          <img
+            src={adminAvatarUrl}
+            alt=""
+            className="admin-avatar admin-avatar--photo"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = DEFAULT_ADMIN_AVATAR_URL;
+            }}
+          />
+          {!isSidebarCollapsed && (
+            <span className="admin-account__text">
+              <span className="admin-account__name">{adminName}</span>
+              {adminEmail && (
+                <span className="admin-account__email">{adminEmail}</span>
+              )}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

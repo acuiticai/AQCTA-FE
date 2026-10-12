@@ -9,67 +9,41 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { formatAmount } from "@/components/formatAmount";
-import reactSelectConfig from "@/utils/react-select-style-config";
-import ReactSelect from "react-select";
 
 import {
   CurrencyDropdown,
-  CustomDatePicker,
-  PageHeader,
   FormInput,
   CustomModal,
-  DataTable,
   ActionButtons,
 } from "@/page-layouts/index";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import csv from "../../../assets/img/icons/csv.png";
 import pdf from "../../../assets/img/icons/pdf.png";
-import userIcon from "../../../assets/img/icons/profile-add.png";
-import {
-  HR_HEADER_BTN_EXCEL,
-  HR_HEADER_BTN_PDF,
-  HR_HEADER_BTN_PRIMARY,
-  HR_PAGE_INNER,
-  HR_PAGE_SHELL,
-  HR_TABLE_CARD,
-} from "../components/hrPageHeaderStyles";
 import { useHistory } from "react-router-dom";
-import CurrencyServices from "@/services/CurrencyServices";
-import useAsync from "@/hooks/useAsync";
 import { useDebounce } from "use-debounce";
 import HrListStatsSummaryCards from "../components/HrListStatsSummaryCards";
-import { FilePlus } from "lucide-react";
 import { AdminContext } from "@/context/AdminContext";
 import request from "@/services/httpService";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import { PlusIcon } from "@/customer/components/ui/icons";
 
 // Import the enhanced currency helpers
 import {
   calculateTotalClaimableAmount,
   getUniqueCurrencies,
   getCurrencyWiseTotals,
-  hasSingleCurrency,
 } from "./currency-helpers";
 
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
 const ClaimsDashboard = () => {
   const { t } = useTranslation();
-  const claimActionHeader = t("claimManagement.action");
-  const claimTableColWidths = useMemo(
-    () => ({
-      [t("claimManagement.empName")]: "125px",
-      [t("claimManagement.itemsCount")]: "105px",
-      [t("claimManagement.claimAmount")]: "108px",
-      [t("claimManagement.currencies")]: "100px",
-      [t("claimManagement.company")]: "105px",
-      [t("claimManagement.status")]: "155px",
-      [t("claimManagement.documents")]: "130px",
-      [claimActionHeader]: "250px",
-    }),
-    [t, claimActionHeader],
-  );
-
   const history = useHistory();
   const [claims, setClaims] = useState([]);
   const [filteredClaims, setFilteredClaims] = useState([]);
@@ -115,7 +89,6 @@ const ClaimsDashboard = () => {
   const [businesses, setBusinesses] = useState([]);
   const [claimsLoading, setClaimsLoading] = useState(false);
 
-  const { data, loading, error } = useAsync(CurrencyServices.getAllCurrency);
   const [searchInput, setSearchInput] = useState("");
   const [tableSearchFilter] = useDebounce(searchInput, 500);
   const { state } = useContext(AdminContext);
@@ -1428,104 +1401,266 @@ const ClaimsDashboard = () => {
     }
   };
 
-  const claimTableFilters = [
+  const portalFilters = [
+    {
+      key: "company",
+      placeholder: t("claimManagement.searchByCompany"),
+      options: [
+        { value: "", label: t("claimManagement.searchByCompany") },
+        ...businesses.map((b) => ({
+          value: b._id,
+          label: b.name,
+        })),
+      ],
+    },
+    {
+      key: "claimGroup",
+      placeholder: t("claimManagement.selectClaimGroup"),
+      options: [
+        { value: "", label: t("claimManagement.selectClaimGroup") },
+        ...(claimGroups?.map((item) => ({
+          value: item._id,
+          label: item.name,
+        })) || []),
+      ],
+    },
+    {
+      key: "claimType",
+      placeholder: t("claimManagement.selectClaimType"),
+      options: [
+        { value: "", label: t("claimManagement.selectClaimType") },
+        ...(claimTypes?.map((item) => ({
+          value: item._id,
+          label: item.type,
+        })) || []),
+      ],
+    },
+    {
+      key: "status",
+      placeholder: t("claimManagement.searchByClaimStatus"),
+      options: [
+        { value: "", label: t("claimManagement.searchByClaimStatus") },
+        { value: "approved", label: "Approved" },
+        { value: "rejected", label: "Rejected" },
+        { value: "pending", label: "Pending" },
+      ],
+    },
+  ];
+
+  const portalFilterValues = {
+    company: companyFilter || "",
+    claimGroup: claimGroupFilter || "",
+    claimType: claimTypeFilter || "",
+    status: statusFilter || "",
+  };
+
+  const handlePortalFilterChange = (key, value) => {
+    const next = value || "";
+    if (key === "company") {
+      setCompanyFilter(next);
+      setClaimGroupFilter("");
+      setClaimTypeFilter("");
+      return;
+    }
+    if (key === "claimGroup") {
+      setClaimGroupFilter(next);
+      setClaimTypeFilter("");
+      return;
+    }
+    if (key === "claimType") {
+      setClaimTypeFilter(next);
+      return;
+    }
+    if (key === "status") {
+      setStatusFilter(next);
+    }
+  };
+
+  const columns = useMemo(
+    () => [
       {
-        isClearButton: true,
-        buttonProps: {
-          onClick: resetFilters,
-        },
+        key: "employee",
+        header: t("claimManagement.empName"),
+        render: (claim) => (
+          <span className="epc-cell__primary">
+            {claim.employee?.displayName || "—"}
+          </span>
+        ),
       },
       {
-        isBusinessDropdown: true,
-        businessDropdownProps: {
-          adminId: adminInfo?.id,
-          selectedBusiness: companyFilter,
-          onChange: (val) => setCompanyFilter(val),
-          placeholder: t("claimManagement.searchByCompany"),
-        },
+        key: "items",
+        header: t("claimManagement.itemsCount"),
+        render: (claim) => (
+          <span className="epc-chip">
+            {claim.items?.length || 0} items
+          </span>
+        ),
       },
       {
-        isTextInput: true,
-        name: "nameIdFilter",
-        value: nameIdFilter,
-        onChange: (v) => setNameIdFilter(v),
-        placeholder: t("claimManagement.searchByNameId"),
+        key: "amount",
+        header: t("claimManagement.claimAmount"),
+        render: (claim) => <ClaimAmountCell items={claim.items} />,
       },
       {
-        customComponent: (
-          <div className="w-full min-w-0">
-            <ReactSelect
-              value={
-                claimGroupFilter
-                  ? {
-                      value: claimGroupFilter,
-                      label: claimGroups?.find((c) => c._id === claimGroupFilter)
-                        ?.name,
-                    }
-                  : null
-              }
-              onChange={(selectedOption) => {
-                setClaimGroupFilter(selectedOption ? selectedOption.value : "");
-              }}
-              placeholder={t("claimManagement.selectClaimGroup")}
-              options={claimGroups?.map((item) => ({
-                label: item?.name,
-                value: item?._id,
-              }))}
-              className="react-select-container"
-              classNamePrefix="react-select"
-              isSearchable
-              menuPlacement="auto"
-              isClearable
-              styles={{
-                ...reactSelectConfig,
-                control: (base, state) => ({
-                  ...reactSelectConfig.control?.(base, state),
-                }),
-              }}
-            />
+        key: "currencies",
+        header: t("claimManagement.currencies"),
+        render: (claim) => (
+          <div className="flex flex-wrap gap-1">
+            {getUniqueCurrencies(claim.items).map((currency, index) => (
+              <span
+                key={index}
+                className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-medium"
+              >
+                {currency}
+              </span>
+            ))}
           </div>
         ),
       },
       {
-        customComponent: (
-          <div className="w-full min-w-0">
-            <ReactSelect
-              className="react-select-container"
-              classNamePrefix="react-select"
-              value={
-                claimTypeFilter
-                  ? {
-                      value: claimTypeFilter,
-                      label: claimTypes?.find((c) => c._id === claimTypeFilter)
-                        ?.type,
-                    }
-                  : null
-              }
-              onChange={(option) => {
-                setClaimTypeFilter(option ? option.value : "");
-              }}
-              styles={{
-                ...reactSelectConfig,
-                control: (base, state) => ({
-                  ...reactSelectConfig.control?.(base, state),
-                }),
-              }}
-              placeholder={t("claimManagement.selectClaimType")}
-              options={claimTypes?.map((item) => ({
-                label: item?.type,
-                value: item?._id,
-              }))}
-              isSearchable
-              menuPlacement="auto"
-              isClearable
-            />
-          </div>
-        ),
+        key: "company",
+        header: t("claimManagement.company"),
+        render: (claim) => claim.company?.name || "—",
       },
       {
-        customComponent: (
-          <div className="w-full min-w-0">
+        key: "status",
+        header: t("claimManagement.status"),
+        render: (claim) => renderClaimStatusCell(claim),
+      },
+      {
+        key: "documents",
+        header: t("claimManagement.documents"),
+        render: (claim) => {
+          const documents = getAllSupportingDocuments(claim.items);
+          if (documents.length === 0) return "—";
+          if (documents.length === 1) {
+            const d0 = documents[0];
+            const fid = d0.fileId || d0.file_id || d0._id;
+            return (
+              <button
+                type="button"
+                onClick={() => HandleOpenFile(fid)}
+                className="epc-cell__link"
+              >
+                {d0.name || "Document"}
+              </button>
+            );
+          }
+          return (
+            <div className="flex flex-col gap-1">
+              {documents.slice(0, 2).map((doc, index) => {
+                const fid = doc.fileId || doc.file_id || doc._id;
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => HandleOpenFile(fid)}
+                    className="epc-cell__link text-left"
+                  >
+                    {doc.name || "Document"}
+                  </button>
+                );
+              })}
+              {documents.length > 2 && (
+                <span className="epc-cell__secondary">
+                  +{documents.length - 2} more
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        key: "actions",
+        header: t("claimManagement.action"),
+        align: "right",
+        render: (claim) => getClaimActionButtons(claim),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t]
+  );
+
+  return (
+    <EpcPage
+      flush
+      title={t("claimManagement.claim")}
+      subtitle={t("claimManagement.pageDescription")}
+      action={
+        hasPermission("Add") ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={downloadExcel}>
+              <img
+                src={csv || "/placeholder.svg"}
+                alt=""
+                className="w-4 h-4 object-contain"
+              />
+              {t("claimManagement.downloadExcel")}
+            </Button>
+            <Button variant="secondary" onClick={downloadPDF}>
+              <img
+                src={pdf || "/placeholder.svg"}
+                alt=""
+                className="w-4 h-4 object-contain"
+              />
+              {t("claimManagement.downloadPDF")}
+            </Button>
+            <Button onClick={() => history.push("/new-claim")}>
+              <PlusIcon size={15} />
+              {t("claimManagement.applyClaimOnBehalf")}
+            </Button>
+          </div>
+        ) : null
+      }
+    >
+      <div className="epc-stack">
+        <HrListStatsSummaryCards
+          stats={stats}
+          labels={{
+            total: t("claimManagement.totalClaims"),
+            approved: t("claimManagement.approvedClaims"),
+            pending: t("claimManagement.pendingClaims"),
+            rejected: t("claimManagement.rejectedClaims"),
+          }}
+        />
+
+        <FilterBar
+          subtitle={t("claimManagement.search")}
+          searchPlaceholder={t("claimManagement.search")}
+          searchValue={searchInput}
+          onSearchChange={(value) => setSearchInput(value)}
+          filters={portalFilters}
+          values={portalFilterValues}
+          onChange={handlePortalFilterChange}
+          onReset={resetFilters}
+        />
+
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="min-w-[180px]">
+            <label className="block text-xs text-gray-500 mb-1">
+              {t("claimManagement.searchByNameId")}
+            </label>
+            <input
+              type="text"
+              value={nameIdFilter}
+              onChange={(e) => setNameIdFilter(e.target.value)}
+              placeholder={t("claimManagement.searchByNameId")}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="min-w-[180px]">
+            <label className="block text-xs text-gray-500 mb-1">
+              {t("claimManagement.searchByClaimReference")}
+            </label>
+            <input
+              type="text"
+              value={claimReference}
+              onChange={(e) => setClaimReference(e.target.value)}
+              placeholder={t("claimManagement.searchByClaimReference")}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="min-w-[200px]">
             <CurrencyDropdown
               businessId={companyFilter}
               value={currencyFilter}
@@ -1535,30 +1670,7 @@ const ClaimsDashboard = () => {
               placeholder={t("claimManagement.selectCurrency")}
             />
           </div>
-        ),
-      },
-      {
-        isTextInput: true,
-        name: "claimReference",
-        value: claimReference,
-        onChange: (v) => setClaimReference(v),
-        placeholder: t("claimManagement.searchByClaimReference"),
-      },
-      {
-        options: [
-          { label: t("claimManagement.searchByClaimStatus"), value: "" },
-          { label: "Approved", value: "approved" },
-          { label: "Rejected", value: "rejected" },
-          { label: "Pending", value: "pending" },
-        ],
-        value: statusFilter ?? "",
-        onChange: (value) => setStatusFilter(value),
-        placeholder: t("claimManagement.searchByClaimStatus"),
-        isClearable: true,
-      },
-      {
-        customComponent: (
-          <div className="w-full min-w-0">
+          <div className="min-w-[240px]">
             <FormInput
               type="date-range"
               initialStartDate={dateRangeFilter.startDate}
@@ -1574,201 +1686,40 @@ const ClaimsDashboard = () => {
               width="100%"
             />
           </div>
-        ),
-      },
-    ];
+        </div>
 
-  return (
-    <div className={HR_PAGE_SHELL}>
-      <div className={HR_PAGE_INNER}>
-      <PageHeader
-        variant="large"
-        title={t("claimManagement.claim")}
-        description={t("claimManagement.pageDescription")}
-        showAddButton={false}
-        renderActions={[
-          ...(hasPermission("Add")
-            ? [
-                <button
-                  key="excel"
-                  type="button"
-                  className={HR_HEADER_BTN_EXCEL}
-                  onClick={downloadExcel}
-                >
-                  <img
-                    src={csv || "/placeholder.svg"}
-                    alt="csv-icon"
-                    className="w-5 h-5 object-contain"
-                  />
-                  {t("claimManagement.downloadExcel")}
-                </button>,
-                <button
-                  key="pdf"
-                  type="button"
-                  className={HR_HEADER_BTN_PDF}
-                  onClick={downloadPDF}
-                >
-                  <img
-                    src={pdf || "/placeholder.svg"}
-                    alt="pdf-icon"
-                    className="w-5 h-5 object-contain"
-                  />
-                  {t("claimManagement.downloadPDF")}
-                </button>,
-              ]
-            : []),
-          ...(hasPermission("Add")
-            ? [
-                <button
-                  key="add"
-                  type="button"
-                  className={HR_HEADER_BTN_PRIMARY}
-                  onClick={() => history.push("/new-claim")}
-                >
-                  <FilePlus size={16} />
-                  {t("claimManagement.applyClaimOnBehalf")}
-                </button>,
-              ]
-            : []),
-        ]}
-      />
-      {/* <div className="flex justify-between items-center mb-6">
-        <h1 className="text-base font-semibold text-gray-800">Claim</h1>
-        {adminInfo?.role.name === "Admin" && (
-          <div className="flex space-x-4">
-            <button className="bg-[#17B26A] text-white px-4 py-3 rounded-xl flex items-center" onClick={downloadExcel}>
-              <img src={csv || "/placeholder.svg"} alt="csv-icon" className="mr-2 w-5 h-5 object-contain" />
-              Download Excel
-            </button>
-            <button className="bg-[#F04438] text-white px-4 py-3 rounded-xl flex items-center" onClick={downloadPDF}>
-              <img src={pdf || "/placeholder.svg"} alt="pdf-icon" className="mr-2 w-5 h-5 object-contain" />
-              Download PDF
-            </button>
-            <Link to="/new-claim" className="bg-[var(--p-blue)] text-white px-4 py-2 rounded-xl flex items-center">
-              <span className="mr-2">
-                <img src={userIcon || "/placeholder.svg"} className="fill-white" />
-              </span>
-              Add New
-            </Link>
-          </div>
-        )}
-      </div> */}
-
-      <HrListStatsSummaryCards
-        stats={stats}
-        labels={{
-          total: t("claimManagement.totalClaims"),
-          approved: t("claimManagement.approvedClaims"),
-          pending: t("claimManagement.pendingClaims"),
-          rejected: t("claimManagement.rejectedClaims"),
-        }}
-      />
-
-      {/* Claims table - Updated with smart currency handling */}
-      <div className={HR_TABLE_CARD}>
-          <DataTable
-            wideTable
-            skipDynamicColumnWidths
-            actionColumnHeaderLabel={claimActionHeader}
-            headersWithoutCellTooltip={[claimActionHeader]}
-            colWidths={claimTableColWidths}
-            filters={claimTableFilters}
-            searchValue={searchInput}
-            onSearch={(value) => setSearchInput(value)}
-            searchPlaceholder={t("claimManagement.search")}
-            headers={[
-              t("claimManagement.empName"),
-              t("claimManagement.itemsCount"),
-              t("claimManagement.claimAmount"),
-              t("claimManagement.currencies"),
-              t("claimManagement.company"),
-              t("claimManagement.status"),
-              t("claimManagement.documents"),
-              claimActionHeader,
-            ]}
-            data={filteredClaims}
-            total={totalResults}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            onRecordsPerPageChange={handleRecordsPerPageChange}
-            recordsPerPage={recordsPerPage}
-            totalPages={totalPages}
-            loading={claimsLoading}
-            renderRow={(claim) => (
-              <tr key={claim._id} className="border-b hover:bg-gray-50">
-                <td className="py-3 px-4">{claim.employee?.displayName}</td>
-                <td className="py-3 px-4">
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                    {claim.items?.length || 0} items
-                  </span>
-                </td>
-                {/* Updated claim amount cell with smart currency handling */}
-                <td className="py-3 px-4">
-                  <ClaimAmountCell items={claim.items} />
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex flex-wrap gap-1">
-                    {getUniqueCurrencies(claim.items).map((currency, index) => (
-                      <span
-                        key={index}
-                        className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-medium"
-                      >
-                        {currency}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="py-3 px-4">{claim.company?.name}</td>
-                <td className="py-3 px-4">
-                  <div className="flex flex-col items-center justify-center">
-                    {renderClaimStatusCell(claim)}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  {(() => {
-                    const documents = getAllSupportingDocuments(claim.items);
-                    if (documents.length === 0) return "-";
-                    if (documents.length === 1) {
-                      const d0 = documents[0];
-                      const fid = d0.fileId || d0.file_id || d0._id;
-                      return (
-                        <button
-                          onClick={() => HandleOpenFile(fid)}
-                          className="text-blue-600 hover:underline text-sm"
-                        >
-                          {d0.name || "Document"}
-                        </button>
-                      );
-                    }
-                    return (
-                      <div className="flex flex-col gap-1">
-                        {documents.slice(0, 2).map((doc, index) => {
-                          const fid = doc.fileId || doc.file_id || doc._id;
-                          return (
-                            <button
-                              key={index}
-                              onClick={() => HandleOpenFile(fid)}
-                              className="text-blue-600 hover:underline text-xs text-left"
-                            >
-                              {doc.name || "Document"}
-                            </button>
-                          );
-                        })}
-                        {documents.length > 2 && (
-                          <span className="text-xs text-gray-500">
-                            +{documents.length - 2} more
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </td>
-                <td className="py-4 px-4 align-top overflow-visible whitespace-normal">
-                  {getClaimActionButtons(claim)}
-                </td>
-              </tr>
-            )}
+        <Card>
+          <CardHeader
+            title={t("claimManagement.claim")}
+            subtitle={
+              claimsLoading
+                ? "Loading…"
+                : `${totalResults} total claims`
+            }
           />
+
+          <PortalDataTable
+            columns={columns}
+            rows={claimsLoading ? [] : filteredClaims}
+            rowKey="_id"
+            emptyMessage={
+              claimsLoading
+                ? "Loading…"
+                : t("No data available") || "No claims found."
+            }
+          />
+
+          {!claimsLoading && totalResults > 0 ? (
+            <Pagination
+              page={currentPage}
+              pageSize={recordsPerPage}
+              total={totalResults}
+              itemLabel="claims"
+              onPageChange={handlePageChange}
+              onPageSizeChange={handleRecordsPerPageChange}
+            />
+          ) : null}
+        </Card>
       </div>
 
       {/* Approval Modal */}
@@ -1921,8 +1872,7 @@ const ClaimsDashboard = () => {
         {currentClaimForLevels &&
           renderClaimApprovalsDetail(currentClaimForLevels)}
       </CustomModal>
-      </div>
-    </div>
+    </EpcPage>
   );
 };
 

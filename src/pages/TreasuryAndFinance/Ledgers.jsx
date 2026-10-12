@@ -1,38 +1,32 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
-import {
-  FiChevronRight,
-  FiEye,
-  FiX,
-  FiUpload,
-  FiSearch,
-  FiDownload,
-  FiFileText,
-} from "react-icons/fi";
-import { useHistory, Link } from "react-router-dom";
-import arrowDown from "../../assets/img/icons/frame.svg";
-import arrowUp from "../../assets/img/icons/frame2.svg";
+import { FiEye, FiX, FiDownload, FiFileText } from "react-icons/fi";
+import { Link } from "react-router-dom";
 import sales from "../../assets/img/icons/Sales.png";
 import group from "../../assets/img/icons/Group.png";
 import union from "../../assets/img/icons/Union.png";
-const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 import AddTransactionButton from "../../components/TreasuryAndFinance/AddTransactionButton";
 import DateRangeComponent from "@/page-layouts/components/DateRangeComponent";
 import useAsync from "@/hooks/useAsync";
 import BankManagementServices from "@/services/BankManagementServices";
 import Papa from "papaparse";
 import { formatAmount, formatDate } from "@/components/formatAmount";
-import CustomDatePicker from "@/components/CustomDatePicker";
-import CustomPagination from "@/components/CustomPagination";
-import { Select } from "@windmill/react-ui";
-import { DataTable, DropdownBasic, PageHeader } from "@/page-layouts/index";
+import { ActionButtons } from "@/page-layouts/index";
 import { notifyError, notifySuccess } from "@/utils/toast";
-import SearchableDropdown from "@/components/SearchableDropdown";
-import SingleBusinessField from "@/components/SingleBusinessField";
 import {
   isSingleAssignedBusiness,
   readAssignedBusinessesFallback,
 } from "@/utils/sessionAssignedBusinesses";
+import { ACTION_BUTTON_TYPES } from "@/utils/constants";
+import { EpcPage } from "@/components/Epc/EpcSurface";
+import FilterBar from "@/customer/components/ui/FilterBar";
+import { Card, CardHeader } from "@/customer/components/ui/Card";
+import PortalDataTable from "@/customer/components/ui/DataTable";
+import Pagination from "@/customer/components/ui/Pagination";
+import Button from "@/customer/components/ui/Button";
+import { DownloadIcon } from "@/customer/components/ui/icons";
+
+const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
 // Main Ledger Component
 const Ledgers = () => {
@@ -40,10 +34,8 @@ const Ledgers = () => {
 
   const bankAccounts = data?.accounts || [];
 
-  const [transactions, setTransactions] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   console.log("current page", currentPage);
   const currentPageRef = useRef(1);
@@ -63,9 +55,9 @@ const Ledgers = () => {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [businesses, setBusinesses] = useState([]);
+  // Pre-existing fetchStats target (overview tiles use transaction response stats)
+  const [, setStats] = useState(null);
   const isSingleBusiness = isSingleAssignedBusiness();
-
-  const history = useHistory();
 
   // Fetch transactions based on API filters
   const fetchTransactions = useCallback(
@@ -102,11 +94,9 @@ const Ledgers = () => {
         );
 
         console.log("transactions", response.data);
-        const transactions = response.data.transactions || [];
-        setTransactions(transactions);
-        setFilteredTransactions(transactions);
+        const nextTransactions = response.data.transactions || [];
+        setFilteredTransactions(nextTransactions);
         setTotalResults(response.data.total || 0);
-        setTotalPages(Math.ceil((response.data.total || 0) / limit));
         setTotalBalance(response.data.stats?.totalBalance || 0);
         setTotalIncome(response.data.stats?.totalIncome || 0);
         setTotalExpense(response.data.stats?.totalExpense || 0);
@@ -237,14 +227,6 @@ const Ledgers = () => {
     setSelectedTransaction(null);
   };
 
-  const handleAddTransaction = () => {
-    history.push("/add-ledger");
-  };
-
-  const handleUploadStatement = () => {
-    document.getElementById("uploadBankStatement").click();
-  };
-
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -329,17 +311,6 @@ const Ledgers = () => {
     setViewingDocument(null);
   };
 
-  const formatCurrency = (amount) => {
-    return `${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-  };
-
-  const handleDateChange = (input) => {
-    setSingleDate(input);
-    setDateRangeStart(""); // Clear date range when single date is set
-    setDateRangeEnd("");
-    setCurrentPage(1);
-  };
-
   const handleTransactionTypeChange = (input) => {
     setSelectedTransactionType(input);
     setCurrentPage(1);
@@ -417,7 +388,7 @@ const Ledgers = () => {
         bankAccountMap[account._id] = account.accountName;
       });
 
-      const data = allTransactions.map((transaction) => {
+      const exportData = allTransactions.map((transaction) => {
         // Get bank account name from populated object or from map
         let bankAccountName = "";
         if (transaction.bankAccountId) {
@@ -453,7 +424,7 @@ const Ledgers = () => {
         };
       });
 
-      const csv = Papa.unparse(data);
+      const csv = Papa.unparse(exportData);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -474,56 +445,90 @@ const Ledgers = () => {
     }
   };
 
-  const CustomFilterComponent = () => {
-    return (
-      <div className="flex flex-wrap gap-2 w-full">
-        <DateRangeComponent
-          startDate={dateRangeStart}
-          endDate={dateRangeEnd}
-          onApply={handleDateRangeApply}
-          onClear={handleDateRangeClear}
-        />
-        <button
-          className="bg-white flex gap-2 border border-gray-300 rounded-md px-4 py-2 items-center hover:bg-gray-50"
-          onClick={handleExport}
-          disabled={loading}
-        >
-          <FiDownload className="mr-2" />
-          <span>Export</span>
-        </button>
-        <input
-          type="file"
-          id="uploadBankStatement"
-          className="hidden"
-          accept=".csv,.xlsx,.xls"
-          onChange={handleFileUpload}
-        />
-        <AddTransactionButton />
-      </div>
-    );
+  const handleRecordsPerPageChange = (value) => {
+    setCurrentPage(1);
+    setRecordsPerPage(value);
+    // fetchTransactions will be called by useEffect when recordsPerPage changes
   };
 
-  const tableFilters = [
+  const columns = [
     {
-      isClearButton: true,
-      buttonProps: {
-        onClick: () => {
-          clearAllFilters();
-          setCurrentPage(1);
-        },
-      },
+      key: "date",
+      header: "Date",
+      render: (row) => formatDate(row.date),
     },
     {
-      name: "transactionType",
-      type: "select",
-      value: selectedTransactionType,
-      onChange: (value) => {
-        handleTransactionTypeChange(value);
-        setCurrentPage(1);
-      },
+      key: "reference",
+      header: "Reference #",
+      render: (row) => (
+        <button
+          type="button"
+          className="epc-cell__link"
+          onClick={() => handleViewTransaction(row.reference)}
+        >
+          {row.reference || "—"}
+        </button>
+      ),
+    },
+    {
+      key: "description",
+      header: "Description",
+      render: (row) => (
+        <span className="epc-cell__primary">{row.description || "—"}</span>
+      ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (row) => (
+        <span
+          className={
+            row.type === "Income" || row.type === "Inflow"
+              ? "epc-cell__primary"
+              : "epc-cell__secondary"
+          }
+        >
+          {row.type || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      render: (row) => (
+        <span className="epc-cell__primary">{formatAmount(row.amount)}</span>
+      ),
+    },
+    {
+      key: "currency",
+      header: "Currency",
+      render: (row) => row.currency || "USD",
+    },
+    {
+      key: "actions",
+      header: "Action",
+      align: "right",
+      render: (row) => (
+        <ActionButtons
+          maxVisibleActions={1}
+          items={[
+            {
+              action: ACTION_BUTTON_TYPES.VIEW,
+              title: "View transaction",
+              onClick: () => handleViewTransaction(row.reference),
+            },
+          ]}
+        />
+      ),
+    },
+  ];
+
+  const portalFilters = [
+    {
+      key: "transactionType",
       placeholder: "Transaction Type: All",
       options: [
-        { value: "All", label: "Transaction Type: All" },
+        { value: "", label: "Transaction Type: All" },
         { value: "Income", label: "Income" },
         { value: "Expense", label: "Expense" },
         { value: "Inflow", label: "Inflow" },
@@ -531,16 +536,10 @@ const Ledgers = () => {
       ],
     },
     {
-      name: "category",
-      type: "select",
-      value: selectedCategory,
-      onChange: (value) => {
-        handleFilterChange("category", value);
-        setCurrentPage(1);
-      },
+      key: "category",
       placeholder: "Category: All",
       options: [
-        { value: "All", label: "Category: All" },
+        { value: "", label: "Category: All" },
         { value: "Sales", label: "Sales" },
         { value: "Services", label: "Services" },
         { value: "Supplies", label: "Supplies" },
@@ -552,13 +551,7 @@ const Ledgers = () => {
     ...(!isSingleBusiness
       ? [
           {
-            name: "business",
-            type: "select",
-            value: selectedBusiness,
-            onChange: (value) => {
-              handleBusinessChange(value);
-              setCurrentPage(1);
-            },
+            key: "business",
             placeholder: "Business: All",
             options: [
               { value: "", label: "Business: All" },
@@ -571,13 +564,7 @@ const Ledgers = () => {
         ]
       : []),
     {
-      name: "account",
-      type: "select",
-      value: selectedAccount,
-      onChange: (value) => {
-        handleAccountChange(value);
-        setCurrentPage(1);
-      },
+      key: "account",
       placeholder: "Account: All",
       options: [
         { value: "", label: "Account: All" },
@@ -589,133 +576,143 @@ const Ledgers = () => {
     },
   ];
 
-  const handleRecordsPerPageChange = (value) => {
-    setCurrentPage(1);
-    setRecordsPerPage(value);
-    // fetchTransactions will be called by useEffect when recordsPerPage changes
+  const portalFilterValues = {
+    transactionType:
+      selectedTransactionType === "All" ? "" : selectedTransactionType,
+    category: selectedCategory === "All" ? "" : selectedCategory,
+    business: selectedBusiness || "",
+    account: selectedAccount || "",
+  };
+
+  const handlePortalFilterChange = (key, value) => {
+    if (key === "transactionType") {
+      handleTransactionTypeChange(value || "All");
+      return;
+    }
+    if (key === "category") {
+      handleFilterChange("category", value || "All");
+      return;
+    }
+    if (key === "business") {
+      handleBusinessChange(value || "");
+      return;
+    }
+    if (key === "account") {
+      handleAccountChange(value || "");
+    }
   };
 
   return (
-    <div className="container max-w-7xl mx-auto px-4 py-8">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <PageHeader
-          title="Ledgers"
-          CustomFilterComponent={CustomFilterComponent}
-        />
-      </div>
-
-      {/* Overview Stats */}
-      <div className="mb-8 bg-[#F9F9FA] rounded-lg p-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-[#f8f8e1] rounded-lg p-6">
-            <div className="bg-[var(--p-blue)] w-12 h-12 rounded-full flex items-center justify-center mb-4">
-              <img src={sales} alt="sales" className="h-6" />
-            </div>
-            <div className="text-2xl font-bold text-gray-800 mb-2">
-              {formatAmount(totalBalance)}
-            </div>
-            <div className="text-[#425166]">Total Balance</div>
-          </div>
-          <div className="bg-[#DCFCE7] rounded-lg p-6">
-            <div className="bg-[#3CD856] w-12 h-12 rounded-full flex items-center justify-center mb-4">
-              <img src={group} alt="group" className="h-6" />
-            </div>
-            <div className="text-2xl font-bold text-gray-800 mb-2">
-              {formatAmount(totalIncome)}
-            </div>
-            <div className="text-[#425166]">Total Income</div>
-          </div>
-          <div className="bg-[#FFF4DE] rounded-lg p-6">
-            <div className="bg-[#FF947A] w-12 h-12 rounded-full flex items-center justify-center mb-4">
-              <img src={union} alt="union" className="h-6" />
-            </div>
-            <div className="text-2xl font-bold text-gray-800 mb-2">
-              {formatAmount(totalExpense)}
-            </div>
-            <div className="text-[#425166]">Total Expense</div>
-          </div>
+    <EpcPage
+      title="Ledgers"
+      subtitle="Review ledger transactions across bank accounts."
+      action={
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="secondary"
+            onClick={handleExport}
+            disabled={loading}
+          >
+            <DownloadIcon size={15} />
+            Export
+          </Button>
+          <input
+            type="file"
+            id="uploadBankStatement"
+            className="hidden"
+            accept=".csv,.xlsx,.xls"
+            onChange={handleFileUpload}
+          />
+          <AddTransactionButton />
         </div>
-      </div>
-
-      {/* Transactions Table */}
-      <div className="bg-[#F9F9FA] rounded-lg p-8">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-4">
-          <DataTable
-            headers={[
-              "Date",
-              "Reference #",
-              "Description",
-              "Type",
-              "Amount",
-              "Currency",
-              "Action",
-            ]}
-            title="All Ledgers"
-            data={filteredTransactions}
-            filters={tableFilters}
-            loading={loading}
-            onPageChange={handlePageChange}
-            onRecordsPerPageChange={handleRecordsPerPageChange}
-            totalResults={totalResults}
-            recordsPerPage={recordsPerPage}
-            totalPages={totalPages}
-            currentPage={currentPage}
-            onSearch={setSearchQuery}
-            searchValue={searchQuery}
-            renderRow={(transaction, index) =>
-              filteredTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="text-center py-10 text-gray-500">
-                    No transactions found
-                  </td>
-                </tr>
-              ) : (
-                <tr key={index} className="border-b hover:bg-gray-50">
-                  <td className="py-3 px-4 text-gray-800">
-                    {formatDate(transaction.date)}
-                    {/* {transaction.time} */}
-                  </td>
-                  <td className="py-3 px-4 text-gray-800">
-                    {transaction.reference}
-                  </td>
-                  <td className="py-3 px-4 text-gray-800">
-                    {transaction.description}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`${
-                        transaction.type === "Income" ||
-                        transaction.type === "Inflow"
-                          ? "text-green-500"
-                          : "text-red-500"
-                      }`}
-                    >
-                      {transaction.type}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-gray-800">
-                    {formatAmount(transaction.amount)}
-                  </td>
-                  <td className="py-3 px-4 text-gray-800">
-                    {transaction.currency || "USD"}
-                  </td>
-                  <td className="py-3 px-4">
-                    <button
-                      className="text-gray-600 hover:text-gray-900"
-                      onClick={() =>
-                        handleViewTransaction(transaction.reference)
-                      }
-                    >
-                      <FiEye size={20} />
-                    </button>
-                  </td>
-                </tr>
-              )
-            }
+      }
+    >
+      <div className="epc-stack">
+        {/* Date range kept above table content (complex filter) */}
+        <div className="flex flex-wrap gap-2">
+          <DateRangeComponent
+            startDate={dateRangeStart}
+            endDate={dateRangeEnd}
+            onApply={handleDateRangeApply}
+            onClear={handleDateRangeClear}
           />
         </div>
+
+        {/* Overview Stats */}
+        <div className="mb-2 bg-[#F9F9FA] rounded-lg p-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[#f8f8e1] rounded-lg p-6">
+              <div className="bg-[var(--p-blue)] w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <img src={sales} alt="sales" className="h-6" />
+              </div>
+              <div className="text-2xl font-bold text-gray-800 mb-2">
+                {formatAmount(totalBalance)}
+              </div>
+              <div className="text-[#425166]">Total Balance</div>
+            </div>
+            <div className="bg-[#DCFCE7] rounded-lg p-6">
+              <div className="bg-[#3CD856] w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <img src={group} alt="group" className="h-6" />
+              </div>
+              <div className="text-2xl font-bold text-gray-800 mb-2">
+                {formatAmount(totalIncome)}
+              </div>
+              <div className="text-[#425166]">Total Income</div>
+            </div>
+            <div className="bg-[#FFF4DE] rounded-lg p-6">
+              <div className="bg-[#FF947A] w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <img src={union} alt="union" className="h-6" />
+              </div>
+              <div className="text-2xl font-bold text-gray-800 mb-2">
+                {formatAmount(totalExpense)}
+              </div>
+              <div className="text-[#425166]">Total Expense</div>
+            </div>
+          </div>
+        </div>
+
+        <FilterBar
+          subtitle="Narrow by type, category, business, account or search."
+          searchPlaceholder="Search ledgers…"
+          searchValue={searchQuery}
+          onSearchChange={(value) => {
+            setSearchQuery(value);
+            setCurrentPage(1);
+          }}
+          values={portalFilterValues}
+          onChange={handlePortalFilterChange}
+          onReset={clearAllFilters}
+          filters={portalFilters}
+        />
+
+        <Card>
+          <CardHeader
+            title="All Ledgers"
+            subtitle={
+              loading ? "Loading…" : `${totalResults} total transactions`
+            }
+          />
+
+          <PortalDataTable
+            columns={columns}
+            rows={loading ? [] : filteredTransactions}
+            rowKey={(row) => row._id || row.reference}
+            emptyMessage={
+              loading ? "Loading transactions…" : "No transactions found"
+            }
+          />
+          {!loading && totalResults > 0 ? (
+            <Pagination
+              page={currentPage}
+              pageSize={recordsPerPage}
+              total={totalResults}
+              itemLabel="transactions"
+              onPageChange={handlePageChange}
+              onPageSizeChange={handleRecordsPerPageChange}
+            />
+          ) : null}
+        </Card>
       </div>
 
       {/* Transaction Details Modal */}
@@ -906,12 +903,12 @@ const Ledgers = () => {
                               to={`/view-vendor-invoice/${selectedTransaction.vendorInvoiceId._id}`}
                               className="text-[var(--p-blue)] hover:underline"
                             >
-                              {selectedTransaction.vendorInvoiceId.invoiceNumber ||
-                                "View invoice"}
+                              {selectedTransaction.vendorInvoiceId
+                                .invoiceNumber || "View invoice"}
                             </Link>
                           ) : (
-                            selectedTransaction?.vendorInvoiceId?.invoiceNumber ||
-                            "-"
+                            selectedTransaction?.vendorInvoiceId
+                              ?.invoiceNumber || "-"
                           )}
                         </p>
                       </div>
@@ -1096,7 +1093,7 @@ const Ledgers = () => {
           </div>
         </div>
       )}
-    </div>
+    </EpcPage>
   );
 };
 

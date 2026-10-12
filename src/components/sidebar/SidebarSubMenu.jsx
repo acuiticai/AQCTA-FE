@@ -64,7 +64,7 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
   });
 
   return (
-    <li className="relative mb-0.5">
+    <li>
       <button
         type="button"
         onClick={toggleExpand}
@@ -72,27 +72,31 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
           isCollapsed ? "admin-navitem--collapsed" : ""
         } ${isParentActive ? "is-active" : ""}`}
         title={isCollapsed ? route.name : ""}
+        aria-expanded={!isCollapsed && expanded}
       >
-        {!isCollapsed && (
-          <span className="flex-shrink-0">
-            {expanded ? (
-              <FiChevronDown className="h-4 w-4" />
-            ) : (
-              <FiChevronRight className="h-4 w-4" />
-            )}
+        {route.icon && (
+          <span className="admin-navitem__icon" aria-hidden="true">
+            {React.createElement(route.icon, {
+              className: "h-[18px] w-[18px] flex-shrink-0",
+            })}
           </span>
         )}
-        {route.icon &&
-          React.createElement(route.icon, {
-            className: "h-[18px] w-[18px] flex-shrink-0",
-          })}
         {!isCollapsed && (
-          <span className="min-w-0 flex-1 truncate text-left">{route.name}</span>
+          <>
+            <span className="admin-navitem__label">{route.name}</span>
+            <span className="admin-navitem__chevron" aria-hidden="true">
+              {expanded ? (
+                <FiChevronDown className="h-4 w-4" />
+              ) : (
+                <FiChevronRight className="h-4 w-4" />
+              )}
+            </span>
+          </>
         )}
       </button>
 
       {!isCollapsed && expanded && route.routes && (
-        <ul className="admin-submenu space-y-0.5">
+        <ul className="admin-submenu">
           {route.routes.map((subRoute) => {
             const currentPath = location.pathname;
             const subRoutePath = safePath(subRoute.path);
@@ -128,12 +132,12 @@ const SidebarSubMenu = ({ sidebar, route, isCollapsed = false }) => {
               >
                 <NavLink
                   to={subRoutePath}
-                  className={`admin-navitem${
+                  className={`admin-navitem admin-navitem--child${
                     isCurrentRoute ? " is-active" : ""
                   }`}
                   activeClassName="is-active"
                 >
-                  <span className="min-w-0 flex-1 truncate">{subRoute.name}</span>
+                  <span className="admin-navitem__label">{subRoute.name}</span>
                 </NavLink>
               </li>
             );

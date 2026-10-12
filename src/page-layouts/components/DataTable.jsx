@@ -88,7 +88,10 @@ const DataTable = ({
   /** Parent controls page size (e.g. attendance details); do not fetch /configuration and re-trigger pagination. */
   skipAutoPageSizeFromConfig = false,
   hideBusinessFieldWhenSingleBusiness = true,
+  /** When "portal", table chrome matches customer portal lists (used inside EpcSurface). */
+  variant = "default",
 }) => {
+  const isPortalVariant = variant === "portal";
   const { t } = useTranslation();
   const [assignedBusinessesCount, setAssignedBusinessesCount] = useState(0);
 
@@ -657,6 +660,7 @@ const DataTable = ({
 
     return (
       <div
+        className={isPortalVariant ? "data-table-layout__pagination" : undefined}
         style={{
           display: "flex",
           flexWrap: "wrap",
@@ -664,7 +668,7 @@ const DataTable = ({
           alignItems: "center",
           gap: "12px",
           width: "100%",
-          padding: "16px 16px 0px 16px",
+          padding: isPortalVariant ? undefined : "16px 16px 0px 16px",
         }}
       >
         <div
@@ -752,17 +756,28 @@ const DataTable = ({
                 key={number}
                 type="button"
                 onClick={() => onPageChange(number)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  backgroundColor:
-                    currentPage === number ? "var(--p-blue)" : "#FAF6F7",
-                  color: currentPage === number ? "white" : "#1A1A1A",
-                  border:
-                    currentPage === number
-                      ? "none"
-                      : "1px solid var(--acu-border, #E0D6D8)",
-                }}
+                className={
+                  isPortalVariant
+                    ? `data-table-layout__pagebtn${
+                        currentPage === number ? " is-active" : ""
+                      }`
+                    : undefined
+                }
+                style={
+                  isPortalVariant
+                    ? undefined
+                    : {
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        backgroundColor:
+                          currentPage === number ? "var(--p-blue)" : "#FAF6F7",
+                        color: currentPage === number ? "white" : "#1A1A1A",
+                        border:
+                          currentPage === number
+                            ? "none"
+                            : "1px solid var(--acu-border, #E0D6D8)",
+                      }
+                }
               >
                 {number}
               </button>
@@ -987,17 +1002,27 @@ const DataTable = ({
 
   if (!show) return null;
 
+  const showToolbar =
+    !isPortalVariant ||
+    Boolean(title) ||
+    (filters?.length ?? 0) > 0 ||
+    onSearch !== undefined ||
+    (actionButtons?.length ?? 0) > 0;
+
   return (
     <div
       className={`data-table-layout min-w-0 max-w-full ${
         wideTable || tableMaxHeight ? "w-full overflow-hidden" : ""
-      } ${!noPadding && "p-5 sm:p-6"} pb-6`}
+      } ${isPortalVariant ? "data-table-layout--portal" : ""} ${
+        !noPadding && !isPortalVariant && "p-5 sm:p-6"
+      } ${!isPortalVariant ? "pb-6" : ""}`}
     >
       <div
         className={`min-w-0 max-w-full ${
           wideTable || tableMaxHeight ? "w-full overflow-hidden" : ""
         } ${containerClassName}`}
       >
+        {showToolbar ? (
         <div
           style={{
             display: "flex",
@@ -1187,11 +1212,12 @@ const DataTable = ({
             ))}
           </div>
         </div>
+        ) : null}
       </div>
       <div
-        className={`admin-table-shell mt-5 w-full min-w-0 max-w-full ${
-          wideTable || tableMaxHeight ? "" : "overflow-hidden"
-        }`}
+        className={`admin-table-shell w-full min-w-0 max-w-full ${
+          isPortalVariant ? "mt-0" : "mt-5"
+        } ${wideTable || tableMaxHeight ? "" : "overflow-hidden"}`}
       >
         <div
           className={`min-w-0 max-w-full ${

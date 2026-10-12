@@ -5,20 +5,14 @@ import {
   useEffect,
   useRef,
   useContext,
-  useMemo,
   useCallback,
 } from "react";
-import { useTranslation } from "react-i18next";
 import AttendanceHeader from "../components/AttendanceHeader";
 import axios from "axios";
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 import AttendanceList from "../components/AttendanceList";
 import { AdminContext } from "@/context/AdminContext";
-import {
-  HR_PAGE_INNER,
-  HR_PAGE_SHELL,
-  HR_TABLE_CARD,
-} from "../components/hrPageHeaderStyles";
+import { HR_PAGE_INNER, HR_PAGE_SHELL } from "../components/hrPageHeaderStyles";
 
 const EMPTY_ATTENDANCE_FILTERS = {
   name: "",
@@ -28,7 +22,6 @@ const EMPTY_ATTENDANCE_FILTERS = {
 };
 
 const AttendancePage = () => {
-  const { t } = useTranslation();
   const { state } = useContext(AdminContext);
   const { adminInfo } = state || {};
 
@@ -156,115 +149,36 @@ const AttendancePage = () => {
     }
   };
 
-  const attendanceTableFilters = useMemo(() => {
-    const uniquePositionsByName =
-      positions?.filter(
-        (pos, index, self) =>
-          index === self.findIndex((p) => p.name === pos.name)
-      ) || [];
-
-    return [
-      {
-        isClearButton: true,
-        buttonProps: {
-          onClick: handleClearAttendanceFilters,
-        },
-      },
-      {
-        isBusinessDropdown: true,
-        businessDropdownProps: {
-          adminId: adminInfo?.id,
-          selectedBusiness,
-          onChange: setSelectedBusiness,
-          placeholder: t("attendance.selectBusiness"),
-          isClearable: true,
-        },
-      },
-      {
-        isTextInput: true,
-        name: "name",
-        value: searchParams.name,
-        onChange: (v) =>
-          setSearchParams((prev) => ({ ...prev, name: v })),
-        placeholder: t("attendance.searchByNameIc"),
-      },
-      {
-        options: [
-          { value: "", label: t("attendance.searchByDepartment") },
-          ...(departments
-            ?.filter(
-              (dept, index, self) =>
-                index === self.findIndex((d) => d.name === dept.name)
-            )
-            .map((dept) => ({
-              value: dept.name,
-              label: dept.name,
-            })) || []),
-        ],
-        value: searchParams.departmentName || "",
-        onChange: (val) =>
-          setSearchParams((prev) => ({ ...prev, departmentName: val })),
-        placeholder: t("attendance.searchByDepartment"),
-        isClearable: true,
-      },
-      {
-        options: [
-          { value: "", label: t("attendance.searchByPosition") },
-          ...uniquePositionsByName.map((pos) => ({
-            value: pos.name,
-            label: pos.name,
-          })),
-        ],
-        value: searchParams.positionName || "",
-        onChange: (val) =>
-          setSearchParams((prev) => ({ ...prev, positionName: val })),
-        placeholder: t("attendance.searchByPosition"),
-        isClearable: true,
-      },
-      {
-        isDatePicker: true,
-        value: searchParams.date || "",
-        onChange: (date) =>
-          setSearchParams((prev) => ({ ...prev, date: date || "" })),
-        clearable: true,
-      },
-    ];
-  }, [
-    t,
-    adminInfo?.id,
-    selectedBusiness,
-    departments,
-    positions,
-    searchParams.name,
-    searchParams.departmentName,
-    searchParams.positionName,
-    searchParams.date,
-    handleClearAttendanceFilters,
-  ]);
-
   return (
     <div className={HR_PAGE_SHELL}>
       <div className={HR_PAGE_INNER}>
-      <AttendanceHeader
-        searchParams={searchParams}
-        selectedBusiness={selectedBusiness}
-      />
-
-      <div className={`${HR_TABLE_CARD} mt-6`}>
-        <AttendanceList
-          filters={attendanceTableFilters}
-          attendanceRecords={attendanceRecords}
-          updateAttendanceStatus={updateAttendanceStatus}
-          currentPage={currentPage}
-          recordsPerPage={recordsPerPage}
-          totalResults={totalResults}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-          loading={loading}
-          onRecordsPerPageChange={handleRecordsPerPageChange}
-          updateAttendanceDates={updateAttendanceDates}
+        <AttendanceHeader
+          searchParams={searchParams}
+          selectedBusiness={selectedBusiness}
         />
-      </div>
+
+        <div className="mt-6">
+          <AttendanceList
+            attendanceRecords={attendanceRecords}
+            updateAttendanceStatus={updateAttendanceStatus}
+            currentPage={currentPage}
+            recordsPerPage={recordsPerPage}
+            totalResults={totalResults}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            loading={loading}
+            onRecordsPerPageChange={handleRecordsPerPageChange}
+            updateAttendanceDates={updateAttendanceDates}
+            searchParams={searchParams}
+            setSearchParams={setSearchParams}
+            departments={departments}
+            positions={positions}
+            selectedBusiness={selectedBusiness}
+            setSelectedBusiness={setSelectedBusiness}
+            onClearFilters={handleClearAttendanceFilters}
+            adminInfo={adminInfo}
+          />
+        </div>
       </div>
     </div>
   );

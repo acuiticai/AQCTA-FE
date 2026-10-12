@@ -23,12 +23,21 @@ export default function DataTable({
   const isControlled = Array.isArray(selected);
   const selection = isControlled ? selected : internal;
 
+  const resolveKey = (row, index) => {
+    if (typeof rowKey === "function") return rowKey(row, index);
+    return row?.[rowKey] ?? index;
+  };
+
   const setSelection = (next) => {
     if (!isControlled) setInternal(next);
     onSelectionChange?.(next);
   };
 
-  const keys = useMemo(() => rows.map((row) => row[rowKey]), [rows, rowKey]);
+  const keys = useMemo(
+    () => rows.map((row, index) => resolveKey(row, index)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, rowKey],
+  );
   const allSelected = keys.length > 0 && keys.every((k) => selection.includes(k));
   const someSelected = selection.length > 0 && !allSelected;
 
@@ -72,8 +81,8 @@ export default function DataTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
-            const key = row[rowKey];
+          {rows.map((row, index) => {
+            const key = resolveKey(row, index);
             const isSelected = selection.includes(key);
             return (
               <tr key={key} className={isSelected ? "is-selected" : undefined}>
