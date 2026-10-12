@@ -97,43 +97,9 @@ export default defineConfig({
     sourcemap: process.env.VITE_SOURCEMAP === "true",
     cssCodeSplit: true,
     reportCompressedSize: false, // skip gzip size reporting (saves CI time)
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          if (id.includes("react-dom") || id.includes("/react/")) {
-            return "vendor-react";
-          }
-          if (id.includes("@mui") || id.includes("@emotion")) {
-            return "vendor-mui";
-          }
-          if (id.includes("antd") || id.includes("@ant-design")) {
-            return "vendor-antd";
-          }
-          if (id.includes("firebase")) return "vendor-firebase";
-          if (id.includes("chart.js") || id.includes("recharts")) {
-            return "vendor-charts";
-          }
-          if (
-            id.includes("@react-pdf") ||
-            id.includes("jspdf") ||
-            id.includes("html2canvas") ||
-            id.includes("html2pdf")
-          ) {
-            return "vendor-pdf";
-          }
-          if (
-            id.includes("lodash") ||
-            id.includes("moment") ||
-            id.includes("dayjs") ||
-            id.includes("date-fns") ||
-            id.includes("axios")
-          ) {
-            return "vendor-utils";
-          }
-        },
-      },
-    },
+    // Do not use manualChunks — forcing vendor splits (esp. charts/react)
+    // caused "Cannot access 'X' before initialization" at runtime on Vercel.
+    rollupOptions: {},
     minify: "esbuild",
     esbuild: {
       drop: ["console", "debugger"], // Remove console and debugger statements in production
