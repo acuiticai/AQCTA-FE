@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
 import { VitePWA } from "vite-plugin-pwa";
 import compression from "vite-plugin-compression2";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 
 import dns from "dns";
@@ -15,6 +15,47 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(
   readFileSync(path.join(__dirname, "package.json"), "utf8"),
 );
+
+/**
+ * workbox-build writes absolute import paths with single quotes. Paths that
+ * contain an apostrophe (e.g. "Zul's Projects") break SW generation with
+ * "Missing semicolon". Re-apply a safe JSON.stringify escape after npm install.
+ */
+function ensureWorkboxApostrophePathFix() {
+  const registryPath = path.join(
+    __dirname,
+    "node_modules/workbox-build/build/lib/module-registry.js",
+  );
+  if (!existsSync(registryPath)) return;
+
+  const source = readFileSync(registryPath, "utf8");
+  const alreadyFixed = source.includes("const modulePath = JSON.stringify");
+  const hasBuggyQuote = source.includes("'${pkgRoot}/${moduleName}.mjs'");
+  if (alreadyFixed || !hasBuggyQuote) return;
+
+  const patched = source.replace(
+    [
+      "            const pkgJsonPath = require.resolve(`${pkg}/package.json`);",
+      "            const pkgRoot = upath_1.default.dirname(pkgJsonPath);",
+      "            const importStatement = (0, common_tags_1.oneLine) `import {${moduleName} as ${localName}} from",
+      "        '${pkgRoot}/${moduleName}.mjs';`;",
+    ].join("\n"),
+    [
+      "            const pkgJsonPath = require.resolve(`${pkg}/package.json`);",
+      "            const pkgRoot = upath_1.default.dirname(pkgJsonPath);",
+      "            // JSON.stringify so paths with apostrophes (e.g. Zul's Projects) stay valid JS.",
+      "            const modulePath = JSON.stringify(`${pkgRoot}/${moduleName}.mjs`);",
+      "            const importStatement = (0, common_tags_1.oneLine) `import {${moduleName} as ${localName}} from",
+      "        ${modulePath};`;",
+    ].join("\n"),
+  );
+
+  if (patched !== source) {
+    writeFileSync(registryPath, patched, "utf8");
+  }
+}
+
+ensureWorkboxApostrophePathFix();
 
 // Single source of truth for version + deploy date used by:
 // - injected build constants (__APP_VERSION__, __APP_DEPLOY_DATE__)
