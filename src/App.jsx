@@ -59,6 +59,8 @@ const PricingPlans = lazy(() => import("@/pages/onboarding/PricingPlans"));
 const RegistrationSubmitted = lazy(() =>
   import("@/pages/onboarding/RegistrationSubmitted"),
 );
+
+
 const WaitingForInvitation = lazy(() =>
   import("@/pages/onboarding/WaitingForInvitation"),
 );
