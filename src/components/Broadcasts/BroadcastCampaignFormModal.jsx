@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react"
 import axios from "axios";
 import MarketingRecipientsEditor from "@/components/Broadcasts/MarketingRecipientsEditor";
 import MarketingCustomerRecipientsPicker from "@/components/Broadcasts/MarketingCustomerRecipientsPicker";
