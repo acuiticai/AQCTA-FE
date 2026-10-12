@@ -1,4 +1,5 @@
 import React, { useId, useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ACTION_BUTTON_TYPES } from "@/utils/constants";
 import {
   eyeSvg,
@@ -50,15 +51,18 @@ const Button = ({
 const ActionsDropdown = ({ items, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({
-    top: 0,
+    top: "auto",
+    bottom: "auto",
     right: 0,
   });
-  const dropdownRef = useRef(null);
   const triggerRef = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      const inTrigger = triggerRef.current?.contains(event.target);
+      const inMenu = menuRef.current?.contains(event.target);
+      if (!inTrigger && !inMenu) {
         setIsOpen(false);
       }
     };
@@ -72,31 +76,40 @@ const ActionsDropdown = ({ items, disabled = false }) => {
   }, [isOpen]);
 
   const updateDropdownPosition = () => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const dropdownHeight = Math.min(items.length * 48 + 80, 300); // Estimate dropdown height
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
+    if (!triggerRef.current) return;
 
-      // If there's not enough space below but enough space above, show above
-      if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
-        setDropdownPosition({
-          top: rect.top - dropdownHeight - 8,
-          right: window.innerWidth - rect.right,
-        });
-      } else {
-        // Show below (default)
-        setDropdownPosition({
-          top: rect.bottom + 8,
-          right: window.innerWidth - rect.right,
-        });
-      }
+    const rect = triggerRef.current.getBoundingClientRect();
+    const menuHeight =
+      menuRef.current?.offsetHeight ||
+      Math.min(items.length * 48 + 80, 300);
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const right = Math.max(8, window.innerWidth - rect.right);
+    const gap = 8;
+
+    // Open below the trigger; flip above only when there is no room underneath
+    const openBelow =
+      spaceBelow >= menuHeight + gap || spaceBelow >= spaceAbove;
+
+    if (openBelow) {
+      setDropdownPosition({
+        top: rect.bottom + gap,
+        bottom: "auto",
+        right,
+      });
+    } else {
+      setDropdownPosition({
+        top: "auto",
+        bottom: window.innerHeight - rect.top + gap,
+        right,
+      });
     }
   };
 
   useEffect(() => {
     if (isOpen) {
-      updateDropdownPosition();
+      // Measure after paint so bottom/top use real menu height
+      const frame = requestAnimationFrame(updateDropdownPosition);
       const handleScroll = () => updateDropdownPosition();
       const handleResize = () => updateDropdownPosition();
 
@@ -104,11 +117,12 @@ const ActionsDropdown = ({ items, disabled = false }) => {
       window.addEventListener("resize", handleResize);
 
       return () => {
+        cancelAnimationFrame(frame);
         window.removeEventListener("scroll", handleScroll, true);
         window.removeEventListener("resize", handleResize);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, items.length]);
 
   const handleItemClick = (item) => {
     if (item.onClick) {
@@ -117,26 +131,17 @@ const ActionsDropdown = ({ items, disabled = false }) => {
     setIsOpen(false);
   };
 
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        ref={triggerRef}
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={disabled}
-        className="p-2 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 rounded-lg flex items-center transition-all duration-200 ease-in-out hover:scale-105 active:scale-95 group"
-      >
-        <HiDotsVertical className="text-gray-500 group-hover:text-p-blue min-w-5 w-5 min-h-4 h-4 transition-colors duration-200" />
-      </button>
-
-      {isOpen && (
+  const menu = isOpen
+    ? createPortal(
         <div
-          className="fixed w-56 bg-white border border-gray-200 rounded-xl shadow-2xl transition-all duration-200 ease-out"
+          ref={menuRef}
+          className="fixed w-56 bg-white border border-gray-200 rounded-xl shadow-2xl"
           style={{
-            zIndex: 9999,
+            zIndex: 99999,
             top: dropdownPosition.top,
+            bottom: dropdownPosition.bottom,
             right: dropdownPosition.right,
             maxHeight: "300px",
-            transform: "translateY(0)",
           }}
         >
           {/* Header */}
@@ -156,14 +161,19 @@ const ActionsDropdown = ({ items, disabled = false }) => {
               const content = (
                 <>
                   <div className="pointer-events-none flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 group-hover/item:bg-p-blue/10 transition-colors duration-150">
-                    <ActionButton {...item} href={undefined} target={undefined} onClick={undefined} />
+                    <ActionButton
+                      {...item}
+                      href={undefined}
+                      target={undefined}
+                      onClick={undefined}
+                    />
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900 group-hover/item:text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 group-hover/item:text-gray-900 truncate">
                       {item.title || item.tooltip || item.action}
                     </div>
                     {item.description && (
-                      <div className="text-xs text-gray-500 mt-0.5">
+                      <div className="text-xs text-gray-500 mt-0.5 truncate">
                         {item.description}
                       </div>
                     )}
@@ -209,8 +219,22 @@ const ActionsDropdown = ({ items, disabled = false }) => {
               <div className="w-8 h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent rounded-full"></div>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled}
+        className="p-2 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 rounded-lg flex items-center transition-all duration-200 ease-in-out hover:scale-105 active:scale-95 group"
+      >
+        <HiDotsVertical className="text-gray-500 group-hover:text-p-blue min-w-5 w-5 min-h-4 h-4 transition-colors duration-200" />
+      </button>
+      {menu}
     </div>
   );
 };

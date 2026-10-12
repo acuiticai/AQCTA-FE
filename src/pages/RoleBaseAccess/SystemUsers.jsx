@@ -766,11 +766,11 @@ const SystemUsers = () => {
     }));
   };
 
-  const handleUpdate = (SystemUsersId) => {
+  const handleUpdate = (selectedSystemUsers) => {
     if (!canUpdate) return;
-    const selectedSystemUsers = data.find((item) => item._id === SystemUsersId);
-    if (selectedSystemUsers) {
-      history.push(`/system-users/edit/${SystemUsersId}`, {
+    const userId = selectedSystemUsers?._id;
+    if (userId) {
+      history.push(`/system-users/edit/${userId}`, {
         user: selectedSystemUsers,
       });
     } else {
@@ -967,7 +967,7 @@ const SystemUsers = () => {
                     action: ACTION_BUTTON_TYPES.EDIT,
                     title: t("systemUsers.updateSystemUser"),
                     permission: canUpdate,
-                    onClick: () => handleUpdate(row._id),
+                    onClick: () => handleUpdate(row),
                   },
                   {
                     action: ACTION_BUTTON_TYPES.DELETE,
