@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Modal } from "react-responsive-modal";
 import "react-responsive-modal/styles.css";
 import styled from "styled-components";
-import { Button } from "../index";
+import Button from "./Button";
 
 // Styled scrollable content with custom scrollbar
 const ScrollableContent = styled.div`

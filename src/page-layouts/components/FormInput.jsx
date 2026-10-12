@@ -1,20 +1,18 @@
 import ColorPicker from "@/components/document_template/color-picker";
 import FileUpload from "@/components/document_template/file-upload";
-import {
-  InputFieldWithLabel,
-  DropdownBasic,
-  DropdownWithAddNewForm,
-  InputField,
-  MultiField,
-  Checkbox,
-  CustomDatePicker,
-  LabelValue,
-  TextArea,
-  CustomRangePicker,
-  DateRangeComponent,
-  EmptyCellContainer,
-  ObjectFormRenderer,
-} from "@/page-layouts/index";
+import InputFieldWithLabel from "./InputFieldWithLabel";
+import DropdownBasic from "./DropdownBasic";
+import DropdownWithAddNewForm from "./DropdownAddNewForm";
+import InputField from "./InputField";
+import MultiField from "./MultiField";
+import Checkbox from "./Checkbox";
+import CustomDatePicker from "./CustomDatePicker";
+import LabelValue from "./LabelValue";
+import TextArea from "./TextArea";
+import CustomRangePicker from "./CustomRangePicker";
+import DateRangeComponent from "./DateRangeComponent";
+import { EmptyCellContainer } from "./EmptyCellContainer";
+import ObjectFormRenderer from "./ObjectFormRenderer";
 import DropdownWithAddNewHtml from "./DropdownAddNewHtml";
 import DynamicField from "./DynamicField";
 import ReactQuill from "react-quill";

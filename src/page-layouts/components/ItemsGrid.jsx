@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Monitor, Trash2, Eye } from "lucide-react";
 import { formatDate } from "@/components/formatAmount";
-import { Loader, CustomModal } from "@/page-layouts/index";
+import Loader from "./Loader";
+import { CustomModal } from "./CustomModal";
 import _ from "lodash";
 
 const ItemsGrid = ({

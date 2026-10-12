@@ -1,4 +1,4 @@
-import { Loader } from "../index";
+import Loader from "./Loader";
 import { useRef, useLayoutEffect } from "react";
 
 export default function Button({

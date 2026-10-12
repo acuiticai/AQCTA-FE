@@ -1,4 +1,4 @@
-import { PageHeader } from "../index";
+import PageHeader from "./PageHeader";
 
 export default function Page({ children, header, customClassName }) {
   return (

@@ -1,6 +1,6 @@
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import { useState } from "react";
-import { Loader } from "@/page-layouts/index";
+import Loader from "./Loader";
 
 // Pass both selectedIndex and onSelectedIndexChange for parent-controlled tabs (e.g. programmatic tab switches).
 const CustomTabs = ({ tabs, onTabChange, selectedIndex: controlledIndex = 0, onSelectedIndexChange }) => {

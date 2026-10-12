@@ -1,4 +1,4 @@
-import { Loader } from "@/page-layouts/index";
+import Loader from "./Loader";
 import { FiInfo } from "react-icons/fi"; // Add this at the top for the info icon
 
 const SummaryCard = ({

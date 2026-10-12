@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useTranslation } from "react-i18next";
-import { CustomModal, DropdownBasic, FormInput } from "@/page-layouts/index";
+import { CustomModal } from "./CustomModal";
+import DropdownBasic from "./DropdownBasic";
+import FormInput from "./FormInput";
 import { Modal, Button, Input } from "@windmill/react-ui";
 import axios from "axios";
 import { AdminContext } from "@/context/AdminContext";

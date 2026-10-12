@@ -8,7 +8,8 @@ import { notifyError, notifySuccess } from "@/utils/toast";
 import useButtonColor from "@/hooks/useButtonColor";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { InputFieldWithLabel, InputLabel } from "@/page-layouts/index";
+import InputFieldWithLabel from "./InputFieldWithLabel";
+import InputLabel from "./InputLabel";
 
 const DropdownWithAddNewHtml = ({
   label,

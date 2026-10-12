@@ -1,11 +1,9 @@
 import useButtonColor from "@/hooks/useButtonColor";
-import {
-  FormInput,
-  PageHeader,
-  BackButton,
-  Loader,
-} from "@/page-layouts/index";
-import { FooterButtons } from "../index";
+import FormInput from "./FormInput";
+import PageHeader from "./PageHeader";
+import BackButton from "./BackButton";
+import Loader from "./Loader";
+import FooterButtons from "./FooterButtons";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { useMemo, useState } from "react";
 import { filterFormFieldsForSingleBusiness } from "@/utils/singleBusinessFormFields";

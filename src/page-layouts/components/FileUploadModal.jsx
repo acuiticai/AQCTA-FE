@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { CustomModal, Button } from "@/page-layouts/index";
+import { CustomModal } from "./CustomModal";
+import Button from "./Button";
 import {
   Box,
   Typography,

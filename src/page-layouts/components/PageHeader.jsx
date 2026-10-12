@@ -1,7 +1,8 @@
 import React from "react";
 import { FiPlus, FiMoreVertical } from "react-icons/fi";
 import useButtonColor from "@/hooks/useButtonColor";
-import { BackButton, FormInput } from "../index";
+import BackButton from "./BackButton";
+import FormInput from "./FormInput";
 import { Tooltip } from "./Tooltip";
 
 const DEFAULT_ADD_BUTTON_CLASS =

@@ -1,7 +1,7 @@
 // MultiField.jsx
 
 import React from "react";
-import { FormInput } from "@/page-layouts/index";
+import FormInput from "./FormInput";
 
 /**
  * @param {object[]} fields

@@ -92,9 +92,47 @@ export default defineConfig({
   build: {
     assetsDir: "assets",
     chunkSizeWarningLimit: 10 * 1024, // Only keep this once
-    sourcemap: true, // Enable source maps for debugging
+    // Sourcemaps on ~18k modules stall Rollup past Vercel's 45m build limit.
+    // Enable locally with: VITE_SOURCEMAP=true npm run build
+    sourcemap: process.env.VITE_SOURCEMAP === "true",
+    cssCodeSplit: true,
+    reportCompressedSize: false, // skip gzip size reporting (saves CI time)
     rollupOptions: {
-      // Additional Rollup configuration options if needed
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("react-dom") || id.includes("/react/")) {
+            return "vendor-react";
+          }
+          if (id.includes("@mui") || id.includes("@emotion")) {
+            return "vendor-mui";
+          }
+          if (id.includes("antd") || id.includes("@ant-design")) {
+            return "vendor-antd";
+          }
+          if (id.includes("firebase")) return "vendor-firebase";
+          if (id.includes("chart.js") || id.includes("recharts")) {
+            return "vendor-charts";
+          }
+          if (
+            id.includes("@react-pdf") ||
+            id.includes("jspdf") ||
+            id.includes("html2canvas") ||
+            id.includes("html2pdf")
+          ) {
+            return "vendor-pdf";
+          }
+          if (
+            id.includes("lodash") ||
+            id.includes("moment") ||
+            id.includes("dayjs") ||
+            id.includes("date-fns") ||
+            id.includes("axios")
+          ) {
+            return "vendor-utils";
+          }
+        },
+      },
     },
     minify: "esbuild",
     esbuild: {

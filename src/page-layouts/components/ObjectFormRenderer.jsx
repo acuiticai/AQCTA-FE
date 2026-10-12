@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Checkbox, InputField } from "@/page-layouts/index";
+import Checkbox from "./Checkbox";
+import InputField from "./InputField";
 
 const ObjectFormRenderer = ({
   data,

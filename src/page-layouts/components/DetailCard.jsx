@@ -1,4 +1,4 @@
-import { EmptyCellContainer } from "@/page-layouts/index";
+import { EmptyCellContainer } from "./EmptyCellContainer";
 import React from "react";
 
 const DetailsCard = ({ title, details, col = 1 }) => {

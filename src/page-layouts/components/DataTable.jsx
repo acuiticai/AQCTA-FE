@@ -9,14 +9,15 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { FiSearch } from "react-icons/fi";
-import { Button, DropdownBasic, Checkbox, ActionButtons } from "../index";
+import Button from "./Button";
+import DropdownBasic from "./DropdownBasic";
+import Checkbox from "./Checkbox";
+import ActionButtons from "./ActionButtons";
 import FilterDropdown from "./helpers/FilterDropdown";
 import { Tooltip } from "react-tooltip";
-import {
-  Tooltip as LayoutTooltip,
-  CustomDatePicker,
-  FormInput,
-} from "@/page-layouts/index";
+import { Tooltip as LayoutTooltip } from "./Tooltip";
+import CustomDatePicker from "./CustomDatePicker";
+import FormInput from "./FormInput";
 import { readAssignedBusinessesFallback } from "@/utils/sessionAssignedBusinesses";
 import "react-tooltip/dist/react-tooltip.css";
 import { IoClose } from "react-icons/io5";

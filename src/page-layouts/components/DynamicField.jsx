@@ -3,7 +3,8 @@ import { FiPlus, FiTrash2, FiUpload } from "react-icons/fi";
 import FormInput from "./FormInput";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { Loader, ObjectFormRenderer } from "../index";
+import Loader from "./Loader";
+import ObjectFormRenderer from "./ObjectFormRenderer";
 import { formatDate } from "@/components/formatAmount";
 
 // Add custom styles for ReactQuill editor and textarea scrollbars
