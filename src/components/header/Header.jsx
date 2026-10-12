@@ -41,8 +41,15 @@ import {
  * @returns {JSX.Element} The header component
  */
 const Header = () => {
-  const { toggleSidebar, isSidebarCollapsed, toggleSidebarCollapse } =
-    useContext(SidebarContext);
+  const {
+    toggleSidebar,
+    isSidebarOpen,
+    isSidebarCollapsed,
+    toggleSidebarCollapse,
+    windowDimension,
+  } = useContext(SidebarContext);
+  // Tailwind `lg` — desktop collapse vs mobile drawer
+  const isDesktopNav = windowDimension >= 1024;
   const { state, dispatch } = useContext(AdminContext);
   const { mode } = useContext(WindmillContext);
   const { adminInfo } = state;
@@ -112,7 +119,11 @@ const Header = () => {
       window.dispatchEvent(new CustomEvent("toggle-settings-sidebar"));
       return;
     }
-    toggleSidebarCollapse();
+    if (isDesktopNav) {
+      toggleSidebarCollapse();
+      return;
+    }
+    toggleSidebar();
   };
 
   // Language options
@@ -511,25 +522,40 @@ const Header = () => {
             type="button"
             onClick={handleSidebarButtonClick}
             className="admin-iconbtn"
+            aria-expanded={
+              isSettingsPage
+                ? undefined
+                : isDesktopNav
+                  ? !isSidebarCollapsed
+                  : isSidebarOpen
+            }
             aria-label={
               isSettingsPage
                 ? "Toggle Settings Sidebar"
-                : isSidebarCollapsed
-                  ? "Expand Sidebar"
-                  : "Collapse Sidebar"
+                : isDesktopNav
+                  ? isSidebarCollapsed
+                    ? "Expand Sidebar"
+                    : "Collapse Sidebar"
+                  : isSidebarOpen
+                    ? "Close Menu"
+                    : "Open Menu"
             }
             title={
               isSettingsPage
                 ? "Toggle Settings Sidebar"
-                : isSidebarCollapsed
-                  ? "Expand Sidebar"
-                  : "Collapse Sidebar"
+                : isDesktopNav
+                  ? isSidebarCollapsed
+                    ? "Expand Sidebar"
+                    : "Collapse Sidebar"
+                  : isSidebarOpen
+                    ? "Close Menu"
+                    : "Open Menu"
             }
           >
-            {isSidebarCollapsed ? (
-              <FiMenu className="h-[18px] w-[18px]" />
-            ) : (
+            {isDesktopNav && !isSidebarCollapsed ? (
               <FiChevronLeft className="h-[18px] w-[18px]" />
+            ) : (
+              <FiMenu className="h-[18px] w-[18px]" />
             )}
           </button>
 

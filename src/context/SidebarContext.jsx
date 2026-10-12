@@ -1,5 +1,11 @@
 import Cookies from "js-cookie";
-import { createContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 
@@ -41,18 +47,33 @@ export const SidebarProvider = ({ children }) => {
   const { i18n } = useTranslation();
   const [tabIndex, setTabIndex] = useState(0);
 
-  const closeSidebar = () => setIsSidebarOpen(false);
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  const toggleSidebarCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+  const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
+  const toggleSidebar = useCallback(
+    () => setIsSidebarOpen((open) => !open),
+    [],
+  );
+  const toggleSidebarCollapse = useCallback(
+    () => setIsSidebarCollapsed((collapsed) => !collapsed),
+    [],
+  );
 
-  const closeDrawer = () => setIsDrawerOpen(false);
-  const toggleDrawer = () => setIsDrawerOpen(!isDrawerOpen);
+  const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
+  const toggleDrawer = useCallback(
+    () => setIsDrawerOpen((open) => !open),
+    [],
+  );
 
-  const closeBulkDrawer = () => setIsBulkDrawerOpen(false);
-  const toggleBulkDrawer = () => setIsBulkDrawerOpen(!isBulkDrawerOpen);
+  const closeBulkDrawer = useCallback(() => setIsBulkDrawerOpen(false), []);
+  const toggleBulkDrawer = useCallback(
+    () => setIsBulkDrawerOpen((open) => !open),
+    [],
+  );
 
-  const closeModal = () => setIsModalOpen(false);
-  const toggleModal = () => setIsModalOpen(!isModalOpen);
+  const closeModal = useCallback(() => setIsModalOpen(false), []);
+  const toggleModal = useCallback(
+    () => setIsModalOpen((open) => !open),
+    [],
+  );
 
   const handleLanguageChange = (lang) => {
     Cookies.set("i18next", lang, {

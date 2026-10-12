@@ -7,6 +7,10 @@ import FooterButtons from "./FooterButtons";
 import { notifyError, notifySuccess } from "@/utils/toast";
 import { useMemo, useState } from "react";
 import { filterFormFieldsForSingleBusiness } from "@/utils/singleBusinessFormFields";
+import {
+  StepHeading,
+  StepNote,
+} from "@/customer/components/wizard/ApplicationWizard";
 
 const Form = ({
   formFields = [],
@@ -45,6 +49,19 @@ const Form = ({
   fieldsRowGapClassName = "gap-6",
   /** Tighten vertical space between label and input for all fields in this form. */
   tightLabelInputSpacing = false,
+  /**
+   * Enquiry-style white card: section heading, outlined fields, tinted note,
+   * and a separate Cancel / Save footer card.
+   */
+  cardLayout = false,
+  cardTitle = "",
+  cardSubtitle = "",
+  /** `{ title, body }` — shown as StepNote at the foot of the card. */
+  cardNote = null,
+  /** Default InputField theme when a field does not set its own (`invoice` = outlined). */
+  fieldTheme = undefined,
+  /** Default DropdownBasic appearance when a field does not set its own. */
+  fieldAppearance = undefined,
 }) => {
   const themeButtonColor = useButtonColor();
   const buttonColor = buttonColorProp || themeButtonColor;
@@ -98,52 +115,173 @@ const Form = ({
     return groupFieldsIntoRows(visibleFields, maxFieldsPerRow);
   }, [formFields, maxFieldsPerRow]);
 
-  // Prevent form submission when Enter is pressed in dropdown/select fields
+  // Prevent form submit on Enter inside selects — but do not stopPropagation so
+  // react-select can still commit the highlighted option.
   const handleFormKeyDown = (e) => {
-    if (e.key === "Enter") {
-      const activeElement = document.activeElement;
-      const target = e.target;
-      
-      // Check if react-select menu is currently open anywhere on the page
-      const reactSelectMenus = document.querySelectorAll('[class*="react-select__menu"], [id*="react-select"]');
-      const isReactSelectMenuOpen = Array.from(reactSelectMenus).some(menu => {
-        const style = window.getComputedStyle(menu);
-        return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-      });
-      
-      // Check if the active element or target is inside a react-select component
-      const isInReactSelect = activeElement?.closest('[class*="react-select"]') ||
-                              target?.closest('[class*="react-select"]') ||
-                              activeElement?.closest('[id*="react-select"]') ||
-                              target?.closest('[id*="react-select"]');
-      
-      // Check if the active element is a select dropdown
-      const isSelectElement = activeElement?.tagName === "SELECT" || target?.tagName === "SELECT";
-      
-      // Check if the active element is in a searchable dropdown
-      const isInSearchableDropdown = activeElement?.closest('[class*="searchable-dropdown"]') ||
-                                     target?.closest('[class*="searchable-dropdown"]') ||
-                                     activeElement?.closest('[class*="dropdown"]') ||
-                                     target?.closest('[class*="dropdown"]');
-      
-      // Check if input is a react-select input
-      const isReactSelectInput = activeElement?.getAttribute('id')?.includes('react-select') ||
-                                target?.getAttribute('id')?.includes('react-select') ||
-                                activeElement?.classList.toString().includes('react-select') ||
-                                target?.classList.toString().includes('react-select');
-      
-      // If any of these conditions are true, prevent form submission
-      if (isReactSelectMenuOpen || isInReactSelect || isSelectElement || isInSearchableDropdown || isReactSelectInput) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      }
+    if (e.key !== "Enter") return;
+
+    const activeElement = document.activeElement;
+    const target = e.target;
+
+    const isNativeSelect =
+      activeElement?.tagName === "SELECT" || target?.tagName === "SELECT";
+
+    const inEpicsSelect =
+      activeElement?.closest(".epics-dropdown") ||
+      target?.closest(".epics-dropdown") ||
+      activeElement?.closest('[class*="react-select"]') ||
+      target?.closest('[class*="react-select"]') ||
+      activeElement?.closest('[class*="searchable-dropdown"]') ||
+      target?.closest('[class*="searchable-dropdown"]');
+
+    const selectInputId =
+      activeElement?.getAttribute?.("id") || target?.getAttribute?.("id") || "";
+    const isSelectInput =
+      selectInputId.includes("react-select") ||
+      selectInputId.includes("epics-input-");
+
+    if (isNativeSelect || inEpicsSelect || isSelectInput) {
+      e.preventDefault();
     }
   };
 
+  const gridColsClass = (row) => {
+    if (
+      maxFieldsPerRow === 1 ||
+      row?.some((field) => field?.fullWidth)
+    ) {
+      return "grid-cols-1";
+    }
+    if (maxFieldsPerRow === 2) {
+      // Card forms: stack on very narrow viewports; otherwise match enquiry 2-col
+      return cardLayout ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2";
+    }
+    return "grid-cols-1";
+  };
+
+  const fieldsBlock = isOpen ? (
+    <div className={fieldsStackSpacingClassName}>
+      {fieldRows.map((row, rowIndex) => (
+        <div
+          key={rowIndex}
+          className={`grid ${fieldsRowGapClassName} items-start ${gridColsClass(row)}`}
+          style={{ alignItems: "stretch" }}
+        >
+          {row.map((field, fieldIndex) => {
+            const slotsBefore = row
+              .slice(0, fieldIndex)
+              .reduce(
+                (sum, f) =>
+                  sum +
+                  Math.min(
+                    Number(f?.colSpan) > 0 ? Number(f.colSpan) : 1,
+                    maxFieldsPerRow,
+                  ),
+                0,
+              );
+            const rowHeadroom = Math.max(0, maxFieldsPerRow - slotsBefore);
+
+            return (
+              <div
+                key={rowIndex + fieldIndex + field?.name}
+                className={
+                  field?.mergeIntoParentGrid
+                    ? "contents"
+                    : `w-full min-w-0 flex flex-col ${
+                        field?.colSpan === 2 && maxFieldsPerRow === 2
+                          ? "col-span-2"
+                          : ""
+                      }`
+                }
+              >
+                {field.icon &&
+                  console.log("Field icon for", field.name, field.icon)}
+                <FormInput
+                  {...field}
+                  theme={
+                    field.theme ??
+                    (["text", "email", "tel", "number", "password", "textarea"].includes(
+                      field?.type || "text",
+                    )
+                      ? fieldTheme
+                      : field.theme)
+                  }
+                  appearance={
+                    field.appearance ??
+                    (field?.type === "select" ||
+                    field?.type === "select-dropdown-with-add-new"
+                      ? fieldAppearance
+                      : undefined)
+                  }
+                  description={field.description || field.helpText}
+                  tightLabelInputSpacing={
+                    field?.tightLabelInputSpacing ?? tightLabelInputSpacing
+                  }
+                  defaultRequired={
+                    noDefaultValidation ? false : field?.required
+                  }
+                  direction={
+                    field?.direction || labelAndFieldDirection || "row"
+                  }
+                  customLabelWidth={customLabelWidth}
+                  labelClassName={
+                    field?.labelClassName ||
+                    (cardLayout
+                      ? "font-semibold text-[#0a0a0a] !text-[13px]"
+                      : undefined)
+                  }
+                  rowHeadroom={
+                    field?.mergeIntoParentGrid ? rowHeadroom : 0
+                  }
+                />
+              </div>
+            );
+          })}
+          {Array.from({
+            length: Math.max(
+              0,
+              maxFieldsPerRow -
+                row.reduce(
+                  (sum, f) =>
+                    sum +
+                    Math.min(
+                      Number(f?.colSpan) > 0 ? Number(f.colSpan) : 1,
+                      maxFieldsPerRow,
+                    ),
+                  0,
+                ),
+            ),
+          }).map((_, emptyIndex) => (
+            <div
+              key={`empty-${rowIndex}-${emptyIndex}`}
+              className="w-full min-w-0"
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  ) : null;
+
+  const footer = showFooterButtons ? (
+    <FooterButtons
+      onCancel={handleCancel}
+      buttonColor={buttonColor}
+      loading={isSubmitting || loading}
+      disableSubmission={
+        disableSaveButton ||
+        (isSubmitted && disableReSubmission ? isSubmitted : false)
+      }
+      showCancelButton={showCancelButton}
+      cancelButtonText={cancelButtonText}
+      saveButtonText={saveButtonText}
+      extendedButtons={extendedFooterButtons}
+      layout={cardLayout ? "wizard" : "default"}
+    />
+  ) : null;
+
   return isLoading ? (
     <div className="flex justify-center items-center h-full">
-<Loader />
+      <Loader />
     </div>
   ) : (
     <form
@@ -171,116 +309,36 @@ const Form = ({
           setLoading(false);
         }
       }}
-      className={formOuterSpacingClassName}
+      className={
+        cardLayout
+          ? "space-y-0 mt-0"
+          : formOuterSpacingClassName
+      }
     >
-      {" "}
       {showBackButton && <BackButton onClick={onBackClick} />}
       {title && <PageHeader title={title} />}
-      <div className="rounded-xl relative">
-        {isOpen && (
-          <div className={fieldsStackSpacingClassName}>
-            {fieldRows.map((row, rowIndex) => (
-              <div
-                key={rowIndex}
-                className={`grid ${fieldsRowGapClassName} items-start ${
-                  maxFieldsPerRow === 1 ||
-                  row?.some((field) => field?.fullWidth)
-                    ? "grid-cols-1"
-                    : maxFieldsPerRow === 2
-                    ? "grid-cols-2"
-                    : "grid-cols-1"
-                }`}
-                style={{ alignItems: "stretch" }}
-              >
-                {row.map((field, fieldIndex) => {
-                  const slotsBefore = row
-                    .slice(0, fieldIndex)
-                    .reduce(
-                      (sum, f) =>
-                        sum +
-                        Math.min(
-                          Number(f?.colSpan) > 0 ? Number(f.colSpan) : 1,
-                          maxFieldsPerRow,
-                        ),
-                      0,
-                    );
-                  const rowHeadroom = Math.max(0, maxFieldsPerRow - slotsBefore);
-
-                  return (
-                    <div
-                      key={rowIndex + fieldIndex + field?.name}
-                      className={
-                        field?.mergeIntoParentGrid
-                          ? "contents"
-                          : `w-full min-w-0 flex flex-col ${
-                              field?.colSpan === 2 && maxFieldsPerRow === 2
-                                ? "col-span-2"
-                                : ""
-                            }`
-                      }
-                    >
-                      {field.icon &&
-                        console.log("Field icon for", field.name, field.icon)}
-                      <FormInput
-                        {...field}
-                        description={field.description || field.helpText}
-                        tightLabelInputSpacing={
-                          field?.tightLabelInputSpacing ?? tightLabelInputSpacing
-                        }
-                        defaultRequired={
-                          noDefaultValidation ? false : field?.required
-                        }
-                        direction={
-                          field?.direction || labelAndFieldDirection || "row"
-                        }
-                        customLabelWidth={customLabelWidth}
-                        rowHeadroom={
-                          field?.mergeIntoParentGrid ? rowHeadroom : 0
-                        }
-                      />
-                    </div>
-                  );
-                })}
-                {Array.from({
-                  length: Math.max(
-                    0,
-                    maxFieldsPerRow -
-                      row.reduce(
-                        (sum, f) =>
-                          sum +
-                          Math.min(
-                            Number(f?.colSpan) > 0 ? Number(f.colSpan) : 1,
-                            maxFieldsPerRow,
-                          ),
-                        0,
-                      ),
-                  ),
-                }).map((_, emptyIndex) => (
-                  <div
-                    key={`empty-${rowIndex}-${emptyIndex}`}
-                    className="w-full min-w-0"
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {beforeFooter}
-      {showFooterButtons && (
-        <FooterButtons
-          onCancel={handleCancel}
-          buttonColor={buttonColor}
-          loading={isSubmitting || loading}
-          disableSubmission={
-            disableSaveButton ||
-            (isSubmitted && disableReSubmission ? isSubmitted : false)
-          }
-          showCancelButton={showCancelButton}
-          cancelButtonText={cancelButtonText}
-          saveButtonText={saveButtonText}
-          extendedButtons={extendedFooterButtons}
-        />
+      {cardLayout ? (
+        <>
+          <section className="epc-card-panel">
+            {(cardTitle || cardSubtitle) && (
+              <StepHeading title={cardTitle} subtitle={cardSubtitle} />
+            )}
+            <div className="relative">{fieldsBlock}</div>
+            {beforeFooter}
+            {cardNote?.body ? (
+              <StepNote title={cardNote.title}>{cardNote.body}</StepNote>
+            ) : null}
+          </section>
+          {footer ? (
+            <footer className="epc-card-panel epc-wizard__foot">{footer}</footer>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <div className="rounded-xl relative">{fieldsBlock}</div>
+          {beforeFooter}
+          {footer}
+        </>
       )}
     </form>
   );

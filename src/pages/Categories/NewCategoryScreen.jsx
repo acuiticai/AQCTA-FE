@@ -4,13 +4,16 @@ import { useTranslation } from "react-i18next";
 import axios from "axios";
 import { notifySuccess, notifyError } from "@/utils/toast";
 import useButtonColor from "@/hooks/useButtonColor";
-import { PageHeader, Form, useFormScreenExit } from "@/page-layouts/index";
+import { Form, useFormScreenExit } from "@/page-layouts/index";
 import { AdminContext } from "@/context/AdminContext";
 import DynamicCustomFieldsForm from "@/components/custom-fields/DynamicCustomFieldsForm";
 import { fetchDefinitions } from "@/services/customFieldServices";
 import { validateCustomFieldValues } from "@/utils/customFieldValidation";
 import { persistCustomFieldValuesByBusiness } from "@/utils/customFieldPersistence";
 import { injectCustomFieldsInFormFields } from "@/utils/customFieldPlacement";
+import { CustomerBrandingProvider } from "@/customer/branding";
+import { DetailHeader } from "@/customer/components/ui/DetailBlocks";
+import "@/customer/styles/index.css";
 
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
@@ -336,6 +339,7 @@ const NewCategoryScreen = () => {
         name: "description",
         type: "textarea",
         required: false,
+        fullWidth: true,
         placeholder: t("category.descriptionPlaceholder"),
         value: formData.description,
         onChange: handleInputChange,
@@ -355,9 +359,11 @@ const NewCategoryScreen = () => {
 
   if (isLoading.form) {
     return (
-      <div className="p-6 bg-white min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-t-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
+      <CustomerBrandingProvider className="epc-admin-wizard-root">
+        <div className="epc-admin-wizard flex items-center justify-center min-h-[40vh]">
+          <div className="w-16 h-16 border-4 border-t-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+        </div>
+      </CustomerBrandingProvider>
     );
   }
 
@@ -410,33 +416,56 @@ const NewCategoryScreen = () => {
     });
 
   return (
-    <div className="py-6 px-6 min-h-screen">
-      <PageHeader
-        title={t("category.new")}
-        showBackButton
-        backFallbackPath="/categories"
-      />
-      <Form
-        formFields={formFieldsWithCustomFields}
-        handleSubmit={handleSubmit}
-        handleCancel={exitCategoriesScreen}
-        loading={loading}
-        buttonColor={buttonColor}
-        isOpen={true}
-        saveButtonText={t("Save")}
-        cancelButtonText={t("Cancel")}
-        labelAndFieldDirection="column"
-        tightLabelInputSpacing={true}
-        customLabelWidth="w-full"
-        fieldsPerRow={2}
-        formOuterSpacingClassName="space-y-4 mt-3"
-        fieldsStackSpacingClassName="space-y-4"
-        fieldsRowGapClassName="gap-4"
-        beforeFooter={
-          renderInFooter ? renderCategoryCustomFields() : null
-        }
-      />
-    </div>
+    <CustomerBrandingProvider className="epc-admin-wizard-root">
+      <div className="epc-admin-wizard">
+        <DetailHeader
+          title={t("category.new")}
+          subtitle={t("category.newSubtitle", {
+            defaultValue:
+              "Create a category to group items for inventory and sales.",
+          })}
+          onBack={exitCategoriesScreen}
+        />
+        <Form
+          formFields={formFieldsWithCustomFields}
+          handleSubmit={handleSubmit}
+          handleCancel={exitCategoriesScreen}
+          isSubmitting={loading}
+          buttonColor={buttonColor}
+          isOpen={true}
+          saveButtonText={t("Save")}
+          cancelButtonText={t("Cancel")}
+          labelAndFieldDirection="column"
+          tightLabelInputSpacing={true}
+          customLabelWidth="w-full"
+          fieldsPerRow={2}
+          fieldsStackSpacingClassName="space-y-4"
+          fieldsRowGapClassName="gap-4"
+          cardLayout
+          cardTitle={t("category.categoryDetails", {
+            defaultValue: "Category Details",
+          })}
+          cardSubtitle={t("category.categoryDetailsSubtitle", {
+            defaultValue:
+              "Provide the business, name, and an optional description for this category.",
+          })}
+          cardNote={{
+            title: t("category.whatHappensNext", {
+              defaultValue: "What happens next",
+            }),
+            body: t("category.whatHappensNextCreate", {
+              defaultValue:
+                "After you save, this category can be assigned when creating or editing items.",
+            }),
+          }}
+          fieldTheme="invoice"
+          fieldAppearance="document"
+          beforeFooter={
+            renderInFooter ? renderCategoryCustomFields() : null
+          }
+        />
+      </div>
+    </CustomerBrandingProvider>
   );
 };
 

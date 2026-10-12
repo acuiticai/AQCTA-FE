@@ -66,9 +66,11 @@ const Layout = () => {
     location.pathname === "/pos" ||
     location.pathname === "/kitchen";
 
+  // Close mobile nav only on route change — do not depend on closeSidebar
+  // identity or opening the menu will immediately close it again.
   useEffect(() => {
     closeSidebar();
-  }, [location, closeSidebar]);
+  }, [location.pathname, location.search, closeSidebar]);
 
   useSyncBrowserHistory();
 

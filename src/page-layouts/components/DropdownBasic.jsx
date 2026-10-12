@@ -457,7 +457,11 @@ const DropdownBasic = ({
           customClassName={`${className} ${customClassName}`}
         />
       ) : (
-        <div className="w-full min-w-0 max-w-full epics-dropdown">
+        <div
+          className={`w-full min-w-0 max-w-full epics-dropdown${
+            appearance === "document" ? " epics-dropdown--document" : ""
+          }`}
+        >
           <SelectComponent
             options={formatOptions()}
             value={formatValue()}
@@ -465,6 +469,11 @@ const DropdownBasic = ({
             placeholder={placeholderValue}
             className={`epics-dropdown ${className} ${customClassName}`.trim()}
             classNamePrefix="epics-dropdown"
+            instanceId={
+              props.name
+                ? `epics-${String(props.name).replace(/[^a-zA-Z0-9_-]/g, "-")}`
+                : undefined
+            }
             styles={{
               ...resolvedStyles,
               menuPortal: (base, state) => ({
@@ -472,6 +481,7 @@ const DropdownBasic = ({
                   ? resolvedStyles.menuPortal(base, state)
                   : base),
                 zIndex: 2147483647,
+                pointerEvents: "auto",
               }),
               menu: (base, state) => ({
                 ...(typeof resolvedStyles.menu === "function"
@@ -482,11 +492,16 @@ const DropdownBasic = ({
                 boxShadow:
                   "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
                 overflow: "hidden",
+                zIndex: 2147483647,
+                pointerEvents: "auto",
               }),
             }}
             menuPortalTarget={
               typeof window !== "undefined" ? document.body : null
             }
+            menuShouldBlockScroll={false}
+            menuShouldScrollIntoView={false}
+            openMenuOnClick
             isMulti={isMulti}
             isDisabled={isDisabled}
             menuPlacement="auto"
@@ -494,7 +509,13 @@ const DropdownBasic = ({
             isClearable={isClearable}
             name={props.name}
             onBlur={props.onBlur}
-            inputId={props.inputId || props.id}
+            inputId={
+              props.inputId ||
+              props.id ||
+              (props.name
+                ? `epics-input-${String(props.name).replace(/[^a-zA-Z0-9_-]/g, "-")}`
+                : undefined)
+            }
           />
         </div>
       )}

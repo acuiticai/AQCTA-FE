@@ -11,16 +11,12 @@ import {
 } from "./components/CustomerEInvoiceInfo";
 import OtherDetailsWithTabs from "./components/OtherDetailsWithTabs";
 import { notifySuccess, notifyError } from "@/utils/toast";
-import { PageHeader, Button as LayoutButton } from "@/page-layouts";
-import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-} from "@windmill/react-ui";
 import { AdminContext } from "@/context/AdminContext";
 import { persistCustomFieldValuesByBusiness } from "@/utils/customFieldPersistence";
 import { useEInvoiceEnabledMap } from "@/hooks/useBusinessEInvoiceEnabled";
+import { CustomerBrandingProvider } from "@/customer/branding";
+import { DetailHeader } from "@/customer/components/ui/DetailBlocks";
+import "@/customer/styles/index.css";
 
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
@@ -663,63 +659,82 @@ const NewCustomerScreen = () => {
   };
 
   return (
-    <div className="py-6 px-6 min-h-screen">
-      <PageHeader
-        title={isEditMode ? t("customer.editCustomer") : t("customer.newCustomer")}
-        showBackButton
-        backFallbackPath="/customers"
-      />
+    <CustomerBrandingProvider className="epc-admin-wizard-root">
+      <div className="epc-admin-wizard">
+        <DetailHeader
+          title={
+            isEditMode
+              ? t("customer.editCustomer")
+              : t("customer.newCustomer")
+          }
+          subtitle={
+            isEditMode
+              ? t("customer.editCustomerSubtitle", {
+                  defaultValue:
+                    "Update company details and related information for this customer.",
+                })
+              : t("customer.newCustomerSubtitle", {
+                  defaultValue:
+                    "Add company details so this customer can be used across sales and applications.",
+                })
+          }
+          onBack={() => history.push("/customers")}
+        />
 
-      <BasicInformation
-        onChange={(data) => {
-          const nextBasic = buildPciBasicInformationPayload(data);
-          setFormData((prev) => ({
-            ...prev,
-            business: data.business || prev.business,
-            status: data.status || prev.status || "Active",
-            basicInformation: nextBasic,
-          }));
-        }}
-        businesses={businesses}
-        initialData={{
-          ...formData.basicInformation,
-          business: formData.business,
-          status: formData.status || formData.basicInformation?.status || "Active",
-        }}
-        isEditMode={isEditMode}
-        onSave={handleBasicInfoSave}
-        customerId={id || undefined}
-      />
+        <BasicInformation
+          onChange={(data) => {
+            const nextBasic = buildPciBasicInformationPayload(data);
+            setFormData((prev) => ({
+              ...prev,
+              business: data.business || prev.business,
+              status: data.status || prev.status || "Active",
+              basicInformation: nextBasic,
+            }));
+          }}
+          businesses={businesses}
+          initialData={{
+            ...formData.basicInformation,
+            business: formData.business,
+            status:
+              formData.status ||
+              formData.basicInformation?.status ||
+              "Active",
+          }}
+          isEditMode={isEditMode}
+          onSave={handleBasicInfoSave}
+          customerId={id || undefined}
+        />
 
-      {isEditMode && !loading && (
-        <div className="mt-4">
-          <OtherDetailsWithTabs
-            key={id}
-            initialData={{
-              eInvoiceInfo: formData.eInvoiceInfo || {},
-              keyContacts: formData.keyContacts || [],
-              addresses: formData.addresses || [],
-            }}
-            onEInvoiceInfoChange={(next) =>
-              setFormData((prev) => ({ ...prev, eInvoiceInfo: next }))
-            }
-            clientType={formData.basicInformation?.client_type}
-            customerPhone={formData.basicInformation?.customerPhone}
-            customerId={id}
-            businessId={
-              Array.isArray(formData.business)
-                ? formData.business[0]
-                : formData.business
-            }
-            customerFirstName={formData.customerFirstName}
-            config={config}
-            onTabSave={handleTabSave}
-            initialActiveTabIndex={otherDetailsInitialTab}
-            showEInvoiceTab={showEInvoiceForCustomer}
-          />
-        </div>
-      )}
-    </div>
+        {isEditMode && !loading && (
+          <section className="epc-card-panel mt-4">
+            <OtherDetailsWithTabs
+              key={id}
+              initialData={{
+                eInvoiceInfo: formData.eInvoiceInfo || {},
+                keyContacts: formData.keyContacts || [],
+                addresses: formData.addresses || [],
+              }}
+              onEInvoiceInfoChange={(next) =>
+                setFormData((prev) => ({ ...prev, eInvoiceInfo: next }))
+              }
+              clientType={formData.basicInformation?.client_type}
+              customerPhone={formData.basicInformation?.customerPhone}
+              customerId={id}
+              businessId={
+                Array.isArray(formData.business)
+                  ? formData.business[0]
+                  : formData.business
+              }
+              customerFirstName={formData.customerFirstName}
+              config={config}
+              onTabSave={handleTabSave}
+              initialActiveTabIndex={otherDetailsInitialTab}
+              showEInvoiceTab={showEInvoiceForCustomer}
+            />
+          </section>
+        )}
+      </div>
+    </CustomerBrandingProvider>
   );
 };
 

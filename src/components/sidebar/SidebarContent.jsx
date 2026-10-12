@@ -98,10 +98,12 @@ const StaffRoute = {
   ],
 };
 
-const SidebarContent = () => {
+const SidebarContent = ({ forceExpanded = false }) => {
   const { t } = useTranslation();
   const { dispatch, state } = useContext(AdminContext);
   const { isSidebarCollapsed } = useContext(SidebarContext);
+  // Mobile drawer always shows full labels even if desktop is collapsed
+  const collapsed = forceExpanded ? false : isSidebarCollapsed;
   const [sidebar, setSidebar] = useState([]);
   const location = useLocation();
   const history = useHistory();
@@ -218,7 +220,7 @@ const SidebarContent = () => {
           sidebar={finalSidebar}
           route={route}
           key={route.productKey || route._id || route.name}
-          isCollapsed={isSidebarCollapsed}
+          isCollapsed={collapsed}
         />
       );
     }
@@ -231,11 +233,11 @@ const SidebarContent = () => {
           exact={route.path === "/"}
           isActive={(match, loc) => isRouteActive(route, loc)}
           className={`admin-navitem ${
-            isSidebarCollapsed ? "admin-navitem--collapsed" : ""
+            collapsed ? "admin-navitem--collapsed" : ""
           }`}
           activeClassName="is-active"
           rel="noreferrer"
-          title={isSidebarCollapsed ? t(`${route.name}`) : ""}
+          title={collapsed ? t(`${route.name}`) : ""}
         >
           {route.icon && (
             <span className="admin-navitem__icon" aria-hidden="true">
@@ -244,7 +246,7 @@ const SidebarContent = () => {
               })}
             </span>
           )}
-          {!isSidebarCollapsed && (
+          {!collapsed && (
             <span className="admin-navitem__label">{t(`${route.name}`)}</span>
           )}
         </NavLink>
@@ -326,7 +328,7 @@ const SidebarContent = () => {
     <div className="admin-sidebar">
       <div
         className={`admin-sidebar__brand${
-          isSidebarCollapsed ? " admin-sidebar__brand--collapsed" : ""
+          collapsed ? " admin-sidebar__brand--collapsed" : ""
         }`}
       >
         <Link to="/home" className="admin-sidebar__brand-link">
@@ -345,7 +347,7 @@ const SidebarContent = () => {
       <nav className="admin-sidebar__nav" aria-label="Admin sections">
         {sidebarSections.map((section) => (
           <div className="admin-navgroup" key={section.id}>
-            {!isSidebarCollapsed && (
+            {!collapsed && (
               <p className="admin-navgroup__label">{section.label}</p>
             )}
             <ul className="admin-navgroup__list">
@@ -357,19 +359,19 @@ const SidebarContent = () => {
 
       <div
         className={`admin-sidebar__foot${
-          isSidebarCollapsed ? " admin-sidebar__foot--collapsed" : ""
+          collapsed ? " admin-sidebar__foot--collapsed" : ""
         }`}
       >
         <button
           type="button"
           className="admin-navitem admin-navitem--quiet"
           onClick={handleLogout}
-          title={isSidebarCollapsed ? "Logout" : ""}
+          title={collapsed ? "Logout" : ""}
         >
           <span className="admin-navitem__icon" aria-hidden="true">
             <FiLogOut className="h-[18px] w-[18px]" />
           </span>
-          {!isSidebarCollapsed && (
+          {!collapsed && (
             <span className="admin-navitem__label">Logout</span>
           )}
         </button>
@@ -377,7 +379,7 @@ const SidebarContent = () => {
         <div
           className="admin-account"
           title={
-            isSidebarCollapsed ? `${adminName}${adminEmail ? ` · ${adminEmail}` : ""}` : ""
+            collapsed ? `${adminName}${adminEmail ? ` · ${adminEmail}` : ""}` : ""
           }
         >
           <img
@@ -389,7 +391,7 @@ const SidebarContent = () => {
               e.target.src = DEFAULT_ADMIN_AVATAR_URL;
             }}
           />
-          {!isSidebarCollapsed && (
+          {!collapsed && (
             <span className="admin-account__text">
               <span className="admin-account__name">{adminName}</span>
               {adminEmail && (

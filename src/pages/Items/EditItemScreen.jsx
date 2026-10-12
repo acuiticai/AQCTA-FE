@@ -5,7 +5,6 @@ import axios from "axios";
 import { notifySuccess, notifyError } from "@/utils/toast";
 import useButtonColor from "@/hooks/useButtonColor";
 import {
-  PageHeader,
   useFormScreenExit,
   Form,
 } from "@/page-layouts/index";
@@ -17,6 +16,9 @@ import {
   upsertValues,
 } from "@/services/customFieldServices";
 import { validateCustomFieldValues } from "@/utils/customFieldValidation";
+import { CustomerBrandingProvider } from "@/customer/branding";
+import { DetailHeader } from "@/customer/components/ui/DetailBlocks";
+import "@/customer/styles/index.css";
 const Base_URL = import.meta.env.VITE_APP_API_BASE_URL;
 
 function getSelectedBusinessIds(business) {
@@ -1491,36 +1493,61 @@ const EditItemScreen = () => {
 
   if (isLoading.form) {
     return (
-      <div className="p-6 bg-white min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-t-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
+      <CustomerBrandingProvider className="epc-admin-wizard-root">
+        <div className="epc-admin-wizard flex items-center justify-center min-h-[40vh]">
+          <div className="w-16 h-16 border-4 border-t-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+        </div>
+      </CustomerBrandingProvider>
     );
   }
 
   return (
-    <div className="py-6 px-6 min-h-screen">
-      <PageHeader
-        title={t("item.edit")}
-        showBackButton
-        backFallbackPath="/items"
-      />
-      <Form
-        formFields={formFields}
-        handleSubmit={handleSubmit}
-        handleCancel={exitItemsScreen}
-        loading={loading}
-        buttonColor={buttonColor}
-        isOpen={true}
-        saveButtonText={t("Save")}
-        cancelButtonText={t("Cancel")}
-        labelAndFieldDirection="column"
-        customLabelWidth="w-full"
-        fieldsPerRow={2}
-        formOuterSpacingClassName="space-y-4 mt-3"
-        fieldsStackSpacingClassName="space-y-4"
-        fieldsRowGapClassName="gap-4"
-      />
-    </div>
+    <CustomerBrandingProvider className="epc-admin-wizard-root">
+      <div className="epc-admin-wizard">
+        <DetailHeader
+          title={t("item.edit")}
+          subtitle={t("item.editSubtitle", {
+            defaultValue:
+              "Update product details, pricing, and inventory settings.",
+          })}
+          onBack={exitItemsScreen}
+        />
+        <Form
+          formFields={formFields}
+          handleSubmit={handleSubmit}
+          handleCancel={exitItemsScreen}
+          isSubmitting={loading}
+          buttonColor={buttonColor}
+          isOpen={true}
+          saveButtonText={t("Save")}
+          cancelButtonText={t("Cancel")}
+          labelAndFieldDirection="column"
+          customLabelWidth="w-full"
+          fieldsPerRow={2}
+          fieldsStackSpacingClassName="space-y-4"
+          fieldsRowGapClassName="gap-4"
+          cardLayout
+          cardTitle={t("item.itemDetails", {
+            defaultValue: "Item Details",
+          })}
+          cardSubtitle={t("item.itemDetailsSubtitle", {
+            defaultValue:
+              "Provide the product identity, type, units, and sales or purchase information.",
+          })}
+          cardNote={{
+            title: t("item.whatHappensNext", {
+              defaultValue: "What happens next",
+            }),
+            body: t("item.whatHappensNextEdit", {
+              defaultValue:
+                "Saving updates this item everywhere it is used — quotations, invoices, and inventory.",
+            }),
+          }}
+          fieldTheme="invoice"
+          fieldAppearance="document"
+        />
+      </div>
+    </CustomerBrandingProvider>
   );
 };
 
