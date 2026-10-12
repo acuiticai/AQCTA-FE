@@ -19,11 +19,14 @@ import {
   FiCalendar,
 } from "react-icons/fi";
 import { AdminContext } from "@/context/AdminContext";
-import { PageHeader, useFormScreenExit, Form, DropdownBasic } from "@/page-layouts/index";
+import { useFormScreenExit, Form, DropdownBasic } from "@/page-layouts/index";
 import DocumentPreview from "@/components/ApplicationForms/DocumentPreview";
 import EpcSurface from "@/components/Epc/EpcSurface";
 import { Card, CardHeader } from "@/customer/components/ui/Card";
+import { CustomerBrandingProvider } from "@/customer/branding";
+import { DetailHeader } from "@/customer/components/ui/DetailBlocks";
 import { notifyError } from "@/utils/toast";
+import "@/customer/styles/index.css";
 import {
   getSoleAssignedBusinessId,
   readAssignedBusinessesFallback,
@@ -760,6 +763,7 @@ const EnquiryForm = () => {
                   <DropdownBasic
                     isMulti
                     sortOptions={false}
+                    appearance="document"
                     value={selected}
                     options={MANDATORY_INSPECTION_SERVICE_OPTIONS.map(
                       (opt) => ({
@@ -790,7 +794,7 @@ const EnquiryForm = () => {
                     <div>
                       <label
                         htmlFor="mandatoryInspectionOthers"
-                        className="block text-sm font-medium text-slate-700 mb-1.5"
+                        className="block text-sm font-semibold text-[#0a0a0a] mb-1.5"
                       >
                         Please specify (Others) *
                       </label>
@@ -808,9 +812,9 @@ const EnquiryForm = () => {
                             mandatoryInspectionOthers: e.target.value,
                           }));
                         }}
-                        className={`w-full border border-transparent focus:outline-none focus:ring-1 focus:ring-blue-200 focus:border-blue-300 rounded-[12px] shadow-sm px-[16px] py-[8px] bg-gray-100 text-sm ${
+                        className={`w-full border border-gray-300 bg-white text-sm py-2.5 px-3 rounded-lg shadow-none focus:outline-none focus:ring-1 focus:ring-[var(--p-blue)] focus:border-[var(--p-blue)] ${
                           errors.mandatoryInspectionOthers
-                            ? "ring-1 ring-red-400 border-red-400"
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
                             : ""
                         }`}
                       />
@@ -841,6 +845,7 @@ const EnquiryForm = () => {
                   <DropdownBasic
                     isMulti
                     sortOptions={false}
+                    appearance="document"
                     value={selected}
                     options={THIRD_PARTY_INSPECTION_SERVICE_OPTIONS.map(
                       (opt) => ({
@@ -871,7 +876,7 @@ const EnquiryForm = () => {
                     <div>
                       <label
                         htmlFor="thirdPartyInspectionOthers"
-                        className="block text-sm font-medium text-slate-700 mb-1.5"
+                        className="block text-sm font-semibold text-[#0a0a0a] mb-1.5"
                       >
                         Please specify (Others) *
                       </label>
@@ -889,9 +894,9 @@ const EnquiryForm = () => {
                             thirdPartyInspectionOthers: e.target.value,
                           }));
                         }}
-                        className={`w-full border border-transparent focus:outline-none focus:ring-1 focus:ring-blue-200 focus:border-blue-300 rounded-[12px] shadow-sm px-[16px] py-[8px] bg-gray-100 text-sm ${
+                        className={`w-full border border-gray-300 bg-white text-sm py-2.5 px-3 rounded-lg shadow-none focus:outline-none focus:ring-1 focus:ring-[var(--p-blue)] focus:border-[var(--p-blue)] ${
                           errors.thirdPartyInspectionOthers
-                            ? "ring-1 ring-red-400 border-red-400"
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
                             : ""
                         }`}
                       />
@@ -960,9 +965,11 @@ const EnquiryForm = () => {
 
   if (isLoadingForm) {
     return (
-      <div className="min-h-screen bg-[#f4f6f9] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-[var(--p-blue)] rounded-full animate-spin" />
-      </div>
+      <CustomerBrandingProvider className="epc-admin-wizard-root">
+        <div className="epc-admin-wizard flex items-center justify-center min-h-[40vh]">
+          <div className="w-12 h-12 border-4 border-slate-200 border-t-[var(--p-blue)] rounded-full animate-spin" />
+        </div>
+      </CustomerBrandingProvider>
     );
   }
 
@@ -984,68 +991,83 @@ const EnquiryForm = () => {
   const title = id ? "Edit Enquiry" : "Add Enquiry";
 
   return (
-    <div className="py-6 px-6 min-h-screen">
-      <PageHeader
-        title={title}
-        showBackButton
-        onBackClick={exitScreen}
-        backFallbackPath="/enquiries"
-      />
-      <Form
-        formFields={formFields}
-        handleSubmit={handleSubmit}
-        handleCancel={exitScreen}
-        isSubmitting={saving}
-        showFooterButtons
-        labelAndFieldDirection="column"
-        tightLabelInputSpacing
-        customLabelWidth="w-full"
-        fieldsPerRow={2}
-        formOuterSpacingClassName="space-y-4 mt-3"
-        fieldsStackSpacingClassName="space-y-4"
-        fieldsRowGapClassName="gap-4"
-        submitSuccessMessage={
-          id
-            ? "Enquiry updated successfully"
-            : "Enquiry created successfully"
-        }
-        afterSubmit={exitScreen}
-      />
+    <CustomerBrandingProvider className="epc-admin-wizard-root">
+      <div className="epc-admin-wizard">
+        <DetailHeader
+          title={title}
+          subtitle={
+            id
+              ? "Update the contact and enquiry details before responding."
+              : "Tell us what the customer needs and our team can follow up."
+          }
+          onBack={exitScreen}
+        />
+        <Form
+          formFields={formFields}
+          handleSubmit={handleSubmit}
+          handleCancel={exitScreen}
+          isSubmitting={saving}
+          showFooterButtons
+          labelAndFieldDirection="column"
+          tightLabelInputSpacing
+          customLabelWidth="w-full"
+          fieldsPerRow={2}
+          fieldsStackSpacingClassName="space-y-4"
+          fieldsRowGapClassName="gap-4"
+          cardLayout
+          cardTitle="Enquiry Details"
+          cardSubtitle="Provide the contact and the service they are enquiring about."
+          cardNote={{
+            title: "What happens next",
+            body: id
+              ? "Saving updates this enquiry. Responded enquiries can be taken forward into an application."
+              : "After you save, AQCTA can review this enquiry and respond. A responded enquiry can be taken forward into an application.",
+          }}
+          fieldTheme="invoice"
+          fieldAppearance="document"
+          submitSuccessMessage={
+            id
+              ? "Enquiry updated successfully"
+              : "Enquiry created successfully"
+          }
+          afterSubmit={exitScreen}
+        />
 
-      <style>{`
-        .enquiry-phone-wrap .enquiry-phone-input {
-          display: flex;
-          align-items: center;
-          width: 100%;
-          border: 1px solid transparent;
-          border-radius: 12px;
-          background: #f3f4f6;
-          padding: 8px 16px;
-          min-height: 42px;
-          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-        }
-        .enquiry-phone-wrap .enquiry-phone-input:focus-within {
-          border-color: #93c5fd;
-          box-shadow: 0 0 0 1px rgba(191, 219, 254, 1);
-        }
-        .enquiry-phone-wrap--error .enquiry-phone-input {
-          border-color: #fca5a5;
-          box-shadow: 0 0 0 1px rgba(252, 165, 165, 0.8);
-        }
-        .enquiry-phone-wrap .enquiry-phone-input .PhoneInputInput {
-          border: none !important;
-          outline: none !important;
-          box-shadow: none !important;
-          background: transparent !important;
-          width: 100%;
-          font-size: 0.95rem;
-          color: #0f172a;
-        }
-        .enquiry-phone-wrap .enquiry-phone-input .PhoneInputCountry {
-          margin-right: 0.5rem;
-        }
-      `}</style>
-    </div>
+        <style>{`
+          .enquiry-phone-wrap .enquiry-phone-input {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 8px 12px;
+            min-height: 42px;
+            box-shadow: none;
+          }
+          .enquiry-phone-wrap .enquiry-phone-input:focus-within {
+            border-color: var(--p-blue);
+            box-shadow: 0 0 0 1px var(--p-blue);
+          }
+          .enquiry-phone-wrap--error .enquiry-phone-input {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35);
+          }
+          .enquiry-phone-wrap .enquiry-phone-input .PhoneInputInput {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            width: 100%;
+            font-size: 0.875rem;
+            color: #0a0a0a;
+          }
+          .enquiry-phone-wrap .enquiry-phone-input .PhoneInputCountry {
+            margin-right: 0.5rem;
+          }
+        `}</style>
+      </div>
+    </CustomerBrandingProvider>
   );
 };
 

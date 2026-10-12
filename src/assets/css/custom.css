@@ -1626,6 +1626,31 @@ table tr {
   max-width: 100% !important;
   width: 100% !important;
   min-width: 0 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Enquiry-style card forms: white outlined control (matches document appearance) */
+.epics-dropdown.epics-dropdown--document .epics-dropdown__control,
+.epics-dropdown--document .epics-dropdown__control {
+  background-color: #ffffff !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+}
+
+.epc-admin-wizard-root .epc-card-panel,
+.epc-admin-wizard .epc-card-panel {
+  overflow: visible;
+}
+
+/* Portaled menus must stay above admin chrome / sticky headers */
+.epics-dropdown__menu-portal {
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+}
+
+.epics-dropdown__menu {
+  pointer-events: auto !important;
 }
 
 .epics-dropdown.epics-dropdown--is-multi .epics-dropdown__control {

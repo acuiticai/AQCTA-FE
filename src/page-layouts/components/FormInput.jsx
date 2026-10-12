@@ -93,16 +93,18 @@ const FormInputComponent = ({
     case "email":
     case "tel":
     case "number":
-    case "password":
+    case "password": {
+      // Avoid leaking select-only props (appearance) onto native <input>
+      const { appearance: _appearance, ...inputFieldProps } = props;
       return (
         <InputFieldWithLabel
-          {...props}
+          {...inputFieldProps}
           shouldShowError={props.shouldShowError ?? !!props.error}
           description={description}
           icon={icon}
           Input={
             <InputField
-              {...props}
+              {...inputFieldProps}
               {...inputProps}
               required={defaultRequired}
               shouldShowError={props.shouldShowError ?? !!props.error}
@@ -111,6 +113,7 @@ const FormInputComponent = ({
           }
         />
       );
+    }
     case "datetime-local":
       return (
         <InputFieldWithLabel
@@ -223,11 +226,9 @@ const FormInputComponent = ({
           />
         );
       }
-      const selectDisabled =
-        Boolean(props?.disabled) ||
-        (Array.isArray(props?.options) &&
-          props.options.length === 0 &&
-          !props?.isCreatable);
+      // Only honor explicit disabled — empty options still open ("No options")
+      // so loading/async selects are not stuck closed.
+      const selectDisabled = Boolean(props?.disabled);
       return (
         <InputFieldWithLabel
           label={props.label}
@@ -236,6 +237,7 @@ const FormInputComponent = ({
           customLabelWidth={props.customLabelWidth}
           tightLabelInputSpacing={props.tightLabelInputSpacing}
           labelOnTop={props.labelOnTop}
+          labelClassName={props.labelClassName}
           noLabel={props.noLabel}
           width={props.width}
           error={props.error}
@@ -265,6 +267,7 @@ const FormInputComponent = ({
               sortOptions={props.sortOptions}
               grouped={props.grouped}
               appearance={props.appearance}
+              documentNeutralFocus={props.documentNeutralFocus}
               className={props.className}
               customClassName={props.customClassName}
               styles={props.styles}

@@ -935,26 +935,45 @@ const BasicInformation = ({
     });
 
   return (
-    <div className="space-y-4">
-      <Form
-        title=""
-        saveButtonText={t("customer.saveBasicInfo")}
-        formFields={formFieldsWithCustomFields}
-        handleSubmit={handleSubmit}
-        handleCancel={exitCustomersScreen}
-        isOpen={isOpen}
-        labelAndFieldDirection="column"
-        tightLabelInputSpacing={true}
-        customLabelWidth="w-full"
-        fieldsPerRow={2}
-        formOuterSpacingClassName="space-y-4 mt-3"
-        fieldsStackSpacingClassName="space-y-4"
-        fieldsRowGapClassName="gap-4"
-        beforeFooter={
-          renderInFooter ? renderCustomerCustomFields() : null
-        }
-      />
-    </div>
+    <Form
+      title=""
+      saveButtonText={t("customer.saveBasicInfo")}
+      formFields={formFieldsWithCustomFields}
+      handleSubmit={handleSubmit}
+      handleCancel={exitCustomersScreen}
+      isOpen={isOpen}
+      labelAndFieldDirection="column"
+      tightLabelInputSpacing={true}
+      customLabelWidth="w-full"
+      fieldsPerRow={2}
+      fieldsStackSpacingClassName="space-y-4"
+      fieldsRowGapClassName="gap-4"
+      cardLayout
+      cardTitle={t("customer.basicDetails", {
+        defaultValue: "Basic Details",
+      })}
+      cardSubtitle={t("customer.basicDetailsSubtitle", {
+        defaultValue:
+          "Provide the company and address information for this customer.",
+      })}
+      cardNote={{
+        title: t("customer.whatHappensNext", {
+          defaultValue: "What happens next",
+        }),
+        body: isEditMode
+          ? t("customer.whatHappensNextEdit", {
+              defaultValue:
+                "Saving updates the customer record. You can manage contacts, addresses, and e-invoice details in the sections below.",
+            })
+          : t("customer.whatHappensNextCreate", {
+              defaultValue:
+                "After you save, this customer will be available for quotations, invoices, and applications. A login password is emailed automatically when an email is provided.",
+            }),
+      }}
+      fieldTheme="invoice"
+      fieldAppearance="document"
+      beforeFooter={renderInFooter ? renderCustomerCustomFields() : null}
+    />
   );
 };
 
