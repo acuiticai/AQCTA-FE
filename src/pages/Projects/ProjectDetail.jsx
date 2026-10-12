@@ -45,6 +45,7 @@ const CERTIFICATION_STAGE_STATUS = {
   certification_recommendation: "certificationRecommendationStatus",
   certificate_approval_letter: "certificateApprovalLetterStatus",
   certification_deliberation: "certificationDeliberationStatus",
+  official_certificate: "officialCertificateStatus",
 };
 
 /** Legacy Type-5-only keys still used when present on an old application. */

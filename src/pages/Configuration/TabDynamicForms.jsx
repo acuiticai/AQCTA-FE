@@ -663,6 +663,7 @@ const STAGE_LABELS = {
   certification_recommendation: "Certification Recommendation",
   certificate_approval_letter: "Certificate Approval Letter",
   certification_deliberation: "Issue for Certification Deliberation",
+  official_certificate: "Official Certificate",
 };
 
 const TYPE_LABELS = {

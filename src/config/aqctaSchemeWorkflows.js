@@ -38,6 +38,7 @@ const ONSITE_ASSESSMENT = [
   "certification_recommendation",
   "certificate_approval_letter",
   "certification_deliberation",
+  "official_certificate",
 ];
 
 /**
@@ -52,6 +53,7 @@ const VERIFICATION_DOCS = [
   "certification_recommendation",
   "certificate_approval_letter",
   "certification_deliberation",
+  "official_certificate",
 ];
 
 /** Ordered stage keys per scheme label. */
@@ -70,6 +72,7 @@ export const SCHEME_STAGE_TITLES = {
     certification_recommendation: "Assessment Recommendation",
     certificate_approval_letter: "Certificate / Decision Letter",
     certification_deliberation: "Issue for Assessment Deliberation",
+    official_certificate: "Certificate of Registration (ISO 13485)",
   },
   GDPMD: {
     audit_notice: "On-site Audit Notice",
@@ -77,6 +80,7 @@ export const SCHEME_STAGE_TITLES = {
     certification_recommendation: "Assessment Recommendation",
     certificate_approval_letter: "Certificate / Decision Letter",
     certification_deliberation: "Issue for Assessment Deliberation",
+    official_certificate: "Certificate of Registration (GDPMD)",
   },
   CoAWOV: {
     doc_audit: "Evidence / Documentation Review",
@@ -85,6 +89,7 @@ export const SCHEME_STAGE_TITLES = {
     certification_recommendation: "Verification Recommendation",
     certificate_approval_letter: "Verification Decision Letter",
     certification_deliberation: "Issue for Verification Deliberation",
+    official_certificate: "Certificate of Conformity",
   },
   "Technical Documentation CA": {
     doc_audit: "Technical Documentation Review",
@@ -93,6 +98,7 @@ export const SCHEME_STAGE_TITLES = {
     certification_recommendation: "Technical Documentation Recommendation",
     certificate_approval_letter: "Technical Documentation Decision Letter",
     certification_deliberation: "Issue for Technical Documentation Deliberation",
+    official_certificate: "Certificate of Conformity",
   },
 };
 
@@ -191,6 +197,12 @@ export const CERTIFICATION_STAGE_FORMS = {
     documentCode: "AQCTA-FOR-01-20",
     defaultTitle: "Issue for Certification Deliberation",
     defaultHeading: "ISSUE FOR CERTIFICATION PANEL DELIBERATION",
+  },
+  official_certificate: {
+    formKey: "FOR-01-21",
+    documentCode: "AQCTA-FOR-01-21",
+    defaultTitle: "Official Certificate",
+    defaultHeading: "OFFICIAL CERTIFICATE",
   },
 };
 
